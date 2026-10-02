@@ -83,4 +83,19 @@ class AppTypography {
     height: 1.2,
     color: AppColors.muted,
   );
+
+  /// Tabular numbers for countdowns, timers, and quantitative metrics (Prevents layout jitter - Rule N1)
+  static TextStyle get tabularCounter => GoogleFonts.plusJakartaSans(
+    fontSize: 38,
+    fontWeight: FontWeight.w800,
+    fontFeatures: const [FontFeature.tabularFigures()],
+    color: AppColors.onSurface,
+  );
+
+  static TextStyle get tabularBody => GoogleFonts.plusJakartaSans(
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+    fontFeatures: const [FontFeature.tabularFigures()],
+    color: AppColors.onSurface,
+  );
 }

@@ -188,7 +188,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.error,
-                minimumSize: const Size(110, 40),
+                minimumSize: const Size(110, 44),
               ),
               onPressed: () async {
                 Navigator.of(context).pop();

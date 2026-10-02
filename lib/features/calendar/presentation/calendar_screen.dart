@@ -133,6 +133,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       },
       borderRadius: BorderRadius.circular(20),
       child: Container(
+        constraints: const BoxConstraints(minHeight: 40),
+        alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primary : AppColors.surfaceContainerLow,

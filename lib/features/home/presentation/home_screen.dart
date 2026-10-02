@@ -705,7 +705,7 @@ class HomeScreen extends ConsumerWidget {
                                     nextEvent,
                                   ),
                                   style: ElevatedButton.styleFrom(
-                                    minimumSize: const Size(100, 36),
+                                    minimumSize: const Size(104, 44),
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 14,
                                     ),
@@ -822,7 +822,7 @@ class HomeScreen extends ConsumerWidget {
                                     );
                                   },
                                   style: ElevatedButton.styleFrom(
-                                    minimumSize: const Size(120, 36),
+                                    minimumSize: const Size(124, 44),
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 14,
                                     ),
