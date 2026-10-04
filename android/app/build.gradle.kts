@@ -6,8 +6,8 @@ plugins {
 
 android {
     namespace = "com.harmonia.mobile.harmonia_mobile"
-    compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    compileSdk = 37
+    ndkVersion = "27.1.12297006"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
