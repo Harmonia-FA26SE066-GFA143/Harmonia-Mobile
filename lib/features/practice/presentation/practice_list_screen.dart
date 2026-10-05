@@ -42,9 +42,34 @@ class PracticeListScreen extends ConsumerWidget {
           data: (assignments) {
             if (assignments.isEmpty) {
               return Center(
-                child: Text(
-                  'Chưa có bài tập nào được giao',
-                  style: AppTypography.bodyMedium,
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.mic_none_rounded,
+                        size: 56,
+                        color: AppColors.muted.withValues(alpha: 0.5),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Chưa có bài tập nào từ máy chủ',
+                        style: AppTypography.titleMedium.copyWith(
+                          color: AppColors.muted,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Tính năng giao bài tập luyện thanh và nộp bài thu âm đang trong quá trình tích hợp API backend.',
+                        style: AppTypography.bodySmall.copyWith(
+                          color: AppColors.muted,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
                 ),
               );
             }

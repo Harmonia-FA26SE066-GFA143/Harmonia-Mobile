@@ -68,6 +68,40 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       final showRehearsals =
                           _selectedFilter == 0 || _selectedFilter == 2;
 
+                      if (events.isEmpty && rehearsals.isEmpty) {
+                        return Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.calendar_today_outlined,
+                                  size: 56,
+                                  color: AppColors.muted.withValues(alpha: 0.5),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Chưa có lịch phụng vụ từ máy chủ',
+                                  style: AppTypography.titleMedium.copyWith(
+                                    color: AppColors.muted,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Tính năng quản lý lịch lễ và lịch tập hát đang trong quá trình tích hợp API backend.',
+                                  style: AppTypography.bodySmall.copyWith(
+                                    color: AppColors.muted,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+
                       return RefreshIndicator(
                         onRefresh: () => ref
                             .read(calendarNotifierProvider.notifier)

@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/app_env.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/di/core_providers.dart';
 import '../data/auth_dto.dart';
 import 'auth_notifier.dart';
 
@@ -318,6 +320,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       icon: const Icon(Icons.g_mobiledata_rounded, size: 24),
                       label: const Text('Đăng nhập với Google'),
                     ),
+                    if (AppEnv.useMock) ...[
+                      const SizedBox(height: 12),
+                      TextButton.icon(
+                        onPressed: () {
+                          ref
+                              .read(sessionManagerProvider)
+                              .markAuthenticated(role: 'ChoirMember');
+                          context.go('/home');
+                        },
+                        icon: const Icon(Icons.science_outlined, size: 18),
+                        label: const Text(
+                          'Truy cập Demo (Không cần đăng nhập)',
+                        ),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.secondary,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 32),
 
                     // Footer notice

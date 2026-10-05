@@ -18,21 +18,16 @@ subprojects {
 subprojects {
     project.evaluationDependsOn(":app")
 }
+
 subprojects {
-    val configureNdk: Project.() -> Unit = {
-        extensions.findByName("android")?.let { ext ->
-            try {
-                ext.javaClass.getMethod("setNdkVersion", String::class.java).invoke(ext, "27.1.12297006")
-            } catch (_: Exception) {
-            }
+    if (project.name != "app") {
+        afterEvaluate {
+            extensions.findByType(com.android.build.gradle.BaseExtension::class.java)?.ndkVersion = "27.1.12297006"
         }
     }
-    if (state.executed) {
-        configureNdk()
-    } else {
-        afterEvaluate { configureNdk() }
-    }
 }
+
+
 
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)

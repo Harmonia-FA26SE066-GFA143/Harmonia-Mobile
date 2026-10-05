@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/app_env.dart';
 import '../../../core/di/core_providers.dart';
+
 import '../../../core/errors/app_exceptions.dart';
 import '../../../core/errors/error_messages.dart';
 import '../data/auth_api_service.dart';
@@ -13,9 +15,12 @@ final authApiServiceProvider = Provider<AuthApiService>((ref) {
 });
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
+  final sessionManager = ref.watch(sessionManagerProvider);
+  if (AppEnv.useMock) {
+    return MockAuthRepositoryImpl(sessionManager: sessionManager);
+  }
   final apiService = ref.watch(authApiServiceProvider);
   final storage = ref.watch(secureStorageServiceProvider);
-  final sessionManager = ref.watch(sessionManagerProvider);
   return AuthRepositoryImpl(
     apiService: apiService,
     storage: storage,

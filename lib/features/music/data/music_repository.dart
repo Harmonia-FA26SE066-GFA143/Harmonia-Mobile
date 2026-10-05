@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/app_env.dart';
+import '../../../core/errors/app_exceptions.dart';
 import 'song_models.dart';
 
 class MockMusicData {
@@ -95,6 +97,29 @@ abstract class MusicRepository {
   Future<void> updateLearningStatus(String songId, LearningStatus status);
 }
 
+class UnintegratedMusicRepositoryImpl implements MusicRepository {
+  @override
+  Future<List<SongListItem>> getSongListForEvent(String eventId) async {
+    return const [];
+  }
+
+  @override
+  Future<SongListItem?> getSongDetail(String songId) async {
+    return null;
+  }
+
+  @override
+  Future<void> updateLearningStatus(
+    String songId,
+    LearningStatus status,
+  ) async {
+    throw const AppException(
+      message: 'Tính năng học bài hát chưa được kết nối máy chủ.',
+      code: 'FEATURE_UNINTEGRATED',
+    );
+  }
+}
+
 class MockMusicRepositoryImpl implements MusicRepository {
   List<SongListItem> _songs = List.from(MockMusicData.songs);
 
@@ -124,5 +149,8 @@ class MockMusicRepositoryImpl implements MusicRepository {
 }
 
 final musicRepositoryProvider = Provider<MusicRepository>((ref) {
-  return MockMusicRepositoryImpl();
+  if (AppEnv.useMock) {
+    return MockMusicRepositoryImpl();
+  }
+  return UnintegratedMusicRepositoryImpl();
 });

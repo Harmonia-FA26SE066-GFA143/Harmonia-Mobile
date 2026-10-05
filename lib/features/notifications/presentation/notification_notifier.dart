@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/app_env.dart';
 import '../../../core/di/core_providers.dart';
 import '../../../core/errors/app_exceptions.dart';
 import '../../../core/errors/error_messages.dart';
@@ -15,6 +16,11 @@ final notificationApiServiceProvider = Provider<NotificationApiService>((ref) {
 });
 
 final notificationRepositoryProvider = Provider<NotificationRepository>((ref) {
+  if (AppEnv.useMock) {
+    final repo = MockNotificationRepositoryImpl();
+    ref.onDispose(() => repo.dispose());
+    return repo;
+  }
   final apiService = ref.watch(notificationApiServiceProvider);
   final signalR = ref.watch(signalRServiceProvider);
   final repo = NotificationRepositoryImpl(

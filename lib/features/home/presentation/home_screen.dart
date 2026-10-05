@@ -315,7 +315,37 @@ class HomeScreen extends ConsumerWidget {
                     child: Text('Không thể tải lịch: $e'),
                   ),
                   data: (events) {
-                    if (events.isEmpty) return const SizedBox.shrink();
+                    if (events.isEmpty) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 24,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.info_outline,
+                              color: AppColors.primary,
+                              size: 24,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Lịch phụng vụ đang được cập nhật từ máy chủ.',
+                                style: AppTypography.bodySmall.copyWith(
+                                  color: AppColors.muted,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
                     final mainEvent = events.first;
 
                     return Card(
@@ -613,9 +643,11 @@ class HomeScreen extends ConsumerWidget {
                   loading: () => const SizedBox.shrink(),
                   error: (_, _) => const SizedBox.shrink(),
                   data: (events) {
+                    if (events.isEmpty) return const SizedBox.shrink();
                     final nextEvent = events.length > 1
                         ? events[1]
                         : events.first;
+
                     return Card(
                       child: Padding(
                         padding: const EdgeInsets.all(14),

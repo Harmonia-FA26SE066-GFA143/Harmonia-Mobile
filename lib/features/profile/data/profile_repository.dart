@@ -1,5 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/app_env.dart';
+import '../../../core/di/core_providers.dart';
+import '../../../core/errors/app_exceptions.dart';
+import '../../../core/storage/secure_storage_service.dart';
 import 'profile_models.dart';
 
 class MockProfileData {
@@ -52,6 +56,46 @@ abstract class ProfileRepository {
   });
 }
 
+class UnintegratedProfileRepositoryImpl implements ProfileRepository {
+  final SecureStorageService storage;
+  UnintegratedProfileRepositoryImpl(this.storage);
+
+  @override
+  Future<MemberProfile> getProfile() async {
+    final email = await storage.getUserEmail() ?? 'Ca viên';
+    final role = await storage.getUserRole() ?? 'ChoirMember';
+    return MemberProfile(
+      id: await storage.getUserId() ?? 'user-me',
+      fullName: email.split('@').first,
+      saintName: '',
+      email: email,
+      phone: '',
+      voicePart: 'Bè Ca viên ($role)',
+      joinedDate: DateTime.now(),
+      attendancePercentage: 0,
+      totalServicesCount: 0,
+    );
+  }
+
+  @override
+  Future<List<MemberSkill>> getSkills() async {
+    return const [];
+  }
+
+  @override
+  Future<void> declareNewSkill({
+    required String name,
+    required String categoryName,
+    required String level,
+    String? note,
+  }) async {
+    throw const AppException(
+      message: 'Tính năng khai báo kỹ năng chưa được kết nối máy chủ.',
+      code: 'FEATURE_UNINTEGRATED',
+    );
+  }
+}
+
 class MockProfileRepositoryImpl implements ProfileRepository {
   final MemberProfile _profile = MockProfileData.profile;
   List<MemberSkill> _skills = List.from(MockProfileData.skills);
@@ -89,5 +133,9 @@ class MockProfileRepositoryImpl implements ProfileRepository {
 }
 
 final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
-  return MockProfileRepositoryImpl();
+  if (AppEnv.useMock) {
+    return MockProfileRepositoryImpl();
+  }
+  final storage = ref.watch(secureStorageServiceProvider);
+  return UnintegratedProfileRepositoryImpl(storage);
 });

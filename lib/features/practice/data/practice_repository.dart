@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/app_env.dart';
+import '../../../core/errors/app_exceptions.dart';
 import 'practice_models.dart';
 
 class MockPracticeData {
@@ -47,6 +49,30 @@ abstract class PracticeRepository {
   });
 }
 
+class UnintegratedPracticeRepositoryImpl implements PracticeRepository {
+  @override
+  Future<List<PracticeAssignment>> getAssignments() async {
+    return const [];
+  }
+
+  @override
+  Future<PracticeAssignment?> getAssignmentDetail(String id) async {
+    return null;
+  }
+
+  @override
+  Future<void> submitRecording({
+    required String assignmentId,
+    required String audioPath,
+    required int durationSeconds,
+  }) async {
+    throw const AppException(
+      message: 'Tính năng nộp bài thu âm chưa được kết nối máy chủ.',
+      code: 'FEATURE_UNINTEGRATED',
+    );
+  }
+}
+
 class MockPracticeRepositoryImpl implements PracticeRepository {
   List<PracticeAssignment> _assignments = List.from(
     MockPracticeData.assignments,
@@ -88,7 +114,10 @@ class MockPracticeRepositoryImpl implements PracticeRepository {
 }
 
 final practiceRepositoryProvider = Provider<PracticeRepository>((ref) {
-  return MockPracticeRepositoryImpl();
+  if (AppEnv.useMock) {
+    return MockPracticeRepositoryImpl();
+  }
+  return UnintegratedPracticeRepositoryImpl();
 });
 
 class PracticeListNotifier

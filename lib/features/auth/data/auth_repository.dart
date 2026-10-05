@@ -1,3 +1,4 @@
+import '../../../core/errors/app_exceptions.dart';
 import '../../../core/session/session_manager.dart';
 import '../../../core/storage/secure_storage_service.dart';
 import 'auth_api_service.dart';
@@ -41,6 +42,14 @@ class AuthRepositoryImpl implements AuthRepository {
 
     final response = await apiService.login(request);
 
+    // Verify role belongs to mobile ChoirMember scope per Rule 04
+    if (response.user.roleName != 'ChoirMember') {
+      throw const AppException(
+        code: 'FORBIDDEN_ROLE',
+        message: 'Tài khoản không thuộc quyền Ca viên Harmonia Mobile.',
+      );
+    }
+
     // Save tokens and user info securely
     await storage.saveTokens(
       accessToken: response.accessToken,
@@ -54,7 +63,7 @@ class AuthRepositoryImpl implements AuthRepository {
       roleName: response.user.roleName,
     );
 
-    sessionManager.markAuthenticated();
+    sessionManager.markAuthenticated(role: response.user.roleName);
     return response.user;
   }
 
@@ -78,6 +87,39 @@ class AuthRepositoryImpl implements AuthRepository {
     } catch (_) {
       // Local cleanup on failure
     }
+    await sessionManager.endSession();
+  }
+}
+
+class MockAuthRepositoryImpl implements AuthRepository {
+  final SessionManager sessionManager;
+
+  MockAuthRepositoryImpl({required this.sessionManager});
+
+  @override
+  Future<UserDto> login({
+    required String email,
+    required String password,
+    String? deviceId,
+    DevicePlatform? platform,
+  }) async {
+    // In demo mode, mark authenticated in memory without storing fake tokens to secure storage
+    await Future.delayed(const Duration(milliseconds: 300));
+    sessionManager.markAuthenticated(role: 'ChoirMember');
+    return const UserDto(
+      id: 'mock-choir-member',
+      email: 'maria.mai@harmonia.org',
+      roleName: 'ChoirMember',
+    );
+  }
+
+  @override
+  Future<void> logout() async {
+    await sessionManager.endSession();
+  }
+
+  @override
+  Future<void> logoutAll() async {
     await sessionManager.endSession();
   }
 }

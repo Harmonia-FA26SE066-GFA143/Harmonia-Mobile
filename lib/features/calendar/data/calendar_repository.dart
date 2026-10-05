@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/app_env.dart';
+import '../../../core/errors/app_exceptions.dart';
 import 'liturgical_models.dart';
 import 'mock_calendar_data.dart';
 
@@ -8,6 +10,37 @@ abstract class CalendarRepository {
   Future<List<LiturgicalEvent>> getEvents();
   Future<List<RehearsalSession>> getRehearsals();
   Future<void> updateParticipation(String eventId, ParticipationStatus status);
+}
+
+class UnintegratedCalendarRepositoryImpl implements CalendarRepository {
+  @override
+  Future<LiturgicalEvent> getUpcomingEvent() async {
+    throw const AppException(
+      message: 'Tính năng Lịch phụng vụ chưa có API máy chủ.',
+      code: 'FEATURE_UNINTEGRATED',
+    );
+  }
+
+  @override
+  Future<List<LiturgicalEvent>> getEvents() async {
+    return const [];
+  }
+
+  @override
+  Future<List<RehearsalSession>> getRehearsals() async {
+    return const [];
+  }
+
+  @override
+  Future<void> updateParticipation(
+    String eventId,
+    ParticipationStatus status,
+  ) async {
+    throw const AppException(
+      message: 'Tính năng điểm danh chưa được kết nối máy chủ.',
+      code: 'FEATURE_UNINTEGRATED',
+    );
+  }
 }
 
 class MockCalendarRepositoryImpl implements CalendarRepository {
@@ -50,7 +83,10 @@ class MockCalendarRepositoryImpl implements CalendarRepository {
 }
 
 final calendarRepositoryProvider = Provider<CalendarRepository>((ref) {
-  return MockCalendarRepositoryImpl();
+  if (AppEnv.useMock) {
+    return MockCalendarRepositoryImpl();
+  }
+  return UnintegratedCalendarRepositoryImpl();
 });
 
 class CalendarNotifier extends Notifier<AsyncValue<List<LiturgicalEvent>>> {

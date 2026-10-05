@@ -13,7 +13,9 @@ import '../../features/notifications/presentation/notification_list_screen.dart'
 import '../../features/practice/presentation/practice_detail_screen.dart';
 import '../../features/practice/presentation/practice_list_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
+import '../app_env.dart';
 import 'main_navigation_shell.dart';
+import 'splash_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorHome = GlobalKey<NavigatorState>(debugLabel: 'shellHome');
@@ -31,23 +33,62 @@ final _shellNavigatorProfile = GlobalKey<NavigatorState>(
 );
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final sessionManager = ref.watch(sessionManagerProvider);
+  final sessionManager = ref.read(sessionManagerProvider);
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: '/home',
+    refreshListenable: sessionManager,
+    initialLocation: AppEnv.useMock ? '/home' : '/splash',
     redirect: (context, state) {
-      final isAuth = sessionManager.status == AuthStatus.authenticated;
-      final isLoggingIn = state.matchedLocation == '/login';
-
-      if (!isAuth && !isLoggingIn) {
-        // If unauthenticated and trying to view protected pages, let demo proceed or redirect
+      if (AppEnv.useMock) {
+        // In demo mode, bypass login and allow exploring all screens
         return null;
       }
+
+      final status = sessionManager.status;
+      final isLoggingIn = state.matchedLocation == '/login';
+      final isSplash = state.matchedLocation == '/splash';
+
+      // 1. Session is still initializing / restoring
+      if (status == AuthStatus.initial) {
+        if (!isSplash) {
+          final target = Uri.encodeComponent(state.uri.toString());
+          return '/splash?from=$target';
+        }
+        return null;
+      }
+
+      // 2. Unauthenticated: redirect protected routes to /login
+      if (status == AuthStatus.unauthenticated) {
+        if (!isLoggingIn) {
+          return '/login';
+        }
+        return null;
+      }
+
+      // 3. Authenticated: prevent lingering on /login or /splash
+      if (status == AuthStatus.authenticated) {
+        if (isLoggingIn || isSplash) {
+          final from = state.uri.queryParameters['from'];
+          if (from != null &&
+              from.isNotEmpty &&
+              from != '/login' &&
+              from != '/splash') {
+            return Uri.decodeComponent(from);
+          }
+          return '/home';
+        }
+      }
+
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/splash',
+        builder: (context, state) => const SplashScreen(),
+      ),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
           return MainNavigationShell(navigationShell: navigationShell);
