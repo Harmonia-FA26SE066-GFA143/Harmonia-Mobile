@@ -8,6 +8,7 @@ import '../../calendar/data/calendar_repository.dart';
 import '../../calendar/data/liturgical_models.dart';
 import '../../notifications/presentation/notification_notifier.dart';
 import '../../practice/data/practice_repository.dart';
+import '../../profile/data/profile_repository.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -118,12 +119,20 @@ class HomeScreen extends ConsumerWidget {
     final calendarState = ref.watch(calendarNotifierProvider);
     final notificationState = ref.watch(notificationNotifierProvider);
     final practiceState = ref.watch(practiceListNotifierProvider);
+    final profileState = ref.watch(currentMemberProfileProvider);
+
+    final memberName = profileState.asData?.value.fullName.trim();
+    final displayName = (memberName != null && memberName.isNotEmpty)
+        ? memberName
+        : 'Ca viên';
+    final avatarInitial = displayName.characters.first.toUpperCase();
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
+            ref.invalidate(currentMemberProfileProvider);
             await ref.read(calendarNotifierProvider.notifier).loadEvents();
             await ref
                 .read(practiceListNotifierProvider.notifier)
@@ -154,7 +163,7 @@ class HomeScreen extends ConsumerWidget {
                       ),
                       child: Center(
                         child: Text(
-                          'M',
+                          avatarInitial,
                           style: AppTypography.titleLarge.copyWith(
                             color: AppColors.primary,
                             fontWeight: FontWeight.bold,
@@ -168,7 +177,7 @@ class HomeScreen extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Chào Maria Mai',
+                            'Chào $displayName',
                             style: AppTypography.headlineSmall.copyWith(
                               fontSize: 18,
                             ),

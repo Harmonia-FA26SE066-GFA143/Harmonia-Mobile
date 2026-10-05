@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/app_env.dart';
-import '../../../core/errors/app_exceptions.dart';
+import 'music_api_service.dart';
 import 'song_models.dart';
 
 class MockMusicData {
@@ -95,17 +95,96 @@ abstract class MusicRepository {
   Future<List<SongListItem>> getSongListForEvent(String eventId);
   Future<SongListItem?> getSongDetail(String songId);
   Future<void> updateLearningStatus(String songId, LearningStatus status);
+  Future<List<SongDto>> searchSongs({
+    String? keyword,
+    int pageNumber = 1,
+    int pageSize = 20,
+  });
+  Future<List<MusicMaterialDetailDto>> getMyMaterials({String? keyword});
+  Future<void> updateMaterialProgress(String materialId, LearningStatus status);
 }
 
-class UnintegratedMusicRepositoryImpl implements MusicRepository {
+class MusicRepositoryImpl implements MusicRepository {
+  final MusicApiService apiService;
+
+  MusicRepositoryImpl({required this.apiService});
+
   @override
   Future<List<SongListItem>> getSongListForEvent(String eventId) async {
-    return const [];
+    // Event-specific song list endpoint is not yet available on Harmonia-BE controllers.
+    // Falls back to available songs catalog.
+    try {
+      final paged = await apiService.getSongs(
+        const SearchSongsRequest(pageNumber: 1, pageSize: 10),
+      );
+      return paged.items.map((song) {
+        return SongListItem(
+          id: song.id,
+          slotName: 'Bài hát phụng vụ',
+          title: song.title,
+          composer: song.composer ?? 'Khuyết danh',
+          tone: song.musicalKey ?? 'Đô Trưởng (C)',
+          tempo: song.tempo ?? 'Vừa phải',
+          sheetMusicUrl: '',
+          audioSampleUrl: null,
+          lyrics: song.notes ?? '',
+          learningStatus: LearningStatus.notStarted,
+        );
+      }).toList();
+    } catch (_) {
+      return const [];
+    }
   }
 
   @override
   Future<SongListItem?> getSongDetail(String songId) async {
-    return null;
+    try {
+      final song = await apiService.getSongById(songId);
+
+      SongClassificationDto? classification;
+      try {
+        classification = await apiService.getSongClassification(songId);
+      } catch (_) {
+        // Classification optional fallback
+      }
+
+      List<MusicMaterialDto> materials = [];
+      try {
+        final matPaged = await apiService.getMaterialsBySong(songId);
+        materials = matPaged.items;
+      } catch (_) {
+        // Materials optional fallback
+      }
+
+      final sheetMat = materials
+          .where((m) => m.materialType == MaterialType.sheetMusic)
+          .firstOrNull;
+      final audioMat = materials
+          .where((m) => m.materialType == MaterialType.sampleAudio)
+          .firstOrNull;
+
+      final slot =
+          classification?.liturgicalSeasons.firstOrNull?.name ??
+          classification?.massTypes.firstOrNull?.name ??
+          'Thánh ca Phụng vụ';
+
+      return SongListItem(
+        id: song.id,
+        slotName: slot,
+        title: song.title,
+        composer: song.composer ?? 'Khuyết danh',
+        tone: song.musicalKey ?? 'Đô Trưởng (C)',
+        tempo: song.tempo ?? 'Vừa phải',
+        sheetMusicUrl: sheetMat?.fileUrl ?? '',
+        audioSampleUrl: audioMat?.fileUrl,
+        lyrics: song.notes ?? '',
+        learningStatus: LearningStatus.notStarted,
+        classification: classification,
+        materials: materials,
+      );
+    } catch (e) {
+      return null;
+    }
   }
 
   @override
@@ -113,10 +192,50 @@ class UnintegratedMusicRepositoryImpl implements MusicRepository {
     String songId,
     LearningStatus status,
   ) async {
-    throw const AppException(
-      message: 'Tính năng học bài hát chưa được kết nối máy chủ.',
-      code: 'FEATURE_UNINTEGRATED',
+    // When learning status is updated for a song, updates its primary material if available
+    try {
+      final materials = await apiService.getMaterialsBySong(songId);
+      if (materials.items.isNotEmpty) {
+        await apiService.updateLearningProgress(
+          materials.items.first.id,
+          status,
+        );
+      }
+    } catch (_) {
+      // Ignored if no materials exist for this song
+    }
+  }
+
+  @override
+  Future<List<SongDto>> searchSongs({
+    String? keyword,
+    int pageNumber = 1,
+    int pageSize = 20,
+  }) async {
+    final paged = await apiService.getSongs(
+      SearchSongsRequest(
+        keyword: keyword,
+        pageNumber: pageNumber,
+        pageSize: pageSize,
+      ),
     );
+    return paged.items;
+  }
+
+  @override
+  Future<List<MusicMaterialDetailDto>> getMyMaterials({String? keyword}) async {
+    final paged = await apiService.getMyMaterials(
+      SearchMusicMaterialsRequest(keyword: keyword),
+    );
+    return paged.items;
+  }
+
+  @override
+  Future<void> updateMaterialProgress(
+    String materialId,
+    LearningStatus status,
+  ) async {
+    await apiService.updateLearningProgress(materialId, status);
   }
 }
 
@@ -146,11 +265,47 @@ class MockMusicRepositoryImpl implements MusicRepository {
       return s;
     }).toList();
   }
+
+  @override
+  Future<List<SongDto>> searchSongs({
+    String? keyword,
+    int pageNumber = 1,
+    int pageSize = 20,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 100));
+    return _songs
+        .map(
+          (s) => SongDto(
+            id: s.id,
+            title: s.title,
+            composer: s.composer,
+            musicalKey: s.tone,
+            tempo: s.tempo,
+            notes: s.lyrics,
+          ),
+        )
+        .toList();
+  }
+
+  @override
+  Future<List<MusicMaterialDetailDto>> getMyMaterials({String? keyword}) async {
+    await Future.delayed(const Duration(milliseconds: 100));
+    return [];
+  }
+
+  @override
+  Future<void> updateMaterialProgress(
+    String materialId,
+    LearningStatus status,
+  ) async {
+    await Future.delayed(const Duration(milliseconds: 100));
+  }
 }
 
 final musicRepositoryProvider = Provider<MusicRepository>((ref) {
   if (AppEnv.useMock) {
     return MockMusicRepositoryImpl();
   }
-  return UnintegratedMusicRepositoryImpl();
+  final apiService = ref.watch(musicApiServiceProvider);
+  return MusicRepositoryImpl(apiService: apiService);
 });

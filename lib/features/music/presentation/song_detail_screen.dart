@@ -248,6 +248,57 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                           ),
                         ],
                       ),
+                      if (song.classification != null) ...[
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: [
+                            for (final season
+                                in song.classification!.liturgicalSeasons)
+                              Chip(
+                                label: Text(
+                                  season.name,
+                                  style: AppTypography.labelSmall,
+                                ),
+                                backgroundColor: AppColors.primary.withValues(
+                                  alpha: 0.08,
+                                ),
+                                side: BorderSide.none,
+                                padding: EdgeInsets.zero,
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            for (final mass in song.classification!.massTypes)
+                              Chip(
+                                label: Text(
+                                  mass.name,
+                                  style: AppTypography.labelSmall,
+                                ),
+                                backgroundColor: AppColors.surfaceContainerLow,
+                                side: BorderSide.none,
+                                padding: EdgeInsets.zero,
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            for (final vocal
+                                in song.classification!.vocalRequirements)
+                              Chip(
+                                label: Text(
+                                  vocal.skillName,
+                                  style: AppTypography.labelSmall.copyWith(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                backgroundColor: AppColors.primary.withValues(
+                                  alpha: 0.08,
+                                ),
+                                side: BorderSide.none,
+                                padding: EdgeInsets.zero,
+                                visualDensity: VisualDensity.compact,
+                              ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),

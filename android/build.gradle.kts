@@ -22,12 +22,15 @@ subprojects {
 subprojects {
     if (project.name != "app") {
         afterEvaluate {
-            extensions.findByType(com.android.build.gradle.BaseExtension::class.java)?.ndkVersion = "27.1.12297006"
+            extensions.findByType(com.android.build.gradle.BaseExtension::class.java)?.let { androidExt ->
+                // NDK 27.1.12297006 is the verified, installed NDK on this workstation.
+                // AGP 9.1.0 defaults to NDK 28.2 which fails to auto-download due to network timeouts.
+                // Setting ndkVersion here ensures native subprojects (e.g. :jni) build successfully.
+                androidExt.ndkVersion = "27.1.12297006"
+            }
         }
     }
 }
-
-
 
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)

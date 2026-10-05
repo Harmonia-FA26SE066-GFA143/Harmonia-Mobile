@@ -11,6 +11,23 @@ abstract class AuthRepository {
     String? deviceId,
     DevicePlatform? platform,
   });
+  Future<UserDto> loginWithGoogle({
+    required String idToken,
+    String? deviceId,
+    DevicePlatform? platform,
+  });
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  });
+  Future<void> forgotPassword({
+    required String email,
+    DevicePlatform? platform,
+  });
+  Future<void> resetPassword({
+    required String token,
+    required String newPassword,
+  });
   Future<void> logout();
   Future<void> logoutAll();
 }
@@ -44,9 +61,10 @@ class AuthRepositoryImpl implements AuthRepository {
 
     // Verify role belongs to mobile ChoirMember scope per Rule 04
     if (response.user.roleName != 'ChoirMember') {
-      throw const AppException(
+      throw AppException(
         code: 'FORBIDDEN_ROLE',
-        message: 'Tài khoản không thuộc quyền Ca viên Harmonia Mobile.',
+        message:
+            'Tài khoản của bạn có vai trò ${response.user.roleName}. Harmonia Mobile chỉ dành cho ca viên (ChoirMember).',
       );
     }
 
@@ -61,10 +79,86 @@ class AuthRepositoryImpl implements AuthRepository {
       id: response.user.id,
       email: response.user.email,
       roleName: response.user.roleName,
+      fullName: response.user.fullName,
     );
 
     sessionManager.markAuthenticated(role: response.user.roleName);
     return response.user;
+  }
+
+  @override
+  Future<UserDto> loginWithGoogle({
+    required String idToken,
+    String? deviceId,
+    DevicePlatform? platform,
+  }) async {
+    final request = GoogleLoginRequest(
+      idToken: idToken,
+      deviceId: deviceId,
+      platform: platform?.value,
+    );
+
+    final response = await apiService.loginWithGoogle(request);
+
+    if (response.user.roleName != 'ChoirMember') {
+      throw AppException(
+        code: 'FORBIDDEN_ROLE',
+        message:
+            'Tài khoản của bạn có vai trò ${response.user.roleName}. Harmonia Mobile chỉ dành cho ca viên (ChoirMember).',
+      );
+    }
+
+    await storage.saveTokens(
+      accessToken: response.accessToken,
+      refreshToken: response.refreshToken,
+      expiresAt: response.accessTokenExpiresAt,
+    );
+
+    await storage.saveUser(
+      id: response.user.id,
+      email: response.user.email,
+      roleName: response.user.roleName,
+      fullName: response.user.fullName,
+    );
+
+    sessionManager.markAuthenticated(role: response.user.roleName);
+    return response.user;
+  }
+
+  @override
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final request = ChangePasswordRequest(
+      currentPassword: currentPassword,
+      newPassword: newPassword,
+    );
+    await apiService.changePassword(request);
+  }
+
+  @override
+  Future<void> forgotPassword({
+    required String email,
+    DevicePlatform? platform,
+  }) async {
+    final request = ForgotPasswordRequest(
+      email: email,
+      platform: platform?.value,
+    );
+    await apiService.forgotPassword(request);
+  }
+
+  @override
+  Future<void> resetPassword({
+    required String token,
+    required String newPassword,
+  }) async {
+    final request = ResetPasswordRequest(
+      token: token,
+      newPassword: newPassword,
+    );
+    await apiService.resetPassword(request);
   }
 
   @override
@@ -103,14 +197,54 @@ class MockAuthRepositoryImpl implements AuthRepository {
     String? deviceId,
     DevicePlatform? platform,
   }) async {
-    // In demo mode, mark authenticated in memory without storing fake tokens to secure storage
     await Future.delayed(const Duration(milliseconds: 300));
     sessionManager.markAuthenticated(role: 'ChoirMember');
     return const UserDto(
       id: 'mock-choir-member',
       email: 'maria.mai@harmonia.org',
+      fullName: 'Maria Nguyễn Thị Mai',
       roleName: 'ChoirMember',
     );
+  }
+
+  @override
+  Future<UserDto> loginWithGoogle({
+    required String idToken,
+    String? deviceId,
+    DevicePlatform? platform,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    sessionManager.markAuthenticated(role: 'ChoirMember');
+    return const UserDto(
+      id: 'mock-choir-member',
+      email: 'maria.mai@gmail.com',
+      fullName: 'Maria Nguyễn Thị Mai',
+      roleName: 'ChoirMember',
+    );
+  }
+
+  @override
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+  }
+
+  @override
+  Future<void> forgotPassword({
+    required String email,
+    DevicePlatform? platform,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+  }
+
+  @override
+  Future<void> resetPassword({
+    required String token,
+    required String newPassword,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 300));
   }
 
   @override

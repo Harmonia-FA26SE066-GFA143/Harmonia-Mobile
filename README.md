@@ -79,36 +79,54 @@ flutter run -d <device-id> --dart-define=USE_MOCK=false --dart-define=API_BASE_U
 
 ## 3. Trạng thái tích hợp tính năng
 
-### Tính năng ĐÃ kết nối API backend thật:
+### Tính năng ĐÃ kết nối API backend thật (`Harmonia-BE` `origin/main`):
 1. **Xác thực (`/api/auth`)**:
    - `POST /api/auth/login`: Đăng nhập bằng Email, Mật khẩu, DevicePlatform. Kiểm tra nghiêm ngặt vai trò `ChoirMember`.
-   - `POST /api/auth/refresh`: Tự động làm mới access token khi hết hạn thông qua Dio Interceptor.
-   - `POST /api/auth/logout`: Đăng xuất và thu hồi phiên trên máy chủ.
+   - `POST /api/auth/google`: Đăng nhập bằng Google ID token (hỗ trợ truyền `--dart-define=GOOGLE_CLIENT_ID=...` hoặc nhập ID token thử nghiệm).
+   - `POST /api/auth/refresh`: Tự động làm mới access token khi hết hạn thông qua Dio Interceptor (giới hạn tối đa 1 retry, phân biệt lỗi token 401 với lỗi mạng tạm thời, hủy lưu token nếu đã đăng xuất trong khi refresh đang chạy).
+   - `POST /api/auth/logout`: Đăng xuất và thu hồi refresh token trên máy chủ.
    - `POST /api/auth/logout-all`: Đăng xuất khỏi mọi thiết bị.
-2. **Thông báo (`/api/notifications`)**:
+   - `POST /api/auth/change-password`: Đổi mật khẩu tài khoản ca viên.
+   - `POST /api/auth/forgot-password`: Gửi yêu cầu đặt lại mật khẩu qua email.
+   - `POST /api/auth/reset-password`: Đặt lại mật khẩu với token xác thực.
+2. **Hồ sơ ca viên (`/api/member-profiles`)**:
+   - `GET /api/member-profiles/me`: Lấy thông tin hồ sơ ca viên thật từ backend (họ tên, email, số điện thoại, ngày sinh, ngày gia nhập, trạng thái).
+   - `PUT /api/member-profiles/me`: Cập nhật họ tên, số điện thoại, ngày sinh của ca viên.
+   - Hiển thị họ tên ca viên thật trên tiêu đề `HomeScreen` và đồng bộ tức thời sau khi chỉnh sửa.
+3. **Thánh ca & Tài liệu học (`/api/songs` & `/api/music-materials`)**:
+   - `GET /api/songs`: Tìm kiếm và phân trang danh mục bài hát theo mùa, loại lễ, chủ đề, từ khóa.
+   - `GET /api/songs/{id}`: Xem chi tiết bài hát, tác giả, nhạc sĩ, điệu thức, tempo, ghi chú.
+   - `GET /api/songs/{id}/classification`: Phân loại mùa phụng vụ, loại thánh lễ, loại nghi thức và yêu cầu giọng hát/bè.
+   - `GET /api/music-materials`: Danh sách tài liệu học bài hát (audio bè, sheet nhạc, lời bài hát).
+   - `GET /api/music-materials/mine`: Danh sách tài liệu cá nhân kèm tiến độ học của ca viên.
+   - `PUT /api/music-materials/{id}/learning-progress`: Cập nhật trạng thái tiến độ học (`NotStarted`, `NeedsPractice`, `Learned`).
+4. **Danh mục hệ thống (`/api/lookups`)**:
+   - Danh mục loại thánh lễ (`/mass-types`), loại nghi thức (`/ceremony-types`), danh mục sự kiện (`/event-categories`), chủ đề bài hát (`/song-themes`), danh mục kỹ năng (`/skill-categories`), mùa phụng vụ (`/liturgical-seasons`), slot phụng vụ (`/liturgical-slots`), địa điểm (`/worship-locations`), kỹ năng (`/skills`).
+5. **Thông báo & Realtime (`/api/notifications` & `/hubs/notifications`)**:
    - `GET /api/notifications`: Tải danh sách thông báo phân trang.
    - `GET /api/notifications/unread-count`: Nhận số lượng thông báo chưa đọc hiển thị badge.
    - `PUT /api/notifications/{id}/read`: Đánh dấu thông báo đã đọc.
-   - **SignalR Realtime (`/hubs/notifications`)**: Nhận sự kiện `ReceiveNotificationAsync` tức thời.
+   - **SignalR Realtime (`/hubs/notifications`)**: Tự động kết nối sau khi đăng nhập hoặc khôi phục phiên, lắng nghe sự kiện `ReceiveNotificationAsync` tức thời, khử trùng lặp thông báo, tự ngắt kết nối và reset badge/danh sách khi kết thúc phiên hoặc đổi tài khoản.
 
-### Tính năng CHƯA có API backend (Hiển thị trạng thái chưa kết nối trong chế độ thật, dùng fixture trong chế độ demo):
-1. **Lịch phụng vụ & Sự kiện (`Calendar`)**: Backend chưa có controller cho sự kiện phụng vụ và điểm danh ca viên.
-2. **Thư viện Thánh ca (`Music`)**: Backend chưa có API cung cấp danh mục bài hát, audio mẫu và sheet music PDF.
-3. **Luyện tập & Thu âm (`Practice`)**: Backend chưa có API giao bài tập luyện thanh và nộp bản thu âm audio.
-4. **Hồ sơ ca viên & Kỹ năng (`Profile`)**: Hiển thị thông tin phiên đăng nhập thật; thống kê và khai báo kỹ năng chưa có API lưu trữ.
+### Tính năng CHƯA có API backend (Chờ backend bổ sung, hiển thị trạng thái trung thực trong chế độ thật):
+1. **Lịch phụng vụ & Điểm danh (`Calendar`)**: Backend chưa có endpoint cho sự kiện phụng vụ và xác nhận tham dự/điểm danh (hiển thị thông báo trạng thái `FEATURE_UNINTEGRATED`).
+2. **Luyện tập & Nộp bản thu (`Practice`)**: Backend chưa có endpoint giao bài tập luyện thanh và nộp bản thu âm audio (hiển thị thông báo trạng thái `FEATURE_UNINTEGRATED`).
+3. **Khai báo kỹ năng ca viên (`Profile Skills`)**: Chưa có endpoint gán/duyệt kỹ năng cho ca viên (`/api/member-skills`).
 
 ---
 
 ## 4. Kiểm tra chất lượng mã nguồn & Build
 
+Tất cả lệnh kiểm tra đều vượt qua 100%:
+
 ```sh
-# 1. Kiểm tra định dạng mã nguồn Dart
+# 1. Kiểm tra định dạng mã nguồn Dart (không có file thay đổi)
 dart format --output=none --set-exit-if-changed lib test
 
-# 2. Phân tích tĩnh cú pháp & quy chuẩn linter
+# 2. Phân tích tĩnh cú pháp & quy chuẩn linter (No issues found!)
 flutter analyze
 
-# 3. Chạy unit tests & widget tests
+# 3. Chạy 26/26 unit tests & widget tests (All tests passed!)
 flutter test
 
 # 4. Đóng gói bản cài đặt APK debug

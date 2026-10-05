@@ -1,11 +1,6 @@
-enum LearningStatus {
-  notStarted('Chưa học'),
-  needsPractice('Cần tập thêm'),
-  learned('Đã thuộc');
+import 'music_dto.dart';
 
-  final String label;
-  const LearningStatus(this.label);
-}
+export 'music_dto.dart';
 
 class SongListItem {
   final String id;
@@ -18,6 +13,8 @@ class SongListItem {
   final String? audioSampleUrl;
   final String lyrics;
   final LearningStatus learningStatus;
+  final SongClassificationDto? classification;
+  final List<MusicMaterialDto> materials;
 
   const SongListItem({
     required this.id,
@@ -30,9 +27,15 @@ class SongListItem {
     this.audioSampleUrl,
     required this.lyrics,
     required this.learningStatus,
+    this.classification,
+    this.materials = const [],
   });
 
-  SongListItem copyWith({LearningStatus? learningStatus}) {
+  SongListItem copyWith({
+    LearningStatus? learningStatus,
+    SongClassificationDto? classification,
+    List<MusicMaterialDto>? materials,
+  }) {
     return SongListItem(
       id: id,
       slotName: slotName,
@@ -44,6 +47,8 @@ class SongListItem {
       audioSampleUrl: audioSampleUrl,
       lyrics: lyrics,
       learningStatus: learningStatus ?? this.learningStatus,
+      classification: classification ?? this.classification,
+      materials: materials ?? this.materials,
     );
   }
 }

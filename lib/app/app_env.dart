@@ -35,4 +35,10 @@ class AppEnv {
 
   static const Duration connectTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 15);
+
+  /// Google OAuth Web/Android Client ID for Google Sign-In.
+  static const String googleClientId = String.fromEnvironment(
+    'GOOGLE_CLIENT_ID',
+    defaultValue: '',
+  );
 }

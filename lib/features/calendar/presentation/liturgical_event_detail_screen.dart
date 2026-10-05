@@ -20,10 +20,13 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
     final calendarState = ref.watch(calendarNotifierProvider);
     final musicRepo = ref.watch(musicRepositoryProvider);
 
-    final event = calendarState.value?.firstWhere(
-      (e) => e.id == eventId,
-      orElse: () => calendarState.value!.first,
-    );
+    final events = calendarState.value ?? [];
+    final event = events.isEmpty
+        ? null
+        : events.cast<LiturgicalEvent?>().firstWhere(
+            (e) => e?.id == eventId,
+            orElse: () => null,
+          );
 
     if (event == null) {
       return Scaffold(

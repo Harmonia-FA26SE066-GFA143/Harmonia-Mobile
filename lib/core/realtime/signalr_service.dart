@@ -16,46 +16,69 @@ class SignalRService {
 
   SignalRService(this._storage);
 
+  bool _isConnecting = false;
+
+  bool get isConnected => _hubConnection?.state == HubConnectionState.Connected;
+
   Future<void> connect() async {
-    final token = await _storage.getAccessToken();
-    if (token == null || token.isEmpty) return;
+    if (_isConnecting) return;
 
     if (_hubConnection != null &&
-        _hubConnection!.state == HubConnectionState.Connected) {
+        (_hubConnection!.state == HubConnectionState.Connected ||
+            _hubConnection!.state == HubConnectionState.Connecting ||
+            _hubConnection!.state == HubConnectionState.Reconnecting)) {
       return;
     }
 
-    _hubConnection = HubConnectionBuilder()
-        .withUrl(
-          AppEnv.notificationHubUrl,
-          options: HttpConnectionOptions(
-            accessTokenFactory: () async =>
-                await _storage.getAccessToken() ?? '',
-          ),
-        )
-        .withAutomaticReconnect()
-        .build();
+    final token = await _storage.getAccessToken();
+    if (token == null || token.isEmpty) return;
 
-    // Event name must match exact server contract name (including Async suffix per Rule 06)
-    _hubConnection!.on('ReceiveNotificationAsync', (arguments) {
-      if (arguments != null && arguments.isNotEmpty) {
-        final data = arguments.first;
-        if (data is Map<String, dynamic>) {
-          _notificationStreamController.add(data);
-        }
-      }
-    });
+    _isConnecting = true;
 
     try {
+      // Disconnect previous connection if in a weird state
+      if (_hubConnection != null) {
+        try {
+          await _hubConnection!.stop();
+        } catch (_) {}
+        _hubConnection = null;
+      }
+
+      _hubConnection = HubConnectionBuilder()
+          .withUrl(
+            AppEnv.notificationHubUrl,
+            options: HttpConnectionOptions(
+              accessTokenFactory: () async =>
+                  await _storage.getAccessToken() ?? '',
+            ),
+          )
+          .withAutomaticReconnect(retryDelays: [0, 2000, 5000, 10000, 30000])
+          .build();
+
+      // Event name must match exact server contract name (including Async suffix per Rule 06)
+      _hubConnection!.on('ReceiveNotificationAsync', (arguments) {
+        if (arguments != null && arguments.isNotEmpty) {
+          final data = arguments.first;
+          if (data is Map<String, dynamic>) {
+            _notificationStreamController.add(data);
+          }
+        }
+      });
+
       await _hubConnection!.start();
     } catch (_) {
-      // Reconnect will be handled automatically or on demand
+      // Handled gracefully: Automatic reconnect or reconnect on next session action
+    } finally {
+      _isConnecting = false;
     }
   }
 
   Future<void> stop() async {
+    _isConnecting = false;
     if (_hubConnection != null) {
-      await _hubConnection!.stop();
+      try {
+        await _hubConnection!.stop();
+      } catch (_) {}
       _hubConnection = null;
     }
   }

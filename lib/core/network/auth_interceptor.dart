@@ -47,30 +47,48 @@ class AuthInterceptor extends Interceptor {
     final statusCode = err.response?.statusCode;
     final path = err.requestOptions.path;
 
-    // Do not attempt refresh on login or refresh endpoint errors
-    if (statusCode == 401 &&
-        !path.contains(ApiEndpoints.login) &&
-        !path.contains(ApiEndpoints.refresh)) {
+    // Check retry count: strictly maximum 1 retry per Rule 04
+    final retryCount = err.requestOptions.extra['retryCount'] as int? ?? 0;
+    if (retryCount >= 1) {
+      handler.next(err);
+      return;
+    }
+
+    // Do not attempt refresh on auth entry endpoints or already refreshing
+    final isAuthEntryEndpoint =
+        path.contains(ApiEndpoints.login) ||
+        path.contains(ApiEndpoints.refresh) ||
+        path.contains(ApiEndpoints.google);
+
+    if (statusCode == 401 && !isAuthEntryEndpoint) {
+      final requestEpoch = sessionManager.sessionEpoch;
       try {
-        final newToken = await _performRefreshToken();
+        final newToken = await _performRefreshToken(requestEpoch);
+
+        // Verify session is still valid and epoch has not changed (e.g. user logged out)
+        if (sessionManager.sessionEpoch != requestEpoch ||
+            !sessionManager.isAuthenticated) {
+          handler.next(err);
+          return;
+        }
+
         if (newToken != null && newToken.isNotEmpty) {
           // Retry the failed request with the new access token
           final retryOptions = err.requestOptions;
           retryOptions.headers['Authorization'] = 'Bearer $newToken';
+          retryOptions.extra['retryCount'] = retryCount + 1;
 
           final response = await dio.fetch(retryOptions);
           return handler.resolve(response);
-        } else {
-          await sessionManager.endSession();
         }
       } catch (_) {
-        await sessionManager.endSession();
+        // Handled within _performRefreshToken
       }
     }
     handler.next(err);
   }
 
-  Future<String?> _performRefreshToken() async {
+  Future<String?> _performRefreshToken(int currentEpoch) async {
     // If a refresh is already in progress, wait for it
     if (_refreshCompleter != null) {
       return _refreshCompleter!.future;
@@ -82,6 +100,7 @@ class AuthInterceptor extends Interceptor {
       final currentRefreshToken = await storage.getRefreshToken();
       if (currentRefreshToken == null || currentRefreshToken.isEmpty) {
         _refreshCompleter!.complete(null);
+        await sessionManager.endSession();
         return null;
       }
 
@@ -106,6 +125,13 @@ class AuthInterceptor extends Interceptor {
         final newRefreshToken = data['refreshToken'] as String;
         final expiresAt = data['accessTokenExpiresAt']?.toString() ?? '';
 
+        // Discard response if session changed or user logged out while refresh was in flight
+        if (sessionManager.sessionEpoch != currentEpoch ||
+            !sessionManager.isAuthenticated) {
+          _refreshCompleter!.complete(null);
+          return null;
+        }
+
         await storage.saveTokens(
           accessToken: newAccessToken,
           refreshToken: newRefreshToken,
@@ -115,11 +141,29 @@ class AuthInterceptor extends Interceptor {
         _refreshCompleter!.complete(newAccessToken);
         return newAccessToken;
       } else {
+        // Non-200 with data implies invalid refresh token
         _refreshCompleter!.complete(null);
+        await sessionManager.endSession();
         return null;
       }
+    } on DioException catch (dioErr) {
+      _refreshCompleter!.complete(null);
+
+      // Distinguish transient network error from invalid refresh token per Rule 04
+      final isNetworkError =
+          dioErr.type == DioExceptionType.connectionTimeout ||
+          dioErr.type == DioExceptionType.sendTimeout ||
+          dioErr.type == DioExceptionType.receiveTimeout ||
+          dioErr.type == DioExceptionType.connectionError;
+
+      if (!isNetworkError) {
+        // Server rejected refresh token (400, 401, etc.) -> end session
+        await sessionManager.endSession();
+      }
+      return null;
     } catch (_) {
       _refreshCompleter!.complete(null);
+      await sessionManager.endSession();
       return null;
     } finally {
       _refreshCompleter = null;

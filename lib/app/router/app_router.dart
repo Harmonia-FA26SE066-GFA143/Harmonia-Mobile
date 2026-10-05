@@ -32,10 +32,20 @@ final _shellNavigatorProfile = GlobalKey<NavigatorState>(
   debugLabel: 'shellProfile',
 );
 
+bool _isValidInternalRoute(String? path) {
+  if (path == null || path.isEmpty) return false;
+  // Must be an internal relative path starting with '/' and not '//'
+  if (!path.startsWith('/') || path.startsWith('//')) return false;
+  final uri = Uri.tryParse(path);
+  final location = uri?.path ?? path;
+  if (location == '/login' || location == '/splash') return false;
+  return true;
+}
+
 final appRouterProvider = Provider<GoRouter>((ref) {
   final sessionManager = ref.read(sessionManagerProvider);
 
-  return GoRouter(
+  final router = GoRouter(
     navigatorKey: _rootNavigatorKey,
     refreshListenable: sessionManager,
     initialLocation: AppEnv.useMock ? '/home' : '/splash',
@@ -52,29 +62,39 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // 1. Session is still initializing / restoring
       if (status == AuthStatus.initial) {
         if (!isSplash) {
-          final target = Uri.encodeComponent(state.uri.toString());
-          return '/splash?from=$target';
+          final target = state.uri.toString();
+          if (_isValidInternalRoute(target)) {
+            return '/splash?from=${Uri.encodeComponent(target)}';
+          }
+          return '/splash';
         }
         return null;
       }
 
-      // 2. Unauthenticated: redirect protected routes to /login
+      // 2. Unauthenticated: redirect protected routes to /login, preserving deep link
       if (status == AuthStatus.unauthenticated) {
         if (!isLoggingIn) {
+          final existingFrom = state.uri.queryParameters['from'];
+          if (existingFrom != null && _isValidInternalRoute(existingFrom)) {
+            return '/login?from=${Uri.encodeComponent(existingFrom)}';
+          }
+          final target = state.uri.toString();
+          if (_isValidInternalRoute(target)) {
+            return '/login?from=${Uri.encodeComponent(target)}';
+          }
           return '/login';
         }
         return null;
       }
 
-      // 3. Authenticated: prevent lingering on /login or /splash
+      // 3. Authenticated: prevent lingering on /login or /splash and return to deep link
       if (status == AuthStatus.authenticated) {
         if (isLoggingIn || isSplash) {
+          // Note: state.uri.queryParameters already decodes the parameter once.
+          // Do NOT call Uri.decodeComponent a second time per Rule 04 / Prompt instructions.
           final from = state.uri.queryParameters['from'];
-          if (from != null &&
-              from.isNotEmpty &&
-              from != '/login' &&
-              from != '/splash') {
-            return Uri.decodeComponent(from);
+          if (_isValidInternalRoute(from)) {
+            return from!;
           }
           return '/home';
         }
@@ -82,6 +102,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       return null;
     },
+
     routes: [
       GoRoute(
         path: '/splash',
@@ -167,4 +188,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
     ],
   );
+  ref.onDispose(() => router.dispose());
+  return router;
 });

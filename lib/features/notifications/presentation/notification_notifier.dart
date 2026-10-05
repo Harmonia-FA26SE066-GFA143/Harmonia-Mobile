@@ -217,6 +217,17 @@ class NotificationNotifier extends Notifier<NotificationState> {
       );
     }
   }
+
+  void reset() {
+    _realtimeSub?.cancel();
+    _realtimeSub = null;
+    state = const NotificationState();
+  }
+
+  void reconnectRealtime() {
+    _realtimeSub?.cancel();
+    _listenRealtime();
+  }
 }
 
 final notificationNotifierProvider =

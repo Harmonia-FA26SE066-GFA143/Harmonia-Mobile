@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../auth/presentation/auth_notifier.dart';
-import '../data/profile_models.dart';
 import '../data/profile_repository.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -16,11 +15,27 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  void _showDeclareSkillDialog(BuildContext context, ProfileRepository repo) {
-    final nameController = TextEditingController();
-    final noteController = TextEditingController();
-    String selectedCategory = 'Kỹ năng thanh nhạc';
-    String selectedLevel = 'Trung cấp';
+  Key _profileRefreshKey = UniqueKey();
+
+  void _refreshProfile() {
+    ref.invalidate(currentMemberProfileProvider);
+    setState(() {
+      _profileRefreshKey = UniqueKey();
+    });
+  }
+
+  void _showEditProfileDialog(
+    BuildContext context,
+    ProfileRepository repo,
+    MemberProfileDto profile,
+  ) {
+    final nameController = TextEditingController(text: profile.fullName);
+    final phoneController = TextEditingController(text: profile.phone ?? '');
+    final dobController = TextEditingController(
+      text: profile.dateOfBirth ?? '',
+    );
+    bool isSaving = false;
+    String? errorMessage;
 
     showModalBottomSheet(
       context: context,
@@ -30,7 +45,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           builder: (context, setModalState) {
             return Padding(
               padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
                 left: 20,
                 right: 20,
                 top: 24,
@@ -40,126 +55,280 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      'Khai báo kỹ năng mới',
-                      style: AppTypography.titleLarge,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Cập nhật hồ sơ ca viên',
+                          style: AppTypography.titleLarge,
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Thông tin sẽ được gửi đến Ca trưởng để đánh giá và phê duyệt.',
-                      style: AppTypography.bodySmall,
-                    ),
-                    const SizedBox(height: 18),
-
-                    // Tên kỹ năng
-                    Text('Tên kỹ năng', style: AppTypography.labelLarge),
+                    const SizedBox(height: 16),
+                    Text('Họ và tên', style: AppTypography.labelLarge),
                     const SizedBox(height: 6),
                     TextField(
                       controller: nameController,
                       decoration: const InputDecoration(
-                        hintText: 'VD: Thị tấu, Đệm đàn Organ, Hát đơn ca...',
+                        hintText: 'Nhập họ và tên...',
                       ),
                     ),
                     const SizedBox(height: 14),
-
-                    // Nhóm kỹ năng
-                    Text('Nhóm kỹ năng', style: AppTypography.labelLarge),
+                    Text('Số điện thoại', style: AppTypography.labelLarge),
                     const SizedBox(height: 6),
-                    DropdownButtonFormField<String>(
-                      initialValue: selectedCategory,
-                      decoration: const InputDecoration(),
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'Kỹ năng thanh nhạc',
-                          child: Text('Kỹ năng thanh nhạc'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'Kỹ năng nhạc cụ',
-                          child: Text('Kỹ năng nhạc cụ'),
-                        ),
-                      ],
-                      onChanged: (val) {
-                        if (val != null) {
-                          setModalState(() => selectedCategory = val);
-                        }
-                      },
+                    TextField(
+                      controller: phoneController,
+                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(
+                        hintText: 'VD: 0912345678',
+                      ),
                     ),
                     const SizedBox(height: 14),
-
-                    // Trình độ tự đánh giá
-                    Text(
-                      'Trình độ tự đánh giá',
-                      style: AppTypography.labelLarge,
-                    ),
+                    Text('Ngày sinh', style: AppTypography.labelLarge),
                     const SizedBox(height: 6),
-                    DropdownButtonFormField<String>(
-                      initialValue: selectedLevel,
-                      decoration: const InputDecoration(),
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'Sơ cấp',
-                          child: Text('Sơ cấp'),
+                    TextField(
+                      controller: dobController,
+                      keyboardType: TextInputType.datetime,
+                      decoration: const InputDecoration(
+                        hintText: 'YYYY-MM-DD (VD: 1995-05-15)',
+                        prefixIcon: Icon(Icons.calendar_today_outlined),
+                      ),
+                    ),
+                    if (errorMessage != null) ...[
+                      const SizedBox(height: 10),
+                      Text(
+                        errorMessage!,
+                        style: AppTypography.bodySmall.copyWith(
+                          color: AppColors.statusDanger,
                         ),
-                        DropdownMenuItem(
-                          value: 'Trung cấp',
-                          child: Text('Trung cấp'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'Nâng cao',
-                          child: Text('Nâng cao'),
+                      ),
+                    ],
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: isSaving
+                          ? null
+                          : () async {
+                              final name = nameController.text.trim();
+                              if (name.isEmpty) {
+                                setModalState(() {
+                                  errorMessage =
+                                      'Họ và tên không được để trống.';
+                                });
+                                return;
+                              }
+
+                              setModalState(() {
+                                isSaving = true;
+                                errorMessage = null;
+                              });
+
+                              try {
+                                final nav = Navigator.of(context);
+                                final messenger = ScaffoldMessenger.of(
+                                  this.context,
+                                );
+                                final phone = phoneController.text.trim();
+                                final dob = dobController.text.trim();
+                                await repo.updateProfile(
+                                  UpdateMyMemberProfileRequest(
+                                    fullName: name,
+                                    phone: phone.isNotEmpty ? phone : null,
+                                    dateOfBirth: dob.isNotEmpty ? dob : null,
+                                  ),
+                                );
+                                if (mounted) {
+                                  nav.pop();
+                                  _refreshProfile();
+                                  messenger.showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Đã cập nhật hồ sơ thành công!',
+                                      ),
+                                      backgroundColor: AppColors.statusSuccess,
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                setModalState(() {
+                                  isSaving = false;
+                                  errorMessage = 'Không thể cập nhật hồ sơ. Vui lòng kiểm tra lại.';
+                                });
+                              }
+                            },
+                      child: isSaving
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.onPrimary,
+                              ),
+                            )
+                          : const Text('Lưu thay đổi'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showChangePasswordDialog(BuildContext context) {
+    final currentPwController = TextEditingController();
+    final newPwController = TextEditingController();
+    final confirmPwController = TextEditingController();
+    bool isSaving = false;
+    String? errorMessage;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                left: 20,
+                right: 20,
+                top: 24,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Đổi mật khẩu', style: AppTypography.titleLarge),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded),
+                          onPressed: () => Navigator.of(context).pop(),
                         ),
                       ],
-                      onChanged: (val) {
-                        if (val != null) {
-                          setModalState(() => selectedLevel = val);
-                        }
-                      },
+                    ),
+                    const SizedBox(height: 16),
+                    Text('Mật khẩu hiện tại', style: AppTypography.labelLarge),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: currentPwController,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        hintText: 'Nhập mật khẩu đang dùng',
+                      ),
                     ),
                     const SizedBox(height: 14),
-
-                    // Ghi chú
+                    Text('Mật khẩu mới', style: AppTypography.labelLarge),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: newPwController,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        hintText: 'Tối thiểu 6 ký tự',
+                      ),
+                    ),
+                    const SizedBox(height: 14),
                     Text(
-                      'Ghi chú / Chứng chỉ liên quan',
+                      'Xác nhận mật khẩu mới',
                       style: AppTypography.labelLarge,
                     ),
                     const SizedBox(height: 6),
                     TextField(
-                      controller: noteController,
-                      maxLines: 2,
+                      controller: confirmPwController,
+                      obscureText: true,
                       decoration: const InputDecoration(
-                        hintText: 'Nêu quá trình học tập hoặc kinh nghiệm...',
+                        hintText: 'Nhập lại mật khẩu mới',
                       ),
                     ),
-                    const SizedBox(height: 20),
-
-                    // Submit button
-                    ElevatedButton(
-                      onPressed: () async {
-                        if (nameController.text.trim().isEmpty) return;
-
-                        await repo.declareNewSkill(
-                          name: nameController.text.trim(),
-                          categoryName: selectedCategory,
-                          level: selectedLevel,
-                          note: noteController.text.trim(),
-                        );
-
-                        if (context.mounted) {
-                          Navigator.of(context).pop();
-                          setState(() {});
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Đã gửi khai báo kỹ năng đến Ca trưởng.',
-                              ),
-                              backgroundColor: AppColors.statusSuccess,
-                            ),
-                          );
-                        }
-                      },
-                      child: const Text('Gửi khai báo'),
-                    ),
+                    if (errorMessage != null) ...[
+                      const SizedBox(height: 10),
+                      Text(
+                        errorMessage!,
+                        style: AppTypography.bodySmall.copyWith(
+                          color: AppColors.statusDanger,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: isSaving
+                          ? null
+                          : () async {
+                              final currentPw = currentPwController.text;
+                              final newPw = newPwController.text;
+                              final confirmPw = confirmPwController.text;
+
+                              if (currentPw.isEmpty || newPw.isEmpty) {
+                                setModalState(() {
+                                  errorMessage =
+                                      'Vui lòng nhập đầy đủ thông tin.';
+                                });
+                                return;
+                              }
+                              if (newPw != confirmPw) {
+                                setModalState(() {
+                                  errorMessage =
+                                      'Xác nhận mật khẩu mới không khớp.';
+                                });
+                                return;
+                              }
+
+                              setModalState(() {
+                                isSaving = true;
+                                errorMessage = null;
+                              });
+
+                              final nav = Navigator.of(context);
+                              final messenger = ScaffoldMessenger.of(
+                                this.context,
+                              );
+                              final ok = await ref
+                                  .read(authNotifierProvider.notifier)
+                                  .changePassword(
+                                    currentPassword: currentPw,
+                                    newPassword: newPw,
+                                  );
+
+                              if (ok && mounted) {
+                                nav.pop();
+                                messenger.showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Đã đổi mật khẩu thành công!',
+                                    ),
+                                    backgroundColor: AppColors.statusSuccess,
+                                  ),
+                                );
+                              } else {
+                                setModalState(() {
+                                  isSaving = false;
+                                  errorMessage =
+                                      ref
+                                          .read(authNotifierProvider)
+                                          .errorMessage ??
+                                      'Không thể đổi mật khẩu. Vui lòng kiểm tra lại.';
+                                });
+                              }
+                            },
+                      child: isSaving
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.onPrimary,
+                              ),
+                            )
+                          : const Text('Đổi mật khẩu'),
+                    ),
                   ],
                 ),
               ),
@@ -175,10 +344,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Đăng xuất tài khoản', style: AppTypography.titleLarge),
-          content: Text(
-            'Bạn có chắc chắn muốn đăng xuất khỏi ứng dụng Harmonia Mobile?',
-            style: AppTypography.bodyMedium,
+          title: const Text('Đăng xuất'),
+          content: const Text(
+            'Bạn có chắc chắn muốn kết thúc phiên đăng nhập trên thiết bị này?',
           ),
           actions: [
             TextButton(
@@ -187,14 +355,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.error,
-                minimumSize: const Size(110, 44),
+                backgroundColor: AppColors.statusDanger,
+                foregroundColor: Colors.white,
               ),
               onPressed: () async {
-                Navigator.of(context).pop();
+                final nav = Navigator.of(context);
+                final router = GoRouter.of(this.context);
+                nav.pop();
                 await ref.read(authNotifierProvider.notifier).logout();
-                if (context.mounted) {
-                  context.go('/login');
+                if (mounted) {
+                  router.go('/login');
                 }
               },
               child: const Text('Đăng xuất'),
@@ -212,18 +382,56 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('Cá nhân & Kỹ năng', style: AppTypography.headlineSmall),
+        title: Text('Hồ sơ cá nhân', style: AppTypography.headlineSmall),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            tooltip: 'Làm mới',
+            onPressed: _refreshProfile,
+          ),
+        ],
       ),
       body: SafeArea(
-        child: FutureBuilder<MemberProfile>(
+        child: FutureBuilder<MemberProfileDto>(
+          key: _profileRefreshKey,
           future: repo.getProfile(),
           builder: (context, profileSnap) {
-            final profile = profileSnap.data;
-            if (profile == null) {
+            if (profileSnap.connectionState == ConnectionState.waiting) {
               return const Center(
                 child: CircularProgressIndicator(color: AppColors.primary),
               );
             }
+
+            if (profileSnap.hasError || !profileSnap.hasData) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.error_outline_rounded,
+                        size: 48,
+                        color: AppColors.statusDanger,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Không thể tải dữ liệu hồ sơ từ máy chủ.',
+                        style: AppTypography.bodyMedium,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _refreshProfile,
+                        child: const Text('Thử lại'),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            final profile = profileSnap.data!;
 
             return SingleChildScrollView(
               padding: const EdgeInsets.all(16),
@@ -249,9 +457,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             ),
                             child: Center(
                               child: Text(
-                                profile.saintName.isNotEmpty
-                                    ? profile.saintName[0]
-                                    : 'M',
+                                profile.fullName.isNotEmpty
+                                    ? profile.fullName[0].toUpperCase()
+                                    : 'C',
                                 style: AppTypography.headlineMedium.copyWith(
                                   color: AppColors.primary,
                                   fontWeight: FontWeight.bold,
@@ -271,17 +479,31 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 2),
-                                Text(
-                                  profile.voicePart,
-                                  style: AppTypography.bodySmall.copyWith(
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.w600,
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary.withValues(
+                                      alpha: 0.1,
+                                    ),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    'Ca viên • ${profile.status.label}',
+                                    style: AppTypography.labelSmall.copyWith(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
                                   profile.email,
-                                  style: AppTypography.labelSmall,
+                                  style: AppTypography.labelSmall.copyWith(
+                                    color: AppColors.muted,
+                                  ),
                                 ),
                               ],
                             ),
@@ -290,170 +512,150 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 16),
 
-                  // Stats row
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(14),
-                            child: Column(
-                              children: [
-                                Text(
-                                  '${profile.attendancePercentage}%',
-                                  style: AppTypography.headlineMedium.copyWith(
-                                    color: AppColors.statusSuccess,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'Tỉ lệ tham gia',
-                                  style: AppTypography.labelSmall,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(14),
-                            child: Column(
-                              children: [
-                                Text(
-                                  '${profile.totalServicesCount}',
-                                  style: AppTypography.headlineMedium.copyWith(
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'Buổi phục vụ',
-                                  style: AppTypography.labelSmall,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Section Skills
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Kỹ năng của tôi',
-                        style: AppTypography.titleLarge.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      TextButton.icon(
-                        onPressed: () => _showDeclareSkillDialog(context, repo),
-                        icon: const Icon(Icons.add_rounded, size: 18),
-                        label: const Text('Khai báo thêm'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-
-                  FutureBuilder<List<MemberSkill>>(
-                    future: repo.getSkills(),
-                    builder: (context, skillsSnap) {
-                      final skills = skillsSnap.data ?? [];
-                      if (skills.isEmpty) {
-                        return const Center(
-                          child: Text('Chưa khai báo kỹ năng nào'),
-                        );
-                      }
-
-                      return Column(
-                        children: skills.map((skill) {
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            child: ListTile(
-                              leading: Container(
-                                width: 36,
-                                height: 36,
-                                decoration: BoxDecoration(
-                                  color: AppColors.secondary.withValues(
-                                    alpha: 0.12,
-                                  ),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.star_rounded,
-                                  color: AppColors.secondary,
-                                  size: 20,
-                                ),
-                              ),
-                              title: Text(
-                                skill.name,
+                  // Detail Information Card (Real data from /member-profiles/me)
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Thông tin cá nhân',
                                 style: AppTypography.titleMedium.copyWith(
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              subtitle: Text(
-                                '${skill.categoryName} • ${skill.level}',
-                                style: AppTypography.bodySmall,
+                              TextButton.icon(
+                                onPressed: () => _showEditProfileDialog(
+                                  context,
+                                  repo,
+                                  profile,
+                                ),
+                                icon: const Icon(Icons.edit_outlined, size: 16),
+                                label: const Text('Chỉnh sửa'),
                               ),
-                              trailing: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 3,
-                                ),
-                                decoration: BoxDecoration(
-                                  color:
-                                      skill.status ==
-                                          SkillApprovalStatus.approved
-                                      ? AppColors.statusSuccessSoft
-                                      : AppColors.statusWarningSoft,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  skill.status.label,
-                                  style: AppTypography.labelSmall.copyWith(
-                                    color:
-                                        skill.status ==
-                                            SkillApprovalStatus.approved
-                                        ? AppColors.statusSuccess
-                                        : AppColors.statusWarning,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Logout Button
-                  OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.error,
-                      side: const BorderSide(color: AppColors.error),
+                            ],
+                          ),
+                          const Divider(),
+                          const SizedBox(height: 8),
+                          _buildInfoRow(
+                            Icons.person_outline_rounded,
+                            'Họ và tên',
+                            profile.fullName,
+                          ),
+                          _buildInfoRow(
+                            Icons.email_outlined,
+                            'Email',
+                            profile.email,
+                          ),
+                          _buildInfoRow(
+                            Icons.phone_outlined,
+                            'Số điện thoại',
+                            profile.phone != null && profile.phone!.isNotEmpty
+                                ? profile.phone!
+                                : 'Chưa cập nhật',
+                          ),
+                          _buildInfoRow(
+                            Icons.cake_outlined,
+                            'Ngày sinh',
+                            profile.dateOfBirth != null &&
+                                    profile.dateOfBirth!.isNotEmpty
+                                ? profile.dateOfBirth!
+                                : 'Chưa cập nhật',
+                          ),
+                          _buildInfoRow(
+                            Icons.calendar_month_outlined,
+                            'Ngày tham gia',
+                            profile.joinedDate.isNotEmpty
+                                ? profile.joinedDate
+                                : 'Chưa có thông tin',
+                          ),
+                          _buildInfoRow(
+                            Icons.check_circle_outline_rounded,
+                            'Trạng thái hoạt động',
+                            profile.status.label,
+                          ),
+                        ],
+                      ),
                     ),
-                    onPressed: () => _showLogoutDialog(context),
-                    icon: const Icon(Icons.logout_rounded, size: 20),
-                    label: const Text('Đăng xuất tài khoản'),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
+
+                  // Security & Actions Card
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Column(
+                        children: [
+                          ListTile(
+                            leading: const Icon(
+                              Icons.lock_reset_rounded,
+                              color: AppColors.primary,
+                            ),
+                            title: const Text('Đổi mật khẩu'),
+                            subtitle: const Text(
+                              'Cập nhật mật khẩu đăng nhập Harmonia',
+                            ),
+                            trailing: const Icon(Icons.chevron_right_rounded),
+                            onTap: () => _showChangePasswordDialog(context),
+                          ),
+                          const Divider(height: 1),
+                          ListTile(
+                            leading: const Icon(
+                              Icons.logout_rounded,
+                              color: AppColors.statusDanger,
+                            ),
+                            title: const Text(
+                              'Đăng xuất',
+                              style: TextStyle(color: AppColors.statusDanger),
+                            ),
+                            subtitle: const Text(
+                              'Kết thúc phiên làm việc trên thiết bị',
+                            ),
+                            onTap: () => _showLogoutDialog(context),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
             );
           },
         ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: AppColors.muted),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: AppTypography.bodySmall.copyWith(color: AppColors.muted),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: AppTypography.bodyMedium.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

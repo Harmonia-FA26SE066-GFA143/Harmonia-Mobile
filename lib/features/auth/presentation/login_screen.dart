@@ -59,53 +59,328 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         );
 
     if (success && mounted) {
-      context.go('/home');
+      final from = GoRouterState.of(context).uri.queryParameters['from'];
+      if (from != null &&
+          from.startsWith('/') &&
+          !from.startsWith('//') &&
+          from != '/login' &&
+          from != '/splash') {
+        context.go(from);
+      } else {
+        context.go('/home');
+      }
     }
   }
 
-  void _showGoogleNotSupportedSheet() {
+  void _showGoogleLoginSheet() {
+    final tokenController = TextEditingController();
+    bool isSubmitting = false;
+    String? localError;
+
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: AppColors.statusInfoSoft,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.info_outline,
-                    color: AppColors.statusInfo,
-                    size: 28,
-                  ),
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                  left: 24,
+                  right: 24,
+                  top: 24,
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  'Đăng nhập với Google',
-                  style: AppTypography.titleLarge,
-                  textAlign: TextAlign.center,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.g_mobiledata_rounded,
+                            color: AppColors.primary,
+                            size: 32,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Đăng nhập với Google',
+                                style: AppTypography.titleLarge,
+                              ),
+                              Text(
+                                'Tích hợp POST /api/auth/google',
+                                style: AppTypography.labelSmall.copyWith(
+                                  color: AppColors.muted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    if (AppEnv.googleClientId.isEmpty) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.statusInfoSoft,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: AppColors.statusInfo.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: Text(
+                          'Máy chủ Harmonia đã hỗ trợ xác thực Google bằng ID Token. Để tự động mở hộp thoại chọn tài khoản Google trên máy này, cần cấu hình GOOGLE_CLIENT_ID trong môi trường ứng dụng.\n\nBạn có thể dán Google ID Token bên dưới để đăng nhập trực tiếp:',
+                          style: AppTypography.bodySmall.copyWith(
+                            color: AppColors.onSurface,
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                    ],
+                    Text('Google ID Token', style: AppTypography.labelMedium),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: tokenController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        hintText: 'Dán Google ID Token nhận được từ Google Sign-In...',
+                      ),
+                    ),
+                    if (localError != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        localError!,
+                        style: AppTypography.bodySmall.copyWith(
+                          color: AppColors.statusDanger,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: isSubmitting
+                          ? null
+                          : () async {
+                              final token = tokenController.text.trim();
+                              if (token.isEmpty) {
+                                setModalState(() {
+                                  localError =
+                                      'Vui lòng nhập hoặc dán Google ID Token.';
+                                });
+                                return;
+                              }
+
+                              setModalState(() {
+                                isSubmitting = true;
+                                localError = null;
+                              });
+
+                              DevicePlatform platform;
+                              try {
+                                if (Platform.isAndroid) {
+                                  platform = DevicePlatform.android;
+                                } else if (Platform.isIOS) {
+                                  platform = DevicePlatform.ios;
+                                } else {
+                                  platform = DevicePlatform.web;
+                                }
+                              } catch (_) {
+                                platform = DevicePlatform.android;
+                              }
+
+                              final nav = Navigator.of(context);
+                              final router = GoRouter.of(this.context);
+                              final from = GoRouterState.of(this.context)
+                                  .uri
+                                  .queryParameters['from'];
+
+                              final success = await ref
+                                  .read(authNotifierProvider.notifier)
+                                  .loginWithGoogle(
+                                    idToken: token,
+                                    platform: platform,
+                                  );
+
+                              if (success && mounted) {
+                                nav.pop();
+                                if (from != null &&
+                                    from.startsWith('/') &&
+                                    !from.startsWith('//') &&
+                                    from != '/login' &&
+                                    from != '/splash') {
+                                  router.go(from);
+                                } else {
+                                  router.go('/home');
+                                }
+                              } else {
+                                setModalState(() {
+                                  isSubmitting = false;
+                                  localError =
+                                      ref
+                                          .read(authNotifierProvider)
+                                          .errorMessage ??
+                                      'Đăng nhập Google không thành công.';
+                                });
+                              }
+                            },
+                      child: isSubmitting
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.onPrimary,
+                              ),
+                            )
+                          : const Text('Xác thực và Đăng nhập'),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Máy chủ Harmonia hiện chưa hỗ trợ xác thực qua Google Sign-In. Vui lòng sử dụng tài khoản email và mật khẩu được Ban điều hành ca đoàn cấp.',
-                  style: AppTypography.bodyMedium,
-                  textAlign: TextAlign.center,
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showForgotPasswordSheet() {
+    final emailController = TextEditingController(
+      text: _emailController.text.trim(),
+    );
+    bool isSubmitting = false;
+    String? feedbackMessage;
+    bool isSuccess = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                  left: 24,
+                  right: 24,
+                  top: 24,
                 ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Đã hiểu'),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text('Quên mật khẩu', style: AppTypography.titleLarge),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Nhập email tài khoản để nhận liên kết đặt lại mật khẩu từ máy chủ Harmonia.',
+                      style: AppTypography.bodySmall,
+                    ),
+                    const SizedBox(height: 18),
+                    TextField(
+                      controller: emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(
+                        hintText: 'cavien@example.com',
+                        prefixIcon: Icon(Icons.mail_outline_rounded),
+                      ),
+                    ),
+                    if (feedbackMessage != null) ...[
+                      const SizedBox(height: 10),
+                      Text(
+                        feedbackMessage!,
+                        style: AppTypography.bodySmall.copyWith(
+                          color: isSuccess
+                              ? AppColors.statusSuccess
+                              : AppColors.statusDanger,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: isSubmitting
+                          ? null
+                          : () async {
+                              final email = emailController.text.trim();
+                              if (email.isEmpty || !email.contains('@')) {
+                                setModalState(() {
+                                  feedbackMessage =
+                                      'Vui lòng nhập email hợp lệ.';
+                                  isSuccess = false;
+                                });
+                                return;
+                              }
+
+                              setModalState(() {
+                                isSubmitting = true;
+                                feedbackMessage = null;
+                              });
+
+                              DevicePlatform platform;
+                              try {
+                                if (Platform.isAndroid) {
+                                  platform = DevicePlatform.android;
+                                } else if (Platform.isIOS) {
+                                  platform = DevicePlatform.ios;
+                                } else {
+                                  platform = DevicePlatform.web;
+                                }
+                              } catch (_) {
+                                platform = DevicePlatform.android;
+                              }
+
+                              final ok = await ref
+                                  .read(authNotifierProvider.notifier)
+                                  .forgotPassword(
+                                    email: email,
+                                    platform: platform,
+                                  );
+
+                              setModalState(() {
+                                isSubmitting = false;
+                                if (ok) {
+                                  isSuccess = true;
+                                  feedbackMessage = 'Yêu cầu đã được gửi. Vui lòng kiểm tra hòm thư của bạn.';
+                                } else {
+                                  isSuccess = false;
+                                  feedbackMessage =
+                                      ref
+                                          .read(authNotifierProvider)
+                                          .errorMessage ??
+                                      'Không thể gửi yêu cầu đặt lại mật khẩu.';
+                                }
+                              });
+                            },
+                      child: isSubmitting
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.onPrimary,
+                              ),
+                            )
+                          : const Text('Gửi yêu cầu đặt lại mật khẩu'),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
@@ -277,7 +552,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         }
                       },
                     ),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 8),
+
+                    // Forgot Password Link
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: _showForgotPasswordSheet,
+                        style: TextButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          foregroundColor: AppColors.primary,
+                        ),
+                        child: Text(
+                          'Quên mật khẩu?',
+                          style: AppTypography.labelMedium.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
 
                     // Login Button
                     ElevatedButton(
@@ -314,12 +610,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Google Login Button (Stitch design compliance - states unsupported)
+                    // Google Login Button (connected to Google ID Token flow)
                     OutlinedButton.icon(
-                      onPressed: _showGoogleNotSupportedSheet,
+                      onPressed: _showGoogleLoginSheet,
                       icon: const Icon(Icons.g_mobiledata_rounded, size: 24),
                       label: const Text('Đăng nhập với Google'),
                     ),
+
                     if (AppEnv.useMock) ...[
                       const SizedBox(height: 12),
                       TextButton.icon(

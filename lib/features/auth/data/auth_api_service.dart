@@ -53,4 +53,52 @@ class AuthApiService {
       throw ApiClient.parseDioException(e);
     }
   }
+
+  Future<LoginResponse> loginWithGoogle(GoogleLoginRequest request) async {
+    try {
+      final response = await _client.dio.post(
+        ApiEndpoints.google,
+        data: request.toJson(),
+      );
+      return LoginResponse.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw ApiClient.parseDioException(e);
+    }
+  }
+
+  Future<void> changePassword(ChangePasswordRequest request) async {
+    try {
+      // 204 No Content per Rule 03
+      await _client.dio.post(
+        ApiEndpoints.changePassword,
+        data: request.toJson(),
+      );
+    } on DioException catch (e) {
+      throw ApiClient.parseDioException(e);
+    }
+  }
+
+  Future<void> forgotPassword(ForgotPasswordRequest request) async {
+    try {
+      // 204 No Content per Rule 03
+      await _client.dio.post(
+        ApiEndpoints.forgotPassword,
+        data: request.toJson(),
+      );
+    } on DioException catch (e) {
+      throw ApiClient.parseDioException(e);
+    }
+  }
+
+  Future<void> resetPassword(ResetPasswordRequest request) async {
+    try {
+      // 204 No Content per Rule 03
+      await _client.dio.post(
+        ApiEndpoints.resetPassword,
+        data: request.toJson(),
+      );
+    } on DioException catch (e) {
+      throw ApiClient.parseDioException(e);
+    }
+  }
 }

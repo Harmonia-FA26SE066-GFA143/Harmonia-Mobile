@@ -97,6 +97,132 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
+  Future<bool> loginWithGoogle({
+    required String idToken,
+    DevicePlatform? platform,
+  }) async {
+    state = state.copyWith(
+      isLoading: true,
+      errorMessage: null,
+      fieldErrors: null,
+    );
+    try {
+      final user = await _repository.loginWithGoogle(
+        idToken: idToken,
+        platform: platform,
+      );
+      state = state.copyWith(isLoading: false, user: user);
+      return true;
+    } on AppException catch (e) {
+      final msg = ErrorMessages.getMessage(e.code, fallback: e.message);
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: msg,
+        fieldErrors: e.fieldErrors,
+      );
+      return false;
+    } catch (_) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Đã có lỗi xảy ra khi xác thực Google. Vui lòng thử lại.',
+      );
+      return false;
+    }
+  }
+
+  Future<bool> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    state = state.copyWith(
+      isLoading: true,
+      errorMessage: null,
+      fieldErrors: null,
+    );
+    try {
+      await _repository.changePassword(
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+      );
+      state = state.copyWith(isLoading: false);
+      return true;
+    } on AppException catch (e) {
+      final msg = ErrorMessages.getMessage(e.code, fallback: e.message);
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: msg,
+        fieldErrors: e.fieldErrors,
+      );
+      return false;
+    } catch (_) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Không thể đổi mật khẩu. Vui lòng thử lại.',
+      );
+      return false;
+    }
+  }
+
+  Future<bool> forgotPassword({
+    required String email,
+    DevicePlatform? platform,
+  }) async {
+    state = state.copyWith(
+      isLoading: true,
+      errorMessage: null,
+      fieldErrors: null,
+    );
+    try {
+      await _repository.forgotPassword(email: email, platform: platform);
+      state = state.copyWith(isLoading: false);
+      return true;
+    } on AppException catch (e) {
+      final msg = ErrorMessages.getMessage(e.code, fallback: e.message);
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: msg,
+        fieldErrors: e.fieldErrors,
+      );
+      return false;
+    } catch (_) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Không thể gửi yêu cầu đặt lại mật khẩu.',
+      );
+      return false;
+    }
+  }
+
+  Future<bool> resetPassword({
+    required String token,
+    required String newPassword,
+  }) async {
+    state = state.copyWith(
+      isLoading: true,
+      errorMessage: null,
+      fieldErrors: null,
+    );
+    try {
+      await _repository.resetPassword(token: token, newPassword: newPassword);
+      state = state.copyWith(isLoading: false);
+      return true;
+    } on AppException catch (e) {
+      final msg = ErrorMessages.getMessage(e.code, fallback: e.message);
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: msg,
+        fieldErrors: e.fieldErrors,
+      );
+      return false;
+    } catch (_) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Không thể đặt lại mật khẩu. Vui lòng thử lại.',
+      );
+      return false;
+    }
+  }
+
   Future<void> logout() async {
     state = state.copyWith(isLoading: true);
     await _repository.logout();

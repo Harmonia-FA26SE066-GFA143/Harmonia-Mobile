@@ -2,14 +2,14 @@
 
 ## Nguồn chuẩn
 
-Hợp đồng dưới đây được đọc từ source Harmonia-BE ngày 2026-10-01,
-chưa xác nhận bằng gọi API runtime.
+Hợp đồng dưới đây được đối chiếu trực tiếp từ source Harmonia-BE nhánh `origin/main`
+(commit `16686f7`).
 
 Trước khi tích hợp, đối chiếu controller, DTO, validator và cấu hình
 serializer mới nhất hoặc hợp đồng API đã được backend xác nhận.
 
 Không tự suy ra endpoint từ tên entity, màn hình Stitch hoặc mã lỗi.
-Nếu thiếu API, báo rõ và dùng mock repository khi phạm vi công việc cho phép.
+Nếu thiếu API, báo rõ và dùng unintegrated / mock repository khi phạm vi công việc cho phép.
 
 ## Ranh giới gọi API
 
@@ -25,9 +25,9 @@ khi chưa được duyệt.
 
 ## Base URL và môi trường
 
-- Base URL lấy từ cấu hình tập trung theo môi trường.
+- Base URL lấy từ cấu hình tập trung theo môi trường (`AppEnv.apiBaseUrl`, mặc định `http://localhost:5259` hoặc `http://10.0.2.2:5259` trên Android emulator).
 - Không hardcode URL trong widget hoặc repository riêng lẻ.
-- Phân biệt API base URL và hub URL để không ghép sai đường dẫn.
+- Phân biệt API base URL và hub URL (`/hubs/notifications`) để không ghép sai đường dẫn.
 - Không đưa secret backend vào cấu hình ứng dụng.
 - Không vô hiệu hoá kiểm tra chứng chỉ để vượt lỗi HTTPS.
 - Địa chỉ localhost trên thiết bị/emulator không mặc nhiên là máy backend;
@@ -42,7 +42,7 @@ Không tự thay đổi backend, CORS hoặc cấu hình triển khai để ch�
   `Authorization: Bearer <accessToken>`.
 - Chỉ gửi token Harmonia đến backend Harmonia được cấu hình.
 - Không đính kèm token vào request tải file từ dịch vụ bên thứ ba.
-- Theo serializer hiện tại, thuộc tính JSON dùng camelCase, enum dùng số.
+- Enum trên backend hiện tại được serialize thành dạng chuỗi (`JsonStringEnumConverter`).
 - Giữ nguyên nullable và kiểu dữ liệu theo DTO.
 
 API thành công trả payload trực tiếp, không có envelope:
@@ -59,22 +59,39 @@ isSuccess
 Response `204 No Content` không có body. Không đưa response này vào
 bộ giải mã bắt buộc có JSON.
 
-## Endpoint hiện có
+## Endpoint hiện có trên backend (origin/main)
 
-| Method | Path | Request | Thành công |
-|---|---|---|---|
-| POST | `/api/auth/login` | LoginRequest; anonymous | 200 LoginResponse |
-| POST | `/api/auth/refresh` | `{refreshToken}`; anonymous | 200 LoginResponse |
-| POST | `/api/auth/logout` | `{refreshToken}`; Bearer | 204 |
-| POST | `/api/auth/logout-all` | Không có body nghiệp vụ; Bearer | 204 |
-| GET | `/api/notifications` | Query phân trang; Bearer | 200 PagedList |
-| GET | `/api/notifications/unread-count` | Bearer | 200 số nguyên |
-| PUT | `/api/notifications/{id}/read` | NotificationId; Bearer | 204 |
-
-Các endpoint có Bearer hiện dùng `[Authorize]`; controller chưa giới hạn
-riêng role `ChoirMember`. Frontend vẫn phải tuân thủ phạm vi mobile đã chốt.
-
-Không tự thêm tiền tố phiên bản như `/api/v1` nếu backend chưa hỗ trợ.
+| Nhóm | Method | Path | Request | Thành công |
+|---|---|---|---|---|
+| **Auth** | POST | `/api/auth/login` | LoginRequest; anonymous | 200 LoginResponse |
+| | POST | `/api/auth/google` | GoogleLoginRequest; anonymous | 200 LoginResponse |
+| | POST | `/api/auth/refresh` | `{refreshToken}`; anonymous | 200 LoginResponse |
+| | POST | `/api/auth/logout` | `{refreshToken}`; Bearer | 204 No Content |
+| | POST | `/api/auth/logout-all` | Không có body nghiệp vụ; Bearer | 204 No Content |
+| | POST | `/api/auth/change-password` | ChangePasswordRequest; Bearer | 200/204 |
+| | POST | `/api/auth/forgot-password` | ForgotPasswordRequest; anonymous | 200/204 |
+| | POST | `/api/auth/reset-password` | ResetPasswordRequest; anonymous | 200/204 |
+| **Hồ sơ** | GET | `/api/member-profiles/me` | Bearer | 200 MemberProfileDto |
+| | PUT | `/api/member-profiles/me` | UpdateMyMemberProfileRequest; Bearer | 200 MemberProfileDto |
+| **Bài hát** | GET | `/api/songs` | SearchSongsRequest query; Bearer | 200 PagedList<SongDto> |
+| | GET | `/api/songs/{id}` | SongId; Bearer | 200 SongDto |
+| | GET | `/api/songs/{id}/classification` | SongId; Bearer | 200 SongClassificationDto |
+| **Tài liệu** | GET | `/api/music-materials` | SearchMusicMaterialsRequest; Bearer | 200 PagedList<MusicMaterialDto> |
+| | GET | `/api/music-materials/mine` | SearchMusicMaterialsRequest; Bearer | 200 PagedList<MusicMaterialDetailDto> |
+| | PUT | `/api/music-materials/{id}/learning-progress` | UpdateMaterialLearningProgressRequest; Bearer | 200 MaterialLearningProgressDto |
+| **Danh mục** | GET | `/api/lookups/mass-types` | Bearer | 200 List<LookupItemDto> |
+| | GET | `/api/lookups/ceremony-types` | Bearer | 200 List<LookupItemDto> |
+| | GET | `/api/lookups/event-categories` | Bearer | 200 List<LookupItemDto> |
+| | GET | `/api/lookups/song-themes` | Bearer | 200 List<LookupItemDto> |
+| | GET | `/api/lookups/skill-categories` | Bearer | 200 List<LookupItemDto> |
+| | GET | `/api/lookups/liturgical-seasons` | Bearer | 200 List<LiturgicalSeasonDto> |
+| | GET | `/api/lookups/liturgical-slots` | Bearer | 200 List<LiturgicalSlotDto> |
+| | GET | `/api/lookups/worship-locations` | Bearer | 200 List<WorshipLocationDto> |
+| | GET | `/api/lookups/skills` | Bearer | 200 List<SkillDto> |
+| **Thông báo** | GET | `/api/notifications` | Query phân trang; Bearer | 200 PagedList<NotificationDto> |
+| | GET | `/api/notifications/unread-count` | Bearer | 200 int |
+| | PUT | `/api/notifications/{id}/read` | NotificationId; Bearer | 204 No Content |
+| | SignalR | `/hubs/notifications` | AccessToken query; Bearer | Event `ReceiveNotificationAsync` |
 
 ## Đăng nhập
 
@@ -279,29 +296,16 @@ Cách hiển thị tuân theo `mobile-rules-05-errors-ui.md`.
 - Không tự thêm idempotency key rồi giả định backend hỗ trợ.
 - Không tự phát lại stream upload đã bị tiêu thụ.
 
-## API chưa có trong snapshot
+## API backend chưa cung cấp (chờ backend bổ sung)
 
-Chưa xác nhận endpoint cho:
-- Google Sign-In.
-- Đăng ký, quên hoặc đổi mật khẩu.
-- Hồ sơ cá nhân/me.
-- Kỹ năng ca viên.
-- Lịch phụng vụ và buổi tập.
-- Bài hát và danh sách bài hát.
-- Xác nhận tham gia.
-- Phân công và điểm danh.
-- Bài tập, bản thu và nhận xét.
-- Upload/download nghiệp vụ.
-- Đăng ký push token.
+Chưa có endpoint trên Harmonia-BE cho các tính năng:
+- **Lịch phụng vụ và buổi tập**: chưa có controller/endpoint (hiển thị trạng thái chưa kết nối máy chủ).
+- **Xác nhận tham gia & Điểm danh**: chưa có endpoint ghi nhận tham dự hay điểm danh thực tế.
+- **Bài tập thanh nhạc & Nộp bản thu**: chưa có endpoint giao bài tập hay nộp file ghi âm bài tập.
+- **Kỹ năng ca viên riêng**: chưa có endpoint gán/duyệt kỹ năng cho ca viên (`/api/member-skills`).
+- **Push token registration**: chưa có endpoint đăng ký FCM/APNS token.
 
-Cần hợp đồng backend được xác nhận trước khi tích hợp.
-
-Nếu triển khai UI bằng dữ liệu mẫu:
-- Đặt fixture/mock trong tầng data riêng.
-- Không hardcode dữ liệu mẫu trong widget.
-- Phân biệt rõ cấu hình mock và môi trường thật.
-- Không âm thầm chuyển sang mock khi API thật lỗi.
-- Không báo “đã tích hợp API” khi mới hoàn thành giao diện.
+Trong chế độ thật (`USE_MOCK=false`), các repository tương ứng (`UnintegratedCalendarRepositoryImpl`, `UnintegratedPracticeRepositoryImpl`) hiển thị trạng thái `FEATURE_UNINTEGRATED` một cách trung thực, tuyệt đối không giả lập thành công hay tạo endpoint ảo.
 
 ## Khi hợp đồng thay đổi
 
