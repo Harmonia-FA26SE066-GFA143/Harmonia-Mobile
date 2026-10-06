@@ -36,7 +36,13 @@ class AppEnv {
   static const Duration connectTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 15);
 
-  /// Google OAuth Web/Android Client ID for Google Sign-In.
+  /// Web OAuth Client ID used by the backend to verify the Google ID Token audience
+  /// (configured under Google__ClientIds in backend Azure/appsettings),
+  /// and passed as `serverClientId` when initializing the Google Sign-In SDK on Android.
+  ///
+  /// Note: The Android OAuth Client ID is registered directly in Google Cloud Console
+  /// with the Android package name (`com.harmonia.mobile.harmonia_mobile`)
+  /// and the signing keystore SHA-1 fingerprint. It is NOT passed into [googleClientId].
   static const String googleClientId = String.fromEnvironment(
     'GOOGLE_CLIENT_ID',
     defaultValue: '',

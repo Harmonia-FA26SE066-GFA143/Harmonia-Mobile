@@ -9,9 +9,18 @@ import '../data/auth_api_service.dart';
 import '../data/auth_dto.dart';
 import '../data/auth_repository.dart';
 
+import '../data/google_auth_service.dart';
+
 final authApiServiceProvider = Provider<AuthApiService>((ref) {
   final client = ref.watch(apiClientProvider);
   return AuthApiService(client);
+});
+
+final googleAuthServiceProvider = Provider<GoogleAuthService>((ref) {
+  if (AppEnv.useMock) {
+    return MockGoogleAuthService();
+  }
+  return GoogleAuthServiceImpl();
 });
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
@@ -61,6 +70,8 @@ class AuthNotifier extends Notifier<AuthState> {
   AuthState build() => const AuthState();
 
   AuthRepository get _repository => ref.read(authRepositoryProvider);
+  GoogleAuthService get _googleAuthService =>
+      ref.read(googleAuthServiceProvider);
 
   Future<bool> login({
     required String email,
@@ -97,6 +108,55 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
+  /// Interactive Google Sign-In: opens native Google account picker via SDK,
+  /// retrieves Google ID Token, and exchanges it with backend POST /api/auth/google.
+  Future<bool> signInWithGoogle({DevicePlatform? platform}) async {
+    state = state.copyWith(
+      isLoading: true,
+      errorMessage: null,
+      fieldErrors: null,
+    );
+    try {
+      final idToken = await _googleAuthService.getIdToken();
+      if (idToken == null) {
+        // User intentionally cancelled the Google account chooser
+        state = state.copyWith(isLoading: false);
+        return false;
+      }
+
+      final user = await _repository.loginWithGoogle(
+        idToken: idToken,
+        platform: platform,
+      );
+      state = state.copyWith(isLoading: false, user: user);
+      return true;
+    } on AppException catch (e) {
+      await _googleAuthService.signOut();
+      String msg;
+      if (e.code == 'AUTH_INVALID_CREDENTIALS') {
+        msg = 'Tài khoản Google này chưa được liên kết với tài khoản Harmonia nào.';
+      } else if (e.code == 'AUTH_ACCOUNT_INACTIVE') {
+        msg = 'Tài khoản Harmonia liên kết với email này đã bị vô hiệu hoá.';
+      } else {
+        msg = ErrorMessages.getMessage(e.code, fallback: e.message);
+      }
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: msg,
+        fieldErrors: e.fieldErrors,
+      );
+      return false;
+    } catch (_) {
+      await _googleAuthService.signOut();
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Đã có lỗi xảy ra khi xác thực Google. Vui lòng thử lại.',
+      );
+      return false;
+    }
+  }
+
+  /// Direct token exchange with backend (reused by testing or direct ID token input).
   Future<bool> loginWithGoogle({
     required String idToken,
     DevicePlatform? platform,
@@ -114,7 +174,15 @@ class AuthNotifier extends Notifier<AuthState> {
       state = state.copyWith(isLoading: false, user: user);
       return true;
     } on AppException catch (e) {
-      final msg = ErrorMessages.getMessage(e.code, fallback: e.message);
+      await _googleAuthService.signOut();
+      String msg;
+      if (e.code == 'AUTH_INVALID_CREDENTIALS') {
+        msg = 'Tài khoản Google này chưa được liên kết với tài khoản Harmonia nào.';
+      } else if (e.code == 'AUTH_ACCOUNT_INACTIVE') {
+        msg = 'Tài khoản Harmonia liên kết với email này đã bị vô hiệu hoá.';
+      } else {
+        msg = ErrorMessages.getMessage(e.code, fallback: e.message);
+      }
       state = state.copyWith(
         isLoading: false,
         errorMessage: msg,
@@ -122,6 +190,7 @@ class AuthNotifier extends Notifier<AuthState> {
       );
       return false;
     } catch (_) {
+      await _googleAuthService.signOut();
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Đã có lỗi xảy ra khi xác thực Google. Vui lòng thử lại.',

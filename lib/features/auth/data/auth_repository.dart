@@ -61,6 +61,14 @@ class AuthRepositoryImpl implements AuthRepository {
 
     // Verify role belongs to mobile ChoirMember scope per Rule 04
     if (response.user.roleName != 'ChoirMember') {
+      try {
+        await apiService.logout(
+          response.refreshToken,
+          accessToken: response.accessToken,
+        );
+      } catch (_) {
+        // If revoke fails, still do not maintain local session
+      }
       throw AppException(
         code: 'FORBIDDEN_ROLE',
         message:
@@ -101,11 +109,23 @@ class AuthRepositoryImpl implements AuthRepository {
     final response = await apiService.loginWithGoogle(request);
 
     if (response.user.roleName != 'ChoirMember') {
-      throw AppException(
-        code: 'FORBIDDEN_ROLE',
-        message:
-            'Tài khoản của bạn có vai trò ${response.user.roleName}. Harmonia Mobile chỉ dành cho ca viên (ChoirMember).',
-      );
+      // Immediately revoke the newly created session on backend per Requirement 5
+      try {
+        await apiService.logout(
+          response.refreshToken,
+          accessToken: response.accessToken,
+        );
+      } catch (_) {
+        // If revoking fails, still do not maintain local session
+      }
+
+      final isRoleAdmin =
+          response.user.roleName.trim().toLowerCase() == 'admin';
+      final message = isRoleAdmin
+          ? 'Xác thực Google thành công. Tài khoản này có quyền Admin. Harmonia Mobile dành cho ca viên; vui lòng dùng tài khoản ca viên.'
+          : 'Xác thực Google thành công. Tài khoản này có vai trò ${response.user.roleName}. Harmonia Mobile dành cho ca viên; vui lòng dùng tài khoản ca viên.';
+
+      throw AppException(code: 'FORBIDDEN_ROLE', message: message);
     }
 
     await storage.saveTokens(

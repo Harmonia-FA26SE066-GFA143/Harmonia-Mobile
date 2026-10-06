@@ -31,9 +31,16 @@ class AuthInterceptor extends Interceptor {
         options.path.startsWith('/api/');
 
     if (isHarmoniaHost) {
-      final token = await storage.getAccessToken();
-      if (token != null && token.isNotEmpty) {
-        options.headers['Authorization'] = 'Bearer $token';
+      final hasCustomAuth =
+          options.headers.containsKey('Authorization') &&
+          options.headers['Authorization'] != null &&
+          (options.headers['Authorization'] as Object).toString().isNotEmpty;
+
+      if (!hasCustomAuth) {
+        final token = await storage.getAccessToken();
+        if (token != null && token.isNotEmpty) {
+          options.headers['Authorization'] = 'Bearer $token';
+        }
       }
     }
     handler.next(options);

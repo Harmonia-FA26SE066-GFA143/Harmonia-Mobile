@@ -33,12 +33,15 @@ class AuthApiService {
     }
   }
 
-  Future<void> logout(String refreshToken) async {
+  Future<void> logout(String refreshToken, {String? accessToken}) async {
     try {
       // 204 No Content per Rule 03
       await _client.dio.post(
         ApiEndpoints.logout,
         data: {'refreshToken': refreshToken},
+        options: accessToken != null && accessToken.isNotEmpty
+            ? Options(headers: {'Authorization': 'Bearer $accessToken'})
+            : null,
       );
     } on DioException catch (e) {
       throw ApiClient.parseDioException(e);
