@@ -116,10 +116,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     String? feedbackMessage;
     bool isSuccess = false;
 
+    bool isSheetMounted = true;
+    final authNotifier = ref.read(authNotifierProvider.notifier);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) {
+      builder: (modalContext) {
         return StatefulBuilder(
           builder: (context, setModalState) {
             return SafeArea(
@@ -168,18 +171,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           : () async {
                               final email = emailController.text.trim();
                               if (email.isEmpty || !email.contains('@')) {
-                                setModalState(() {
-                                  feedbackMessage =
-                                      'Vui lòng nhập email hợp lệ.';
-                                  isSuccess = false;
-                                });
+                                if (isSheetMounted && modalContext.mounted) {
+                                  setModalState(() {
+                                    feedbackMessage =
+                                        'Vui lòng nhập email hợp lệ.';
+                                    isSuccess = false;
+                                  });
+                                }
                                 return;
                               }
 
-                              setModalState(() {
-                                isSubmitting = true;
-                                feedbackMessage = null;
-                              });
+                              if (isSheetMounted && modalContext.mounted) {
+                                setModalState(() {
+                                  isSubmitting = true;
+                                  feedbackMessage = null;
+                                });
+                              }
 
                               DevicePlatform platform;
                               try {
@@ -194,27 +201,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 platform = DevicePlatform.android;
                               }
 
-                              final ok = await ref
-                                  .read(authNotifierProvider.notifier)
-                                  .forgotPassword(
-                                    email: email,
-                                    platform: platform,
-                                  );
+                              final ok = await authNotifier.forgotPassword(
+                                email: email,
+                                platform: platform,
+                              );
 
-                              setModalState(() {
-                                isSubmitting = false;
-                                if (ok) {
-                                  isSuccess = true;
-                                  feedbackMessage = 'Yêu cầu đã được gửi. Vui lòng kiểm tra hòm thư của bạn.';
-                                } else {
-                                  isSuccess = false;
-                                  feedbackMessage =
-                                      ref
-                                          .read(authNotifierProvider)
-                                          .errorMessage ??
-                                      'Không thể gửi yêu cầu đặt lại mật khẩu.';
-                                }
-                              });
+                              if (!isSheetMounted || !modalContext.mounted) {
+                                return;
+                              }
+
+                              final currentError = mounted
+                                  ? ref.read(authNotifierProvider).errorMessage
+                                  : null;
+
+                              if (isSheetMounted && modalContext.mounted) {
+                                setModalState(() {
+                                  isSubmitting = false;
+                                  if (ok) {
+                                    isSuccess = true;
+                                    feedbackMessage = 'Yêu cầu đã được gửi. Vui lòng kiểm tra hòm thư của bạn.';
+                                  } else {
+                                    isSuccess = false;
+                                    feedbackMessage = currentError ?? 'Không thể gửi yêu cầu đặt lại mật khẩu.';
+                                  }
+                                });
+                              }
                             },
                       child: isSubmitting
                           ? const SizedBox(
@@ -234,7 +245,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           },
         );
       },
-    );
+    ).whenComplete(() {
+      isSheetMounted = false;
+      emailController.dispose();
+    });
   }
 
   @override

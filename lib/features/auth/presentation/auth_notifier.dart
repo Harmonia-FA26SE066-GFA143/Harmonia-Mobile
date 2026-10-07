@@ -65,7 +65,17 @@ class AuthState {
   }
 }
 
+enum AuthAction {
+  none,
+  login,
+  googleSignIn,
+  resetPassword,
+  forgotPassword,
+}
+
 class AuthNotifier extends Notifier<AuthState> {
+  AuthAction _activeAction = AuthAction.none;
+
   @override
   AuthState build() => const AuthState();
 
@@ -78,6 +88,7 @@ class AuthNotifier extends Notifier<AuthState> {
     required String password,
     DevicePlatform? platform,
   }) async {
+    _activeAction = AuthAction.login;
     state = state.copyWith(
       isLoading: true,
       errorMessage: null,
@@ -89,9 +100,13 @@ class AuthNotifier extends Notifier<AuthState> {
         password: password,
         platform: platform,
       );
+      if (!ref.mounted || _activeAction != AuthAction.login) return false;
+      _activeAction = AuthAction.none;
       state = state.copyWith(isLoading: false, user: user);
       return true;
     } on AppException catch (e) {
+      if (!ref.mounted || _activeAction != AuthAction.login) return false;
+      _activeAction = AuthAction.none;
       final msg = ErrorMessages.getMessage(e.code, fallback: e.message);
       state = state.copyWith(
         isLoading: false,
@@ -100,6 +115,8 @@ class AuthNotifier extends Notifier<AuthState> {
       );
       return false;
     } catch (_) {
+      if (!ref.mounted || _activeAction != AuthAction.login) return false;
+      _activeAction = AuthAction.none;
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Đã có lỗi xảy ra. Vui lòng thử lại.',
@@ -111,6 +128,7 @@ class AuthNotifier extends Notifier<AuthState> {
   /// Interactive Google Sign-In: opens native Google account picker via SDK,
   /// retrieves Google ID Token, and exchanges it with backend POST /api/auth/google.
   Future<bool> signInWithGoogle({DevicePlatform? platform}) async {
+    _activeAction = AuthAction.googleSignIn;
     state = state.copyWith(
       isLoading: true,
       errorMessage: null,
@@ -120,7 +138,10 @@ class AuthNotifier extends Notifier<AuthState> {
       final idToken = await _googleAuthService.getIdToken();
       if (idToken == null) {
         // User intentionally cancelled the Google account chooser
-        state = state.copyWith(isLoading: false);
+        if (_activeAction == AuthAction.googleSignIn) {
+          _activeAction = AuthAction.none;
+          state = state.copyWith(isLoading: false);
+        }
         return false;
       }
 
@@ -128,10 +149,14 @@ class AuthNotifier extends Notifier<AuthState> {
         idToken: idToken,
         platform: platform,
       );
+      if (!ref.mounted || _activeAction != AuthAction.googleSignIn) return false;
+      _activeAction = AuthAction.none;
       state = state.copyWith(isLoading: false, user: user);
       return true;
     } on AppException catch (e) {
       await _googleAuthService.signOut();
+      if (!ref.mounted || _activeAction != AuthAction.googleSignIn) return false;
+      _activeAction = AuthAction.none;
       String msg;
       if (e.code == 'AUTH_INVALID_CREDENTIALS') {
         msg = 'Tài khoản Google này chưa được liên kết với tài khoản Harmonia nào.';
@@ -236,6 +261,7 @@ class AuthNotifier extends Notifier<AuthState> {
     required String email,
     DevicePlatform? platform,
   }) async {
+    _activeAction = AuthAction.forgotPassword;
     state = state.copyWith(
       isLoading: true,
       errorMessage: null,
@@ -243,9 +269,13 @@ class AuthNotifier extends Notifier<AuthState> {
     );
     try {
       await _repository.forgotPassword(email: email, platform: platform);
+      if (!ref.mounted || _activeAction != AuthAction.forgotPassword) return false;
+      _activeAction = AuthAction.none;
       state = state.copyWith(isLoading: false);
       return true;
     } on AppException catch (e) {
+      if (!ref.mounted || _activeAction != AuthAction.forgotPassword) return false;
+      _activeAction = AuthAction.none;
       final msg = ErrorMessages.getMessage(e.code, fallback: e.message);
       state = state.copyWith(
         isLoading: false,
@@ -254,6 +284,8 @@ class AuthNotifier extends Notifier<AuthState> {
       );
       return false;
     } catch (_) {
+      if (!ref.mounted || _activeAction != AuthAction.forgotPassword) return false;
+      _activeAction = AuthAction.none;
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Không thể gửi yêu cầu đặt lại mật khẩu.',
@@ -262,10 +294,14 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
+  int _resetPasswordSubmissionId = 0;
+
   Future<bool> resetPassword({
     required String token,
     required String newPassword,
   }) async {
+    final submissionId = ++_resetPasswordSubmissionId;
+    _activeAction = AuthAction.resetPassword;
     state = state.copyWith(
       isLoading: true,
       errorMessage: null,
@@ -273,9 +309,17 @@ class AuthNotifier extends Notifier<AuthState> {
     );
     try {
       await _repository.resetPassword(token: token, newPassword: newPassword);
+      if (!ref.mounted || submissionId != _resetPasswordSubmissionId) {
+        return false;
+      }
+      _activeAction = AuthAction.none;
       state = state.copyWith(isLoading: false);
       return true;
     } on AppException catch (e) {
+      if (!ref.mounted || submissionId != _resetPasswordSubmissionId) {
+        return false;
+      }
+      _activeAction = AuthAction.none;
       final msg = ErrorMessages.getMessage(e.code, fallback: e.message);
       state = state.copyWith(
         isLoading: false,
@@ -284,12 +328,46 @@ class AuthNotifier extends Notifier<AuthState> {
       );
       return false;
     } catch (_) {
+      if (!ref.mounted || submissionId != _resetPasswordSubmissionId) {
+        return false;
+      }
+      _activeAction = AuthAction.none;
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Không thể đặt lại mật khẩu. Vui lòng thử lại.',
       );
       return false;
     }
+  }
+
+  /// Cancels in-flight reset password requests and clears reset error and loading states.
+  /// If another action (such as login or Google sign-in) is active, its state is untouched.
+  void cancelResetPassword() {
+    _resetPasswordSubmissionId++;
+    final wasReset = (_activeAction == AuthAction.resetPassword);
+    if (wasReset) {
+      _activeAction = AuthAction.none;
+    }
+    Future.microtask(() {
+      if (!ref.mounted) return;
+      if (_activeAction == AuthAction.none) {
+        if (state.isLoading ||
+            state.errorMessage != null ||
+            state.fieldErrors != null) {
+          state = state.copyWith(
+            isLoading: false,
+            errorMessage: null,
+            fieldErrors: null,
+          );
+        }
+      }
+    });
+  }
+
+  /// Synchronously invalidates any active reset password request without modifying state.
+  /// Safe to call during widget lifecycle / build phases.
+  void invalidateResetPasswordRequests() {
+    _resetPasswordSubmissionId++;
   }
 
   Future<void> logout() async {
