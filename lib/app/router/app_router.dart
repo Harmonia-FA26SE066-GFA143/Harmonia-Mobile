@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/di/core_providers.dart';
 import '../../core/session/session_manager.dart';
 import '../../features/auth/presentation/login_screen.dart';
+import '../../features/auth/presentation/reset_password_screen.dart';
 import '../../features/calendar/presentation/calendar_screen.dart';
 import '../../features/calendar/presentation/liturgical_event_detail_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
@@ -38,7 +39,11 @@ bool _isValidInternalRoute(String? path) {
   if (!path.startsWith('/') || path.startsWith('//')) return false;
   final uri = Uri.tryParse(path);
   final location = uri?.path ?? path;
-  if (location == '/login' || location == '/splash') return false;
+  if (location == '/login' ||
+      location == '/splash' ||
+      location == '/reset-password') {
+    return false;
+  }
   return true;
 }
 
@@ -52,6 +57,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       if (AppEnv.useMock) {
         // In demo mode, bypass login and allow exploring all screens
+        return null;
+      }
+
+      // Allow /reset-password across all session statuses (initial, unauth, auth)
+      if (state.matchedLocation == '/reset-password' ||
+          state.uri.path == '/reset-password') {
         return null;
       }
 
@@ -109,6 +120,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const SplashScreen(),
       ),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+      GoRoute(
+        path: '/reset-password',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) {
+          final tokenValues = state.uri.queryParametersAll['token'];
+          final isDuplicateToken =
+              tokenValues != null && tokenValues.length > 1;
+          final token = state.uri.queryParameters['token'];
+          return ResetPasswordScreen(
+            token: token,
+            isDuplicateToken: isDuplicateToken,
+          );
+        },
+      ),
 
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {

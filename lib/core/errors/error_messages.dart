@@ -9,6 +9,11 @@ class ErrorMessages {
     'AUTH_REFRESH_TOKEN_INVALID': 'Phiên đăng nhập không hợp lệ.',
     'AUTH_REFRESH_TOKEN_EXPIRED':
         'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+    'AUTH_RESET_TOKEN_INVALID': 'Liên kết đặt lại mật khẩu không hợp lệ. Vui lòng yêu cầu gửi lại email mới.',
+    'AUTH_RESET_TOKEN_EXPIRED': 'Liên kết đặt lại mật khẩu đã hết hạn. Vui lòng yêu cầu gửi lại email mới.',
+    'AUTH_RESET_TOKEN_USED': 'Liên kết đặt lại mật khẩu đã được sử dụng. Vui lòng yêu cầu gửi lại email mới.',
+    'AUTH_PASSWORD_TOO_WEAK':
+        'Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ và số.',
     'NOTIFICATION_NOT_FOUND': 'Không tìm thấy thông báo.',
     'VALIDATION_FAILED': 'Vui lòng kiểm tra lại thông tin đã nhập.',
     'NETWORK_ERROR':
