@@ -15,20 +15,24 @@ class SongListItem {
   final LearningStatus learningStatus;
   final SongClassificationDto? classification;
   final List<MusicMaterialDto> materials;
+  final int? displayOrder;
+  final String? note;
 
   const SongListItem({
     required this.id,
     required this.slotName,
     required this.title,
-    required this.composer,
-    required this.tone,
-    required this.tempo,
-    required this.sheetMusicUrl,
+    this.composer = '',
+    this.tone = '',
+    this.tempo = '',
+    this.sheetMusicUrl = '',
     this.audioSampleUrl,
-    required this.lyrics,
+    this.lyrics = '',
     required this.learningStatus,
     this.classification,
     this.materials = const [],
+    this.displayOrder,
+    this.note,
   });
 
   SongListItem copyWith({
