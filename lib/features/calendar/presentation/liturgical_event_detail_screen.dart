@@ -5,8 +5,9 @@ import 'package:intl/intl.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/errors/error_messages.dart';
+import 'participation_prompt.dart';
 import '../../music/data/music_repository.dart';
-import '../../music/data/song_models.dart';
 import '../data/calendar_repository.dart';
 import '../data/liturgical_models.dart';
 
@@ -17,27 +18,49 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final calendarState = ref.watch(calendarNotifierProvider);
-    final musicRepo = ref.watch(musicRepositoryProvider);
-
-    final events = calendarState.value ?? [];
-    final event = events.isEmpty
-        ? null
-        : events.cast<LiturgicalEvent?>().firstWhere(
-            (e) => e?.id == eventId,
-            orElse: () => null,
-          );
-
-    if (event == null) {
+    final detailState = ref.watch(eventDetailProvider(eventId));
+    final songListAsync = ref.watch(eventApprovedSongListProvider(eventId));
+    if (detailState.isLoading) {
       return Scaffold(
         appBar: AppBar(title: const Text('Chi tiết sự kiện')),
-        body: const Center(child: Text('Không tìm thấy sự kiện')),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
+    if (detailState.hasError) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Chi tiết sự kiện')),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(ErrorMessages.forException(detailState.error)),
+              TextButton(
+                onPressed: () => ref.invalidate(eventDetailProvider(eventId)),
+                child: const Text('Thử lại'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    final detail = detailState.requireValue;
+    final event = detail.event;
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Chi tiết phụng vụ')),
+      appBar: AppBar(
+        title: const Text('Chi tiết phụng vụ'),
+        actions: [
+          IconButton(
+            tooltip: 'Tải lại',
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              ref.invalidate(eventDetailProvider(eventId));
+              ref.invalidate(eventApprovedSongListProvider(eventId));
+            },
+          ),
+        ],
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -51,26 +74,28 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.statusSuccessSoft,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Text(
-                              event.seasonName,
-                              style: AppTypography.labelSmall.copyWith(
-                                color: AppColors.statusSuccess,
-                                fontWeight: FontWeight.bold,
+                          if (event.seasonName.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.statusSuccessSoft,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Text(
+                                event.seasonName,
+                                style: AppTypography.labelSmall.copyWith(
+                                  color: AppColors.statusSuccess,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
-                          ),
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 10,
@@ -81,7 +106,9 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
                               borderRadius: BorderRadius.circular(16),
                             ),
                             child: Text(
-                              'Phân công: ${event.assignedVocalPart}',
+                              event.assignedVocalPart.isEmpty
+                                  ? 'Chưa có thông tin phân công'
+                                  : 'Phân công: ${event.assignedVocalPart}',
                               style: AppTypography.labelSmall.copyWith(
                                 color: AppColors.primary,
                                 fontWeight: FontWeight.bold,
@@ -151,6 +178,67 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
 
+              if (detail.specialRequirements?.isNotEmpty == true)
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Hướng dẫn phục vụ',
+                          style: AppTypography.titleMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(detail.specialRequirements!),
+                      ],
+                    ),
+                  ),
+                ),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Phân công của bạn',
+                        style: AppTypography.titleMedium,
+                      ),
+                      if (detail.assignments.isEmpty)
+                        const Text('Chưa có phân công được công bố.'),
+                      for (final assignment in detail.assignments)
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.assignment_ind),
+                          title: Text(assignment.skillName),
+                          subtitle: assignment.songTitle == null
+                              ? null
+                              : Text(assignment.songTitle!),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              if (detail.rehearsals.isNotEmpty)
+                Card(
+                  child: Column(
+                    children: [
+                      for (final item in detail.rehearsals)
+                        ListTile(
+                          title: Text(item.rehearsal.title),
+                          subtitle: Text(
+                            '${DateFormat('dd/MM/yyyy').format(item.rehearsal.date)} • ${item.rehearsal.timeRange}\n${item.rehearsal.attendanceStatus}',
+                          ),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => context.push(
+                            '/rehearsal/${Uri.encodeComponent(item.rehearsal.id)}',
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 16),
               // Participation Confirmation Box
               Card(
                 child: Padding(
@@ -176,7 +264,7 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Vui lòng xác nhận để Ca trưởng sắp xếp phân công bè và bài tập.',
+                        participationStatusMessage(event),
                         style: AppTypography.bodySmall,
                       ),
                       const SizedBox(height: 16),
@@ -198,14 +286,14 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
                                       : AppColors.border,
                                 ),
                               ),
-                              onPressed: () {
-                                ref
-                                    .read(calendarNotifierProvider.notifier)
-                                    .setParticipation(
-                                      event.id,
+                              onPressed: !event.canRespond
+                                  ? null
+                                  : () => showParticipationPrompt(
+                                      context,
+                                      ref,
+                                      event,
                                       ParticipationStatus.confirmed,
-                                    );
-                              },
+                                    ),
                               child: Text(
                                 'Có mặt',
                                 style: TextStyle(
@@ -236,14 +324,14 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
                                       : AppColors.border,
                                 ),
                               ),
-                              onPressed: () {
-                                ref
-                                    .read(calendarNotifierProvider.notifier)
-                                    .setParticipation(
-                                      event.id,
+                              onPressed: !event.canRespond
+                                  ? null
+                                  : () => showParticipationPrompt(
+                                      context,
+                                      ref,
+                                      event,
                                       ParticipationStatus.declined,
-                                    );
-                              },
+                                    ),
                               child: Text(
                                 'Vắng mặt',
                                 style: TextStyle(
@@ -258,6 +346,22 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
                             ),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Trạng thái: ${event.participationStatus.label}',
+                        style: AppTypography.bodySmall,
+                      ),
+                      TextButton(
+                        onPressed: event.canRespond
+                            ? () => showParticipationPrompt(
+                                context,
+                                ref,
+                                event,
+                                ParticipationStatus.unsure,
+                              )
+                            : null,
+                        child: const Text('Chưa chắc chắn'),
                       ),
                     ],
                   ),
@@ -275,20 +379,63 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
+                  songListAsync.when(
+                    data: (songList) {
+                      final hasApproved = songList != null;
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: hasApproved
+                              ? AppColors.statusSuccessSoft
+                              : AppColors.surfaceContainerHigh,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          hasApproved ? 'Đã phê duyệt' : 'Chưa có danh sách',
+                          style: AppTypography.labelSmall.copyWith(
+                            color: hasApproved
+                                ? AppColors.statusSuccess
+                                : AppColors.muted,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      );
+                    },
+                    loading: () => Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceContainerHigh,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'Đang tải...',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: AppColors.muted,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
-                    decoration: BoxDecoration(
-                      color: AppColors.statusSuccessSoft,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      'Đã phê duyệt',
-                      style: AppTypography.labelSmall.copyWith(
-                        color: AppColors.statusSuccess,
-                        fontWeight: FontWeight.bold,
+                    error: (_, _) => Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.statusDangerSoft,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'Lỗi tải',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: AppColors.statusDanger,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
@@ -296,24 +443,84 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
 
-              FutureBuilder<List<SongListItem>>(
-                future: musicRepo.getSongListForEvent(eventId),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.primary,
+              songListAsync.when(
+                loading: () => const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  ),
+                ),
+                error: (err, _) => Card(
+                  color: AppColors.statusDangerSoft,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.error_outline_rounded,
+                              color: AppColors.statusDanger,
+                              size: 20,
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              'Không thể tải danh sách bài hát',
+                              style: TextStyle(
+                                color: AppColors.statusDanger,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        OutlinedButton.icon(
+                          icon: const Icon(Icons.refresh_rounded, size: 18),
+                          label: const Text('Thử lại'),
+                          onPressed: () => ref.refresh(
+                            eventApprovedSongListProvider(eventId),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                data: (songList) {
+                  if (songList == null) {
+                    return const Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Center(
+                          child: Text(
+                            'Chưa có danh sách bài hát được duyệt cho sự kiện này',
+                            style: TextStyle(color: AppColors.muted),
+                          ),
+                        ),
                       ),
                     );
                   }
 
-                  final songs = snapshot.data ?? [];
-                  if (songs.isEmpty) {
-                    return const Center(child: Text('Chưa có bài hát'));
+                  if (songList.items.isEmpty) {
+                    return const Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Center(
+                          child: Text(
+                            'Danh sách bài hát đã được duyệt nhưng chưa có bài hát nào',
+                            style: TextStyle(color: AppColors.muted),
+                          ),
+                        ),
+                      ),
+                    );
                   }
 
+                  final items = List.of(songList.items)
+                    ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+
                   return Column(
-                    children: songs.map((song) {
+                    children: items.map((item) {
                       return Card(
                         margin: const EdgeInsets.only(bottom: 10),
                         child: ListTile(
@@ -334,7 +541,7 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
                             ),
                           ),
                           title: Text(
-                            song.title,
+                            item.songTitle,
                             style: AppTypography.titleMedium.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
@@ -342,18 +549,26 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                '${song.slotName} • ${song.composer}',
-                                style: AppTypography.bodySmall,
-                              ),
                               const SizedBox(height: 2),
                               Text(
-                                'Tone: ${song.tone}',
-                                style: AppTypography.labelSmall.copyWith(
+                                item.slotName.isNotEmpty
+                                    ? item.slotName
+                                    : 'Bài hát phụng vụ',
+                                style: AppTypography.bodySmall.copyWith(
                                   color: AppColors.secondary,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
+                              if (item.note != null &&
+                                  item.note!.trim().isNotEmpty) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Ghi chú: ${item.note}',
+                                  style: AppTypography.labelSmall.copyWith(
+                                    color: AppColors.muted,
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                           trailing: const Icon(
@@ -361,7 +576,7 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
                             color: AppColors.muted,
                           ),
                           onTap: () {
-                            context.push('/song-detail/${song.id}');
+                            context.push('/song-detail/${item.songId}');
                           },
                         ),
                       );
