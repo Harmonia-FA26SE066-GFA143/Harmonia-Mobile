@@ -4,15 +4,21 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/di/core_providers.dart';
 import '../../core/session/session_manager.dart';
+import '../../features/auth/presentation/change_password_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/reset_password_screen.dart';
 import '../../features/calendar/presentation/calendar_screen.dart';
+import '../../features/calendar/presentation/rehearsal_detail_screen.dart';
 import '../../features/calendar/presentation/liturgical_event_detail_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/music/presentation/song_detail_screen.dart';
+import '../../features/music/presentation/music_library_screen.dart';
+import '../../features/music/presentation/music_material_screen.dart';
 import '../../features/notifications/presentation/notification_list_screen.dart';
 import '../../features/practice/presentation/practice_detail_screen.dart';
 import '../../features/practice/presentation/practice_list_screen.dart';
+import '../../features/practice/presentation/practice_submission_detail_screen.dart';
+import '../../features/profile/presentation/participation_history_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../app_env.dart';
 import 'main_navigation_shell.dart';
@@ -71,7 +77,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final isSplash = state.matchedLocation == '/splash';
 
       // 1. Session is still initializing / restoring
-      if (status == AuthStatus.initial) {
+      if (status == AuthStatus.initial || status == AuthStatus.restoring) {
         if (!isSplash) {
           final target = state.uri.toString();
           if (_isValidInternalRoute(target)) {
@@ -98,8 +104,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return null;
       }
 
-      // 3. Authenticated: prevent lingering on /login or /splash and return to deep link
+      final isChangePassword = state.matchedLocation == '/change-password';
+
+      // 3. Authenticated: prevent lingering on /login or /splash and enforce password change if required
       if (status == AuthStatus.authenticated) {
+        if (sessionManager.isPasswordChangeRequired) {
+          if (!isChangePassword) {
+            return '/change-password';
+          }
+          return null;
+        }
+
         if (isLoggingIn || isSplash) {
           // Note: state.uri.queryParameters already decodes the parameter once.
           // Do NOT call Uri.decodeComponent a second time per Rule 04 / Prompt instructions.
@@ -120,6 +135,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const SplashScreen(),
       ),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+      GoRoute(
+        path: '/change-password',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => ChangePasswordScreen(
+          isForced: sessionManager.isPasswordChangeRequired,
+        ),
+      ),
       GoRoute(
         path: '/reset-password',
         parentNavigatorKey: _rootNavigatorKey,
@@ -188,12 +210,32 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ],
       ),
       GoRoute(
+        path: '/rehearsal/:id',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => RehearsalDetailScreen(
+          rehearsalId: state.pathParameters['id'] ?? '',
+        ),
+      ),
+      GoRoute(
         path: '/event-detail/:id',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
           return LiturgicalEventDetailScreen(eventId: id);
         },
+      ),
+      GoRoute(
+        path: '/music-library',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const MusicLibraryScreen(),
+      ),
+      GoRoute(
+        path: '/music-material/:id',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => MusicMaterialScreen(
+          materialId: state.pathParameters['id'] ?? '',
+          songId: state.uri.queryParameters['songId'] ?? '',
+        ),
       ),
       GoRoute(
         path: '/song-detail/:id',
@@ -210,6 +252,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final id = state.pathParameters['id'] ?? '';
           return PracticeDetailScreen(assignmentId: id);
         },
+      ),
+      GoRoute(
+        path: '/practice-submission/:id',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          return PracticeSubmissionDetailScreen(submissionId: id);
+        },
+      ),
+      GoRoute(
+        path: '/profile/history',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const ParticipationHistoryScreen(),
       ),
     ],
   );
