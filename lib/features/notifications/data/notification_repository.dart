@@ -11,6 +11,7 @@ abstract class NotificationRepository {
   });
   Future<int> getUnreadCount();
   Future<void> markAsRead(String id);
+  Future<void> markAllAsRead();
   Stream<NotificationDto> get realtimeNotifications;
 }
 
@@ -59,6 +60,11 @@ class NotificationRepositoryImpl implements NotificationRepository {
   @override
   Future<void> markAsRead(String id) {
     return apiService.markAsRead(id);
+  }
+
+  @override
+  Future<void> markAllAsRead() {
+    return apiService.markAllAsRead();
   }
 
   void dispose() {
@@ -130,6 +136,13 @@ class MockNotificationRepositoryImpl implements NotificationRepository {
         return n.copyWith(isRead: true, readAt: DateTime.now());
       }
       return n;
+    }).toList();
+  }
+
+  @override
+  Future<void> markAllAsRead() async {
+    _items = _items.map((n) {
+      return n.copyWith(isRead: true, readAt: DateTime.now());
     }).toList();
   }
 

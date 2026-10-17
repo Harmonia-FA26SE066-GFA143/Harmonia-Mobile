@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../app/theme/app_colors.dart';
@@ -63,7 +64,95 @@ class _NotificationListScreenState
     if (difference.inMinutes < 60) return '${difference.inMinutes} phút trước';
     if (difference.inHours < 24) return '${difference.inHours} giờ trước';
     if (difference.inDays < 7) return '${difference.inDays} ngày trước';
-    return DateFormat('dd/MM/yyyy HH:mm').format(dateTime);
+    return DateFormat('dd/MM/yyyy HH:mm').format(dateTime.toLocal());
+  }
+
+  void _handleNotificationTap(NotificationDto item) {
+    if (!item.isRead) {
+      ref.read(notificationNotifierProvider.notifier).markAsRead(item.id);
+    }
+
+    final refType = item.referenceType?.trim();
+    final refId = item.referenceId?.trim();
+
+    if (refType == 'LiturgicalEvent' && refId != null && refId.isNotEmpty) {
+      context.push('/event-detail/$refId');
+      return;
+    }
+
+    if (refType == 'Rehearsal' && refId != null && refId.isNotEmpty) {
+      context.push('/rehearsal/${Uri.encodeComponent(refId)}');
+      return;
+    }
+
+    if (refType == 'PracticeAssignment' && refId != null && refId.isNotEmpty) {
+      context.push('/practice-detail/$refId');
+      return;
+    }
+
+    if (refType == 'PracticeSubmission' && refId != null && refId.isNotEmpty) {
+      context.push('/practice-submission/$refId');
+      return;
+    }
+
+    if (refType == 'MemberSkill') {
+      context.push('/profile');
+      return;
+    }
+
+    if (refType == 'Song' && refId != null && refId.isNotEmpty) {
+      context.push('/song-detail/$refId');
+      return;
+    }
+
+    // Default: Show bottom sheet with full notification details
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      item.title,
+                      style: AppTypography.titleLarge.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                DateFormat('dd/MM/yyyy HH:mm').format(item.createdAt.toLocal()),
+                style: AppTypography.labelSmall.copyWith(
+                  color: AppColors.muted,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 12),
+              Text(
+                item.content,
+                style: AppTypography.bodyMedium.copyWith(height: 1.5),
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -96,6 +185,14 @@ class _NotificationListScreenState
             ],
           ],
         ),
+        actions: [
+          if (state.unreadCount > 0)
+            IconButton(
+              icon: const Icon(Icons.done_all_rounded),
+              tooltip: 'Đánh dấu tất cả đã đọc',
+              onPressed: () => notifier.markAllAsRead(),
+            ),
+        ],
       ),
       body: Builder(
         builder: (context) {
@@ -204,11 +301,7 @@ class _NotificationListScreenState
 
                 final item = state.items[index];
                 return InkWell(
-                  onTap: () {
-                    if (!item.isRead) {
-                      notifier.markAsRead(item.id);
-                    }
-                  },
+                  onTap: () => _handleNotificationTap(item),
                   borderRadius: BorderRadius.circular(16),
                   child: Container(
                     padding: const EdgeInsets.all(14),
