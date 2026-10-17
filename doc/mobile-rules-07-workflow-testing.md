@@ -197,7 +197,7 @@ Nếu chỉ kiểm tra một nền tảng, ghi rõ nền tảng còn lại chưa
 
 Quy ước commit nằm tại:
 
-[Quy ước commit frontend mobile](../.github/mobile-commit-convention.md)
+[Quy ước commit frontend mobile](mobile-commit-convention.md)
 
 - Chỉ commit/push khi người dùng yêu cầu hoặc đã cho phép.
 - Kiểm tra diff trước khi stage và diff đã stage trước khi commit.

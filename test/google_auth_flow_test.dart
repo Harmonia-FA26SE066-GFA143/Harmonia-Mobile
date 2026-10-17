@@ -178,7 +178,7 @@ void main() {
         fakeApiService.capturedGoogleRequest?.idToken,
         'valid-google-id-token',
       );
-      expect(fakeApiService.capturedGoogleRequest?.platform, 0);
+      expect(fakeApiService.capturedGoogleRequest?.platform, 'Android');
 
       // Verify tokens stored
       expect(await storage.getAccessToken(), 'choir-access-token');
@@ -206,7 +206,7 @@ void main() {
               refreshToken: 'admin-refresh-token',
               user: UserDto(
                 id: 'admin-1',
-                email: 'harmoniafall26@gmail.com',
+                email: 'admin@example.test',
                 fullName: 'Harmonia Admin',
                 roleName: 'Admin',
               ),

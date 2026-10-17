@@ -1,0 +1,776 @@
+[
+  {
+    "endpoint": "POST /api/auth/login",
+    "label": "",
+    "status": 200,
+    "expected": [
+      200
+    ],
+    "passed": true,
+    "kind": "object",
+    "fields": [
+      "accessToken",
+      "accessTokenExpiresAt",
+      "refreshToken",
+      "user"
+    ]
+  },
+  {
+    "endpoint": "GET /api/auth/me",
+    "label": "",
+    "status": 200,
+    "expected": [
+      200
+    ],
+    "passed": true,
+    "kind": "object",
+    "fields": [
+      "id",
+      "email",
+      "fullName",
+      "phone",
+      "roleName",
+      "isActive",
+      "isPasswordChangeRequired"
+    ]
+  },
+  {
+    "endpoint": "GET /api/member-profiles/me",
+    "label": "",
+    "status": 200,
+    "expected": [
+      200
+    ],
+    "passed": true,
+    "kind": "object",
+    "fields": [
+      "id",
+      "fullName",
+      "email",
+      "phone",
+      "dateOfBirth",
+      "joinedDate",
+      "status",
+      "avatarUrl",
+      "roleName",
+      "approvedSkills"
+    ]
+  },
+  {
+    "endpoint": "GET /api/member-profiles/me/history?pageNumber=1&pageSize=20",
+    "label": "",
+    "status": 200,
+    "expected": [
+      200
+    ],
+    "passed": true,
+    "kind": "object",
+    "fields": [
+      "items",
+      "pageNumber",
+      "pageSize",
+      "totalCount",
+      "totalPages",
+      "hasPreviousPage",
+      "hasNextPage"
+    ],
+    "itemCount": 0,
+    "totalCount": 0,
+    "itemFields": null
+  },
+  {
+    "endpoint": "GET /api/member-skills/mine?pageNumber=1&pageSize=20",
+    "label": "",
+    "status": 200,
+    "expected": [
+      200
+    ],
+    "passed": true,
+    "kind": "object",
+    "fields": [
+      "items",
+      "pageNumber",
+      "pageSize",
+      "totalCount",
+      "totalPages",
+      "hasPreviousPage",
+      "hasNextPage"
+    ],
+    "itemCount": 0,
+    "totalCount": 0,
+    "itemFields": null
+  },
+  {
+    "endpoint": "GET /api/event-participations/mine",
+    "label": "",
+    "status": 200,
+    "expected": [
+      200
+    ],
+    "passed": true,
+    "kind": "array",
+    "itemCount": 0,
+    "fields": null
+  },
+  {
+    "endpoint": "GET /api/schedule/assignments",
+    "label": "",
+    "status": 200,
+    "expected": [
+      200
+    ],
+    "passed": true,
+    "kind": "array",
+    "itemCount": 0,
+    "fields": null
+  },
+  {
+    "endpoint": "GET /api/schedule/events",
+    "label": "",
+    "status": 200,
+    "expected": [
+      200
+    ],
+    "passed": true,
+    "kind": "array",
+    "itemCount": 0,
+    "fields": null
+  },
+  {
+    "endpoint": "GET /api/schedule/rehearsals",
+    "label": "",
+    "status": 200,
+    "expected": [
+      200
+    ],
+    "passed": true,
+    "kind": "array",
+    "itemCount": 0,
+    "fields": null
+  },
+  {
+    "endpoint": "GET /api/system-settings/public",
+    "label": "",
+    "status": 200,
+    "expected": [
+      200
+    ],
+    "passed": true,
+    "kind": "array",
+    "itemCount": 0,
+    "fields": null
+  },
+  {
+    "endpoint": "GET /api/liturgical-days?fromDate=2026-10-15&toDate=2026-10-22",
+    "label": "",
+    "status": 200,
+    "expected": [
+      200
+    ],
+    "passed": true,
+    "kind": "array",
+    "itemCount": 8,
+    "fields": [
+      "date",
+      "celebrationName",
+      "rank",
+      "seasonName"
+    ]
+  },
+  {
+    "endpoint": "GET /api/liturgical-days/2026-10-15",
+    "label": "",
+    "status": 200,
+    "expected": [
+      200
+    ],
+    "passed": true,
+    "kind": "object",
+    "fields": [
+      "date",
+      "celebrationName",
+      "rank",
+      "seasonName"
+    ]
+  },
+  {
+    "endpoint": "GET /api/songs?pageNumber=1&pageSize=20",
+    "label": "",
+    "status": 200,
+    "expected": [
+      200
+    ],
+    "passed": true,
+    "kind": "object",
+    "fields": [
+      "items",
+      "pageNumber",
+      "pageSize",
+      "totalCount",
+      "totalPages",
+      "hasPreviousPage",
+      "hasNextPage"
+    ],
+    "itemCount": 1,
+    "totalCount": 1,
+    "itemFields": [
+      "id",
+      "title",
+      "composer",
+      "lyricist",
+      "musicalKey",
+      "tempo",
+      "notes"
+    ]
+  },
+  {
+    "endpoint": "GET /api/songs/eef006ca-c939-411a-8738-1089ca9aed82",
+    "label": "",
+    "status": 200,
+    "expected": [
+      200
+    ],
+    "passed": true,
+    "kind": "object",
+    "fields": [
+      "id",
+      "title",
+      "composer",
+      "lyricist",
+      "musicalKey",
+      "tempo",
+      "notes"
+    ]
+  },
+  {
+    "endpoint": "GET /api/songs/eef006ca-c939-411a-8738-1089ca9aed82/classification",
+    "label": "",
+    "status": 200,
+    "expected": [
+      200
+    ],
+    "passed": true,
+    "kind": "object",
+    "fields": [
+      "songId",
+      "liturgicalSeasons",
+      "massTypes",
+      "ceremonyTypes",
+      "songThemes",
+      "vocalRequirements",
+      "instrumentRequirements"
+    ]
+  },
+  {
+    "endpoint": "GET /api/music-materials?songId=eef006ca-c939-411a-8738-1089ca9aed82&pageNumber=1&pageSize=20",
+    "label": "",
+    "status": 200,
+    "expected": [
+      200
+    ],
+    "passed": true,
+    "kind": "object",
+    "fields": [
+      "items",
+      "pageNumber",
+      "pageSize",
+      "totalCount",
+      "totalPages",
+      "hasPreviousPage",
+      "hasNextPage"
+    ],
+    "itemCount": 0,
+    "totalCount": 0,
+    "itemFields": null
+  },
+  {
+    "endpoint": "GET /api/music-materials/mine?pageNumber=1&pageSize=20",
+    "label": "",
+    "status": 200,
+    "expected": [
+      200
+    ],
+    "passed": true,
+    "kind": "object",
+    "fields": [
+      "items",
+      "pageNumber",
+      "pageSize",
+      "totalCount",
+      "totalPages",
+      "hasPreviousPage",
+      "hasNextPage"
+    ],
+    "itemCount": 0,
+    "totalCount": 0,
+    "itemFields": null
+  },
+  {
+    "endpoint": "GET /api/practice-assignments/mine?pageNumber=1&pageSize=20",
+    "label": "",
+    "status": 200,
+    "expected": [
+      200
+    ],
+    "passed": true,
+    "kind": "object",
+    "fields": [
+      "items",
+      "pageNumber",
+      "pageSize",
+      "totalCount",
+      "totalPages",
+      "hasPreviousPage",
+      "hasNextPage"
+    ],
+    "itemCount": 0,
+    "totalCount": 0,
+    "itemFields": null
+  },
+  {
+    "endpoint": "GET /api/practice-assignments/mine/counts",
+    "label": "",
+    "status": 200,
+    "expected": [
+      200
+    ],
+    "passed": true,
+    "kind": "object",
+    "fields": [
+      "total",
+      "notSubmitted",
+      "submitted",
+      "needsRevision",
+      "passed",
+      "overdue"
+    ]
+  },
+  {
+    "endpoint": "GET /api/practice-submissions/mine?pageNumber=1&pageSize=20",
+    "label": "",
+    "status": 200,
+    "expected": [
+      200
+    ],
+    "passed": true,
+    "kind": "object",
+    "fields": [
+      "items",
+      "pageNumber",
+      "pageSize",
+      "totalCount",
+      "totalPages",
+      "hasPreviousPage",
+      "hasNextPage"
+    ],
+    "itemCount": 0,
+    "totalCount": 0,
+    "itemFields": null
+  },
+  {
+    "endpoint": "GET /api/notifications?pageNumber=1&pageSize=20",
+    "label": "",
+    "status": 200,
+    "expected": [
+      200
+    ],
+    "passed": true,
+    "kind": "object",
+    "fields": [
+      "items",
+      "pageNumber",
+      "pageSize",
+      "totalCount",
+      "totalPages",
+      "hasPreviousPage",
+      "hasNextPage"
+    ],
+    "itemCount": 0,
+    "totalCount": 0,
+    "itemFields": null
+  },
+  {
+    "endpoint": "GET /api/notifications/unread-count",
+    "label": "",
+    "status": 200,
+    "expected": [
+      200
+    ],
+    "passed": true,
+    "kind": "object",
+    "fields": [
+      null
+    ]
+  },
+  {
+    "endpoint": "GET /api/lookups/mass-types",
+    "label": "",
+    "status": 200,
+    "expected": [
+      200
+    ],
+    "passed": true,
+    "kind": "array",
+    "itemCount": 1,
+    "fields": [
+      "id",
+      "name",
+      "description",
+      "isActive"
+    ]
+  },
+  {
+    "endpoint": "GET /api/lookups/ceremony-types",
+    "label": "",
+    "status": 200,
+    "expected": [
+      200
+    ],
+    "passed": true,
+    "kind": "array",
+    "itemCount": 1,
+    "fields": [
+      "id",
+      "name",
+      "description",
+      "isActive"
+    ]
+  },
+  {
+    "endpoint": "GET /api/lookups/event-categories",
+    "label": "",
+    "status": 200,
+    "expected": [
+      200
+    ],
+    "passed": true,
+    "kind": "array",
+    "itemCount": 0,
+    "fields": null
+  },
+  {
+    "endpoint": "GET /api/lookups/song-themes",
+    "label": "",
+    "status": 200,
+    "expected": [
+      200
+    ],
+    "passed": true,
+    "kind": "array",
+    "itemCount": 1,
+    "fields": [
+      "id",
+      "name",
+      "description",
+      "isActive"
+    ]
+  },
+  {
+    "endpoint": "GET /api/lookups/skill-categories",
+    "label": "",
+    "status": 200,
+    "expected": [
+      200
+    ],
+    "passed": true,
+    "kind": "array",
+    "itemCount": 5,
+    "fields": [
+      "id",
+      "name",
+      "description",
+      "isActive"
+    ]
+  },
+  {
+    "endpoint": "GET /api/lookups/liturgical-seasons",
+    "label": "",
+    "status": 200,
+    "expected": [
+      200
+    ],
+    "passed": true,
+    "kind": "array",
+    "itemCount": 1,
+    "fields": [
+      "id",
+      "name",
+      "startDate",
+      "endDate",
+      "colorHex",
+      "isActive"
+    ]
+  },
+  {
+    "endpoint": "GET /api/lookups/liturgical-slots",
+    "label": "",
+    "status": 200,
+    "expected": [
+      200
+    ],
+    "passed": true,
+    "kind": "array",
+    "itemCount": 1,
+    "fields": [
+      "id",
+      "name",
+      "defaultOrder",
+      "isActive"
+    ]
+  },
+  {
+    "endpoint": "GET /api/lookups/worship-locations",
+    "label": "",
+    "status": 200,
+    "expected": [
+      200
+    ],
+    "passed": true,
+    "kind": "array",
+    "itemCount": 1,
+    "fields": [
+      "id",
+      "name",
+      "address",
+      "isActive"
+    ]
+  },
+  {
+    "endpoint": "GET /api/lookups/skills",
+    "label": "",
+    "status": 200,
+    "expected": [
+      200
+    ],
+    "passed": true,
+    "kind": "array",
+    "itemCount": 0,
+    "fields": null
+  },
+  {
+    "endpoint": "GET /api/schedule/events/00000000-0000-0000-0000-000000000000",
+    "label": "Missing ID; not a positive detail test",
+    "status": 404,
+    "expected": [
+      404
+    ],
+    "passed": true,
+    "kind": "object",
+    "fields": [
+      "code",
+      "message"
+    ],
+    "errorCode": "LITURGICAL_EVENT_NOT_FOUND"
+  },
+  {
+    "endpoint": "GET /api/schedule/rehearsals/00000000-0000-0000-0000-000000000000",
+    "label": "Missing ID; not a positive detail test",
+    "status": 404,
+    "expected": [
+      404
+    ],
+    "passed": true,
+    "kind": "object",
+    "fields": [
+      "code",
+      "message"
+    ],
+    "errorCode": "REHEARSAL_NOT_FOUND"
+  },
+  {
+    "endpoint": "GET /api/service-rosters?eventId=00000000-0000-0000-0000-000000000000",
+    "label": "Expected role restriction",
+    "status": 403,
+    "expected": [
+      403
+    ],
+    "passed": true,
+    "kind": "empty-or-scalar"
+  },
+  {
+    "endpoint": "GET /api/director-notes",
+    "label": "Expected role restriction",
+    "status": 403,
+    "expected": [
+      403
+    ],
+    "passed": true,
+    "kind": "empty-or-scalar"
+  },
+  {
+    "endpoint": "GET /api/rehearsals/00000000-0000-0000-0000-000000000000/attendances",
+    "label": "Expected role restriction",
+    "status": 403,
+    "expected": [
+      403
+    ],
+    "passed": true,
+    "kind": "empty-or-scalar"
+  },
+  {
+    "endpoint": "GET /api/liturgical-events",
+    "label": "Expected role restriction",
+    "status": 403,
+    "expected": [
+      403
+    ],
+    "passed": true,
+    "kind": "empty-or-scalar"
+  },
+  {
+    "endpoint": "GET /api/liturgical-events/00000000-0000-0000-0000-000000000000",
+    "label": "Expected role restriction",
+    "status": 403,
+    "expected": [
+      403
+    ],
+    "passed": true,
+    "kind": "empty-or-scalar"
+  },
+  {
+    "endpoint": "GET /api/song-lists/event/00000000-0000-0000-0000-000000000000/latest",
+    "label": "Expected role restriction",
+    "status": 403,
+    "expected": [
+      403
+    ],
+    "passed": true,
+    "kind": "empty-or-scalar"
+  },
+  {
+    "endpoint": "GET /api/schedule/events",
+    "label": "Unauthenticated",
+    "status": 401,
+    "expected": [
+      401
+    ],
+    "passed": true,
+    "kind": "object",
+    "fields": [
+      "code",
+      "message"
+    ],
+    "errorCode": "AUTH_TOKEN_INVALID"
+  },
+  {
+    "endpoint": "PUT /api/event-participations/mine/00000000-0000-0000-0000-000000000000",
+    "label": "Invalid status; no real participation is changed",
+    "status": 400,
+    "expected": [
+      400
+    ],
+    "passed": true,
+    "kind": "object",
+    "fields": [
+      "code",
+      "message",
+      "errors"
+    ],
+    "errorCode": "VALIDATION_FAILED",
+    "validationFields": [
+      "status"
+    ]
+  },
+  {
+    "endpoint": "PUT /api/music-materials/00000000-0000-0000-0000-000000000000/learning-progress",
+    "label": "Invalid progress; no real material is changed",
+    "status": 400,
+    "expected": [
+      400
+    ],
+    "passed": true,
+    "kind": "object",
+    "fields": [
+      "code",
+      "message",
+      "errors"
+    ],
+    "errorCode": "VALIDATION_FAILED",
+    "validationFields": [
+      "status"
+    ]
+  },
+  {
+    "endpoint": "GET /api/liturgical-days?fromDate=2026-10-22&toDate=2026-10-15",
+    "label": "Invalid date range",
+    "status": 400,
+    "expected": [
+      400
+    ],
+    "passed": true,
+    "kind": "object",
+    "fields": [
+      "code",
+      "message",
+      "errors"
+    ],
+    "errorCode": "VALIDATION_FAILED",
+    "validationFields": [
+      "toDate"
+    ]
+  },
+  {
+    "endpoint": "GET /api/liturgical-days?fromDate=2026-01-01&toDate=2027-12-31",
+    "label": "Range exceeds 366 days",
+    "status": 400,
+    "expected": [
+      400
+    ],
+    "passed": true,
+    "kind": "object",
+    "fields": [
+      "code",
+      "message",
+      "errors"
+    ],
+    "errorCode": "VALIDATION_FAILED",
+    "validationFields": [
+      "toDate"
+    ]
+  },
+  {
+    "endpoint": "POST /api/auth/refresh",
+    "label": "",
+    "status": 200,
+    "expected": [
+      200
+    ],
+    "passed": true,
+    "kind": "object",
+    "fields": [
+      "accessToken",
+      "accessTokenExpiresAt",
+      "refreshToken",
+      "user"
+    ]
+  },
+  {
+    "endpoint": "GET /api/auth/me",
+    "label": "Refreshed access token",
+    "status": 200,
+    "expected": [
+      200
+    ],
+    "passed": true,
+    "kind": "object",
+    "fields": [
+      "id",
+      "email",
+      "fullName",
+      "phone",
+      "roleName",
+      "isActive",
+      "isPasswordChangeRequired"
+    ]
+  },
+  {
+    "endpoint": "POST /api/auth/logout",
+    "label": "Only the newly created test session",
+    "status": 204,
+    "expected": [
+      204
+    ],
+    "passed": true,
+    "kind": "empty-or-scalar"
+  }
+]

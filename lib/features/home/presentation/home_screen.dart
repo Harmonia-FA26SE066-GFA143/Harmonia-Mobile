@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../calendar/data/calendar_repository.dart';
 import '../../calendar/data/liturgical_models.dart';
+import '../../calendar/presentation/participation_prompt.dart';
+import 'home_api_sections.dart';
 import '../../notifications/presentation/notification_notifier.dart';
 import '../../practice/data/practice_repository.dart';
 import '../../profile/data/profile_repository.dart';
@@ -14,109 +17,48 @@ class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   void _showParticipationDialog(
-    BuildContext context,
+    BuildContext screenContext,
     WidgetRef ref,
     LiturgicalEvent event,
   ) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'Xác nhận tham dự Thánh Lễ',
-                  style: AppTypography.titleLarge,
-                ),
-                const SizedBox(height: 6),
-                Text(event.title, style: AppTypography.bodySmall),
-                const SizedBox(height: 20),
-                ListTile(
-                  leading: const Icon(
-                    Icons.check_circle_rounded,
-                    color: AppColors.statusSuccess,
-                  ),
-                  title: const Text('Có mặt phục vụ'),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: const BorderSide(color: AppColors.border),
-                  ),
-                  onTap: () {
-                    ref
-                        .read(calendarNotifierProvider.notifier)
-                        .setParticipation(
-                          event.id,
-                          ParticipationStatus.confirmed,
-                        );
-                    Navigator.of(context).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Đã xác nhận tham gia phục vụ!'),
-                        backgroundColor: AppColors.statusSuccess,
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 10),
-                ListTile(
-                  leading: const Icon(
-                    Icons.cancel_rounded,
-                    color: AppColors.statusDanger,
-                  ),
-                  title: const Text('Báo vắng mặt'),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: const BorderSide(color: AppColors.border),
-                  ),
-                  onTap: () {
-                    ref
-                        .read(calendarNotifierProvider.notifier)
-                        .setParticipation(
-                          event.id,
-                          ParticipationStatus.declined,
-                        );
-                    Navigator.of(context).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Đã cập nhật trạng thái vắng mặt.'),
-                        backgroundColor: AppColors.statusDanger,
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 10),
-                ListTile(
-                  leading: const Icon(
-                    Icons.help_outline_rounded,
-                    color: AppColors.statusWarning,
-                  ),
-                  title: const Text('Chưa chắc chắn'),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: const BorderSide(color: AppColors.border),
-                  ),
-                  onTap: () {
-                    ref
-                        .read(calendarNotifierProvider.notifier)
-                        .setParticipation(event.id, ParticipationStatus.unsure);
-                    Navigator.of(context).pop();
-                  },
-                ),
-              ],
+    showModalBottomSheet<void>(
+      context: screenContext,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(event.title, style: AppTypography.titleLarge),
             ),
-          ),
-        );
-      },
+            for (final status in [
+              ParticipationStatus.confirmed,
+              ParticipationStatus.declined,
+              ParticipationStatus.unsure,
+            ])
+              ListTile(
+                title: Text(status.label),
+                enabled: event.canRespond,
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  showParticipationPrompt(screenContext, ref, event, status);
+                },
+              ),
+          ],
+        ),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final calendarState = ref.watch(calendarNotifierProvider);
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final dayState = ref.watch(liturgicalDayProvider(today));
+    final settings = ref.watch(publicAppSettingsProvider).value;
+    final choirLabel = settings?.choirName.isNotEmpty == true
+        ? settings!.choirName
+        : 'Ca viên';
     final notificationState = ref.watch(notificationNotifierProvider);
     final practiceState = ref.watch(practiceListNotifierProvider);
     final profileState = ref.watch(currentMemberProfileProvider);
@@ -132,6 +74,9 @@ class HomeScreen extends ConsumerWidget {
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
+            ref.invalidate(rehearsalsProvider);
+            ref.invalidate(publicAppSettingsProvider);
+            ref.invalidate(liturgicalDayProvider(today));
             ref.invalidate(currentMemberProfileProvider);
             await ref.read(calendarNotifierProvider.notifier).loadEvents();
             await ref
@@ -196,7 +141,7 @@ class HomeScreen extends ConsumerWidget {
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
-                                  'Bè Soprano',
+                                  choirLabel,
                                   style: AppTypography.labelSmall.copyWith(
                                     color: AppColors.primary,
                                     fontWeight: FontWeight.bold,
@@ -262,6 +207,23 @@ class HomeScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 18),
 
+                Card(
+                  child: ListTile(
+                    leading: const Icon(
+                      Icons.library_music,
+                      color: AppColors.primary,
+                    ),
+                    title: const Text('Thư viện thánh ca'),
+                    subtitle: const Text('Tìm bài hát và tài liệu học của bạn'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/music-library'),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                const HomePublicNotice(),
+                const MemberAssignmentsCard(),
+
                 // Subtitle Context Banner
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -277,7 +239,17 @@ class HomeScreen extends ConsumerWidget {
                             ),
                           ),
                           Text(
-                            'Tuần XXVI Thường Niên • Phụng vụ Thánh ca',
+                            dayState.when(
+                              data: (day) => day == null
+                                  ? 'Chưa có lịch lễ hôm nay'
+                                  : [
+                                      day.celebrationName,
+                                      if (day.seasonName?.isNotEmpty == true)
+                                        day.seasonName!,
+                                    ].join(' • '),
+                              loading: () => 'Đang tải lịch lễ…',
+                              error: (_, _) => 'Chưa tải được lịch lễ hôm nay',
+                            ),
                             style: AppTypography.bodySmall,
                           ),
                         ],
@@ -293,7 +265,7 @@ class HomeScreen extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        'Tuần 26',
+                        DateFormat('dd/MM').format(DateTime.now()),
                         style: AppTypography.labelSmall.copyWith(
                           color: AppColors.secondary,
                           fontWeight: FontWeight.bold,
@@ -506,7 +478,8 @@ class HomeScreen extends ConsumerWidget {
                                           ),
                                           const SizedBox(width: 8),
                                           Text(
-                                            '27/09/2026',
+                                            DateFormat('dd/MM/yyyy')
+                                                .format(mainEvent.date),
                                             style: AppTypography.bodyMedium
                                                 .copyWith(
                                                   fontWeight: FontWeight.w600,
@@ -636,7 +609,7 @@ class HomeScreen extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        '2 việc',
+                        'Của bạn',
                         style: AppTypography.labelSmall.copyWith(
                           color: AppColors.statusDanger,
                           fontWeight: FontWeight.bold,
@@ -694,7 +667,7 @@ class HomeScreen extends ConsumerWidget {
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
-                                        '${nextEvent.title} (04/10 • 18:00)',
+                                        '${nextEvent.title} (${DateFormat('dd/MM').format(nextEvent.date)} • ${nextEvent.timeRange})',
                                         style: AppTypography.bodySmall,
                                       ),
                                     ],
@@ -734,17 +707,19 @@ class HomeScreen extends ConsumerWidget {
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
-                                      'Hạn chót: T7 tuần này',
+                                      'Phản hồi một lần',
                                       style: AppTypography.labelSmall,
                                     ),
                                   ],
                                 ),
                                 ElevatedButton.icon(
-                                  onPressed: () => _showParticipationDialog(
-                                    context,
-                                    ref,
-                                    nextEvent,
-                                  ),
+                                  onPressed: !nextEvent.canRespond
+                                      ? null
+                                      : () => _showParticipationDialog(
+                                          context,
+                                          ref,
+                                          nextEvent,
+                                        ),
                                   style: ElevatedButton.styleFrom(
                                     minimumSize: const Size(104, 44),
                                     padding: const EdgeInsets.symmetric(
@@ -771,7 +746,8 @@ class HomeScreen extends ConsumerWidget {
                 practiceState.when(
                   loading: () => const SizedBox.shrink(),
                   error: (_, _) => const SizedBox.shrink(),
-                  data: (assignments) {
+                  data: (practiceList) {
+                    final assignments = practiceList.items;
                     if (assignments.isEmpty) return const SizedBox.shrink();
                     final pendingAssignment = assignments.first;
                     return Card(
@@ -912,66 +888,7 @@ class HomeScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
 
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Thứ Sáu, 02/10/2026',
-                              style: AppTypography.titleMedium.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.statusInfoSoft,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                '19:30 – 21:00',
-                                style: AppTypography.labelSmall.copyWith(
-                                  color: AppColors.statusInfo,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.location_on_outlined,
-                              size: 16,
-                              color: AppColors.muted,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Phòng tập Ca đoàn Harmonia',
-                              style: AppTypography.bodySmall,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Nội dung: Ráp đàn và luyện kỹ thuật bè bài Đáp ca Chúa Nhật XXVII.',
-                          style: AppTypography.bodySmall.copyWith(
-                            color: AppColors.body,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                const UpcomingRehearsalCard(),
                 const SizedBox(height: 20),
               ],
             ),

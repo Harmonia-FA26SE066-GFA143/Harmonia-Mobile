@@ -573,7 +573,10 @@ void main() {
 
         // Verify success screen is NOT shown for token_second because token_first was abandoned
         expect(find.text('Đặt lại mật khẩu thành công!'), findsNothing);
-        expect(find.text('Đặt lại mật khẩu'), findsNWidgets(2)); // Form is still open
+        expect(
+          find.text('Đặt lại mật khẩu'),
+          findsNWidgets(2),
+        ); // Form is still open
       },
     );
 
@@ -623,10 +626,7 @@ void main() {
           find.byType(TextFormField).first,
           'PasswordA123',
         );
-        await tester.enterText(
-          find.byType(TextFormField).last,
-          'PasswordA123',
-        );
+        await tester.enterText(find.byType(TextFormField).last, 'PasswordA123');
 
         // 2. Submit token A
         await tester.tap(
@@ -677,10 +677,7 @@ void main() {
           find.byType(TextFormField).first,
           'PasswordB123',
         );
-        await tester.enterText(
-          find.byType(TextFormField).last,
-          'PasswordB123',
-        );
+        await tester.enterText(find.byType(TextFormField).last, 'PasswordB123');
 
         await tester.tap(
           find.widgetWithText(ElevatedButton, 'Đặt lại mật khẩu'),
@@ -883,9 +880,7 @@ void main() {
               authRepositoryProvider.overrideWithValue(repository),
               sessionManagerProvider.overrideWithValue(sessionManager),
             ],
-            child: MaterialApp.router(
-              routerConfig: testRouter,
-            ),
+            child: MaterialApp.router(routerConfig: testRouter),
           ),
         );
         await tester.pumpAndSettle();
@@ -1027,9 +1022,7 @@ void main() {
               authRepositoryProvider.overrideWithValue(repository),
               sessionManagerProvider.overrideWithValue(sessionManager),
             ],
-            child: MaterialApp.router(
-              routerConfig: testRouter,
-            ),
+            child: MaterialApp.router(routerConfig: testRouter),
           ),
         );
         await tester.pumpAndSettle();

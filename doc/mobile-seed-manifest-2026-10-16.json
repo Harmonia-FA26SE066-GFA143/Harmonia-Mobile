@@ -1,0 +1,723 @@
+{
+  "prefix": "[MOBILE-SEED-20261016]",
+  "updatedAtUtc": "2026-10-16T13:53:03.8508051Z",
+  "records": [
+    {
+      "kind": "TargetMemberProfile",
+      "id": "30e3e1ae-562a-4a2b-81f7-6cfd17d0c737",
+      "action": "ReadOnly"
+    },
+    {
+      "kind": "SkillCategory",
+      "id": "cfb78dbd-4a8f-47af-8c90-2e045cb81962",
+      "action": "Existing"
+    },
+    {
+      "kind": "Skill",
+      "id": "9d6e3e11-4b81-43f4-b0eb-21138a51d888",
+      "action": "Existing"
+    },
+    {
+      "kind": "Skill",
+      "id": "9512a6f0-1189-49c5-b560-cccd23fb90ea",
+      "action": "Existing"
+    },
+    {
+      "kind": "MemberSkill",
+      "id": "7c422ea0-a793-40ce-a192-b18b24a7be16",
+      "action": "Existing"
+    },
+    {
+      "kind": "MemberSkill",
+      "id": "2c4149fa-475f-468b-a96f-e84818b1cbfd",
+      "action": "Existing"
+    },
+    {
+      "kind": "Location",
+      "id": "31217e66-e034-4c19-8d6e-23d37430128b",
+      "action": "Existing"
+    },
+    {
+      "kind": "Song",
+      "id": "60742a37-7b5d-4401-8e88-ab286f282871",
+      "action": "Existing"
+    },
+    {
+      "kind": "Rehearsal",
+      "id": "b2327f91-4fa9-4c46-953c-bdd276183f98",
+      "action": "Created"
+    },
+    {
+      "kind": "Rehearsal",
+      "id": "5dd3c624-f97d-4926-9d45-f224ff33ba28",
+      "action": "Created"
+    },
+    {
+      "kind": "PracticeAssignment",
+      "id": "152cbe16-dfbd-4249-a9d6-dad2347f6b79",
+      "action": "Created"
+    },
+    {
+      "kind": "PracticeAssignment",
+      "id": "2fe1b8eb-00f7-4682-ac39-d8e7004f90ec",
+      "action": "CreatedForUploadProbe"
+    },
+    {
+      "kind": "MassType",
+      "scenario": "EventSeed",
+      "id": "4a984881-1bea-4059-ab11-25b34eb76821"
+    },
+    {
+      "kind": "LiturgicalSlot",
+      "scenario": "EventSeed",
+      "id": "c493e3d1-ec81-465b-9103-a88f3f1b1e92"
+    },
+    {
+      "kind": "LiturgicalEvent",
+      "scenario": "Assigned",
+      "id": "adbbd346-0430-4115-8e9a-7335f2da5fa4"
+    },
+    {
+      "kind": "EventParticipation",
+      "scenario": "Assigned",
+      "id": "611c72b1-ce28-42f9-8da5-29081c6a0d65"
+    },
+    {
+      "kind": "LiturgicalEvent",
+      "scenario": "Invited",
+      "id": "1cf86634-4ed0-495b-867c-ee8eae3af572"
+    },
+    {
+      "kind": "EventParticipation",
+      "scenario": "Invited",
+      "id": "237aa0f8-26e5-4d34-992f-c67aed9c0cb4"
+    },
+    {
+      "kind": "LiturgicalEvent",
+      "scenario": "Draft",
+      "id": "cb9693e0-9428-4908-b00c-13d59e5e9ce5"
+    },
+    {
+      "kind": "SongList",
+      "scenario": "Assigned",
+      "id": "5acb823b-d849-475d-bc61-5511ac3f3f9d"
+    },
+    {
+      "kind": "SongListItem",
+      "scenario": "Assigned",
+      "id": "4e5fb24f-a225-4b8d-a853-e5a2e27cbe82"
+    },
+    {
+      "kind": "RosterAssignment",
+      "scenario": "Assigned",
+      "id": "5e8961ae-1758-4f0e-be5b-8d2491f785bf"
+    },
+    {
+      "kind": "ServiceRoster",
+      "scenario": "Assigned",
+      "id": "5db05434-3e4d-4327-9d7c-db3f01344ae4"
+    },
+    {
+      "kind": "LinkedRehearsal",
+      "scenario": "Assigned",
+      "id": "b2327f91-4fa9-4c46-953c-bdd276183f98"
+    }
+  ],
+  "failures": [
+    {
+      "method": "POST",
+      "path": "/api/music-materials",
+      "status": 502,
+      "code": "EXTERNAL_STORAGE_FAILED"
+    },
+    {
+      "method": "POST",
+      "path": "/api/music-materials",
+      "status": 502,
+      "code": "EXTERNAL_STORAGE_FAILED"
+    },
+    {
+      "method": "POST",
+      "path": "/api/music-materials",
+      "status": 502,
+      "code": "EXTERNAL_STORAGE_FAILED"
+    },
+    {
+      "method": "POST",
+      "path": "/api/rehearsals",
+      "status": 500,
+      "code": "INTERNAL_ERROR"
+    },
+    {
+      "method": "POST",
+      "path": "/api/practice-assignments/2fe1b8eb-00f7-4682-ac39-d8e7004f90ec/submissions",
+      "status": 502,
+      "code": "EXTERNAL_STORAGE_FAILED"
+    }
+  ],
+  "checks": [
+    {
+      "kind": "MaterialUpload",
+      "materialType": "SheetMusic",
+      "state": "Blocked_ExternalStorageFailed"
+    },
+    {
+      "kind": "MaterialUpload",
+      "materialType": "Lyrics",
+      "state": "Blocked_ExternalStorageFailed"
+    },
+    {
+      "kind": "MaterialUpload",
+      "materialType": "SampleAudio",
+      "state": "Blocked_ExternalStorageFailed"
+    },
+    {
+      "kind": "MemberRehearsalDetail",
+      "id": "b2327f91-4fa9-4c46-953c-bdd276183f98",
+      "attendance": null,
+      "songCount": 1
+    },
+    {
+      "kind": "MemberRehearsalDetail",
+      "id": "5dd3c624-f97d-4926-9d45-f224ff33ba28",
+      "attendance": "Present",
+      "songCount": 1
+    },
+    {
+      "kind": "PracticeScenario",
+      "scenario": "Chờ chấm",
+      "state": "Blocked_ExternalStorageFailed"
+    },
+    {
+      "kind": "PracticeScenario",
+      "scenario": "Đã đạt",
+      "state": "Blocked_ExternalStorageFailed"
+    },
+    {
+      "kind": "PracticeScenario",
+      "scenario": "Cần luyện thêm",
+      "state": "Blocked_ExternalStorageFailed"
+    },
+    {
+      "kind": "PublicSetting",
+      "key": "System.Announcement",
+      "state": "MissingRow_NoCreateEndpoint"
+    },
+    {
+      "kind": "PublicSetting",
+      "key": "Choir.Name",
+      "state": "MissingRow_NoCreateEndpoint"
+    },
+    {
+      "kind": "PublicSetting",
+      "key": "Parish.Name",
+      "state": "MissingRow_NoCreateEndpoint"
+    },
+    {
+      "kind": "FinalCounts",
+      "skills": 2,
+      "materials": 0,
+      "practiceAssignments": 1,
+      "submissions": 0,
+      "upcomingRehearsals": 1,
+      "unreadCount": 2,
+      "practiceCounts": {
+        "total": 1,
+        "notSubmitted": 1,
+        "submitted": 0,
+        "needsRevision": 0,
+        "passed": 0,
+        "overdue": 0
+      },
+      "historicalBeforeSecondAssignment": true
+    }
+  ],
+  "remaining": [
+    "Cloudinary/storage upload failed in initial seed; uploads not retried during ParishPriest continuation",
+    "Public system setting rows still missing; API exposes GET/PUT only"
+  ],
+  "verifiedByFlutter": {
+    "passed": true,
+    "skills": 2,
+    "materials": 0,
+    "seedPracticeAssignments": 2,
+    "upcomingRehearsals": 1,
+    "pastAttendance": "Present",
+    "futureAttendance": null,
+    "unreadCount": 9
+  },
+  "eventSeed": {
+    "prefix": "[MOBILE-SEED-20261016]",
+    "updatedAtUtc": "2026-10-16T12:16:17.853089Z",
+    "targetMemberEmail": "member@harmonia.local",
+    "records": [
+      {
+        "kind": "MassType",
+        "scenario": "EventSeed",
+        "id": "4a984881-1bea-4059-ab11-25b34eb76821"
+      },
+      {
+        "kind": "LiturgicalSlot",
+        "scenario": "EventSeed",
+        "id": "c493e3d1-ec81-465b-9103-a88f3f1b1e92"
+      },
+      {
+        "kind": "LiturgicalEvent",
+        "scenario": "Assigned",
+        "id": "adbbd346-0430-4115-8e9a-7335f2da5fa4"
+      },
+      {
+        "kind": "EventParticipation",
+        "scenario": "Assigned",
+        "id": "611c72b1-ce28-42f9-8da5-29081c6a0d65"
+      },
+      {
+        "kind": "LiturgicalEvent",
+        "scenario": "Invited",
+        "id": "1cf86634-4ed0-495b-867c-ee8eae3af572"
+      },
+      {
+        "kind": "EventParticipation",
+        "scenario": "Invited",
+        "id": "237aa0f8-26e5-4d34-992f-c67aed9c0cb4"
+      },
+      {
+        "kind": "LiturgicalEvent",
+        "scenario": "Draft",
+        "id": "cb9693e0-9428-4908-b00c-13d59e5e9ce5"
+      },
+      {
+        "kind": "SongList",
+        "scenario": "Assigned",
+        "id": "5acb823b-d849-475d-bc61-5511ac3f3f9d"
+      },
+      {
+        "kind": "SongListItem",
+        "scenario": "Assigned",
+        "id": "4e5fb24f-a225-4b8d-a853-e5a2e27cbe82"
+      },
+      {
+        "kind": "RosterAssignment",
+        "scenario": "Assigned",
+        "id": "5e8961ae-1758-4f0e-be5b-8d2491f785bf"
+      },
+      {
+        "kind": "ServiceRoster",
+        "scenario": "Assigned",
+        "id": "5db05434-3e4d-4327-9d7c-db3f01344ae4"
+      },
+      {
+        "kind": "LinkedRehearsal",
+        "scenario": "Assigned",
+        "id": "b2327f91-4fa9-4c46-953c-bdd276183f98"
+      }
+    ],
+    "requests": [
+      {
+        "method": "POST",
+        "path": "/api/auth/login",
+        "status": 200,
+        "code": "",
+        "expected": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/auth/login",
+        "status": 200,
+        "code": "",
+        "expected": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/auth/login",
+        "status": 200,
+        "code": "",
+        "expected": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/auth/login",
+        "status": 200,
+        "code": "",
+        "expected": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/member-profiles/me",
+        "status": 200,
+        "code": "",
+        "expected": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/member-skills/mine?pageNumber=1&pageSize=50",
+        "status": 200,
+        "code": "",
+        "expected": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/songs/60742a37-7b5d-4401-8e88-ab286f282871",
+        "status": 200,
+        "code": "",
+        "expected": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/lookups/mass-types?includeInactive=true",
+        "status": 200,
+        "code": "",
+        "expected": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/lookups/liturgical-slots?includeInactive=true",
+        "status": 200,
+        "code": "",
+        "expected": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/liturgical-events?fromDate=2026-10-18&toDate=2026-10-20&pageNumber=1&pageSize=50",
+        "status": 200,
+        "code": "",
+        "expected": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/event-participations?eventId=adbbd346-0430-4115-8e9a-7335f2da5fa4",
+        "status": 200,
+        "code": "",
+        "expected": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/event-participations?eventId=1cf86634-4ed0-495b-867c-ee8eae3af572",
+        "status": 200,
+        "code": "",
+        "expected": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/song-lists/event/adbbd346-0430-4115-8e9a-7335f2da5fa4/latest",
+        "status": 200,
+        "code": "",
+        "expected": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/song-list-items/4e5fb24f-a225-4b8d-a853-e5a2e27cbe82/personnel-requirements",
+        "status": 200,
+        "code": "",
+        "expected": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/service-rosters?eventId=adbbd346-0430-4115-8e9a-7335f2da5fa4",
+        "status": 200,
+        "code": "",
+        "expected": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/schedule/assignments",
+        "status": 200,
+        "code": "",
+        "expected": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/rehearsals?pageNumber=1&pageSize=50",
+        "status": 200,
+        "code": "",
+        "expected": true
+      },
+      {
+        "method": "PUT",
+        "path": "/api/rehearsals/b2327f91-4fa9-4c46-953c-bdd276183f98",
+        "status": 200,
+        "code": "",
+        "expected": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/event-participations/mine",
+        "status": 200,
+        "code": "",
+        "expected": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/schedule/assignments",
+        "status": 200,
+        "code": "",
+        "expected": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/schedule/events",
+        "status": 200,
+        "code": "",
+        "expected": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/schedule/events/adbbd346-0430-4115-8e9a-7335f2da5fa4",
+        "status": 200,
+        "code": "",
+        "expected": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/schedule/events/1cf86634-4ed0-495b-867c-ee8eae3af572",
+        "status": 200,
+        "code": "",
+        "expected": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/schedule/events/cb9693e0-9428-4908-b00c-13d59e5e9ce5",
+        "status": 404,
+        "code": "LITURGICAL_EVENT_NOT_FOUND",
+        "expected": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/song-lists/event/adbbd346-0430-4115-8e9a-7335f2da5fa4/approved",
+        "status": 200,
+        "code": "",
+        "expected": true
+      },
+      {
+        "method": "PUT",
+        "path": "/api/event-participations/mine/adbbd346-0430-4115-8e9a-7335f2da5fa4",
+        "status": 409,
+        "code": "EVENT_PARTICIPATION_ALREADY_RESPONDED",
+        "expected": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/notifications/unread-count",
+        "status": 200,
+        "code": "",
+        "expected": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/auth/logout",
+        "status": 204,
+        "code": "",
+        "expected": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/auth/logout",
+        "status": 204,
+        "code": "",
+        "expected": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/auth/logout",
+        "status": 204,
+        "code": "",
+        "expected": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/auth/logout",
+        "status": 204,
+        "code": "",
+        "expected": true
+      }
+    ],
+    "checks": [
+      {
+        "name": "TargetMember",
+        "passed": true,
+        "details": {
+          "memberId": "30e3e1ae-562a-4a2b-81f7-6cfd17d0c737"
+        }
+      },
+      {
+        "name": "SyntheticSong",
+        "passed": true,
+        "details": {
+          "songId": "60742a37-7b5d-4401-8e88-ab286f282871"
+        }
+      },
+      {
+        "name": "EventStatus-Assigned",
+        "passed": true,
+        "details": {
+          "id": "adbbd346-0430-4115-8e9a-7335f2da5fa4",
+          "status": "Published",
+          "date": "2026-10-18"
+        }
+      },
+      {
+        "name": "Participation-Assigned",
+        "passed": true,
+        "details": {
+          "status": "Confirmed",
+          "eventId": "adbbd346-0430-4115-8e9a-7335f2da5fa4"
+        }
+      },
+      {
+        "name": "EventStatus-Invited",
+        "passed": true,
+        "details": {
+          "id": "1cf86634-4ed0-495b-867c-ee8eae3af572",
+          "status": "Published",
+          "date": "2026-10-19"
+        }
+      },
+      {
+        "name": "Participation-Invited",
+        "passed": true,
+        "details": {
+          "status": "Invited",
+          "eventId": "1cf86634-4ed0-495b-867c-ee8eae3af572"
+        }
+      },
+      {
+        "name": "EventStatus-Draft",
+        "passed": true,
+        "details": {
+          "id": "cb9693e0-9428-4908-b00c-13d59e5e9ce5",
+          "status": "Draft",
+          "date": "2026-10-20"
+        }
+      },
+      {
+        "name": "SongPersonnelRequirement",
+        "passed": true,
+        "details": {
+          "requiredCount": 1,
+          "skillId": "9d6e3e11-4b81-43f4-b0eb-21138a51d888",
+          "songListItemId": "4e5fb24f-a225-4b8d-a853-e5a2e27cbe82"
+        }
+      },
+      {
+        "name": "SongListApproved",
+        "passed": true,
+        "details": {
+          "songListId": "5acb823b-d849-475d-bc61-5511ac3f3f9d",
+          "itemId": "4e5fb24f-a225-4b8d-a853-e5a2e27cbe82"
+        }
+      },
+      {
+        "name": "RosterFinalized",
+        "passed": true,
+        "details": {
+          "assignmentCount": 1,
+          "rosterId": "5db05434-3e4d-4327-9d7c-db3f01344ae4",
+          "shortages": 0
+        }
+      },
+      {
+        "name": "MemberAssignedDetail",
+        "passed": true,
+        "details": {
+          "canRespond": false,
+          "status": "Confirmed",
+          "assignments": 1
+        }
+      },
+      {
+        "name": "MemberEventRehearsal",
+        "passed": true,
+        "details": {
+          "rehearsalId": "b2327f91-4fa9-4c46-953c-bdd276183f98",
+          "rehearsals": 1
+        }
+      },
+      {
+        "name": "MemberInvitationAvailable",
+        "passed": true,
+        "details": {
+          "status": "Invited",
+          "canRespond": true
+        }
+      },
+      {
+        "name": "AssignedScheduleVisible",
+        "passed": true,
+        "details": {
+          "assignedEventId": "adbbd346-0430-4115-8e9a-7335f2da5fa4"
+        }
+      },
+      {
+        "name": "ApprovedSongListVisible",
+        "passed": true,
+        "details": {
+          "items": 1,
+          "status": "Approved"
+        }
+      },
+      {
+        "name": "DraftHidden",
+        "passed": true,
+        "details": {
+          "draftDetailStatus": 404
+        }
+      },
+      {
+        "name": "RepeatResponseRejected",
+        "passed": true,
+        "details": {
+          "code": "EVENT_PARTICIPATION_ALREADY_RESPONDED",
+          "status": 409
+        }
+      },
+      {
+        "name": "FinalSummary",
+        "passed": true,
+        "details": {
+          "createdOrReusedEvents": 3,
+          "finalizedRosters": 1,
+          "ownAssignments": 1,
+          "approvedSongLists": 1,
+          "draftEvents": 1,
+          "confirmedInvitations": 1,
+          "unreadCount": 9,
+          "openInvitations": 1,
+          "publishedEvents": 2
+        }
+      }
+    ]
+  },
+  "eventVerifiedByFlutter": {
+    "passed": true,
+    "seedPublishedEvents": 2,
+    "confirmed": "Confirmed",
+    "confirmedCanRespond": false,
+    "invited": "Invited",
+    "invitedCanRespond": true,
+    "ownAssignments": 1,
+    "linkedRehearsals": 1,
+    "approvedSongs": 1,
+    "draftDetailStatus": 404,
+    "unreadCount": 9
+  },
+  "liveFlutterTestsPassed": 2,
+  "uiVerification": {
+    "checksPassed": 14,
+    "checksFailed": 0,
+    "flutterTestsPassed": 138,
+    "replyAfterUiTest": {
+      "checkedAtUtc": "2026-10-16T13:53:03.5818941Z",
+      "role": "ChoirMember",
+      "respondedEventId": "1cf86634-4ed0-495b-867c-ee8eae3af572",
+      "status": "Confirmed",
+      "canRespond": false,
+      "cannotRespondReason": "EVENT_PARTICIPATION_ALREADY_RESPONDED",
+      "assignedEvents": 1,
+      "unreadCount": 8,
+      "uiUnreadCountAtSnapshot": 6,
+      "badgeMatchesSnapshot": false,
+      "badgeComparisonNote": "The value 6 belongs to an earlier UI snapshot. The resumed emulator displays a different profile; no current same-account badge comparison was performed."
+    },
+    "historicalSeedNote": "Invited results in the earlier seed checks precede the one-time UI response."
+  }
+}

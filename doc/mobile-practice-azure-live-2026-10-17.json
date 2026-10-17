@@ -1,0 +1,443 @@
+{
+  "environment": "https://harmonia-be-a7hneqh4aacsd2e6.southeastasia-01.azurewebsites.net",
+  "checkedAtUtc": "2026-10-17T07:40:29.8808828Z",
+  "httpChecks": [
+    {
+      "name": "Swagger available",
+      "passed": true,
+      "details": {
+        "hasPracticeSchema": false,
+        "practiceResponseHasContent": false
+      }
+    },
+    {
+      "name": "Login Member",
+      "passed": true,
+      "details": {
+        "passwordChangeRequired": false,
+        "role": "ChoirMember"
+      }
+    },
+    {
+      "name": "Login Director",
+      "passed": true,
+      "details": {
+        "passwordChangeRequired": false,
+        "role": "ChoirDirector"
+      }
+    },
+    {
+      "name": "Authenticated account",
+      "passed": true,
+      "details": {
+        "role": "ChoirMember",
+        "status": 200
+      }
+    },
+    {
+      "name": "Assignment list response",
+      "passed": true,
+      "details": {
+        "seedItems": 2,
+        "totalCount": 2
+      }
+    },
+    {
+      "name": "Assignment permission contract",
+      "passed": false,
+      "details": {
+        "detailHasCanSubmit": false,
+        "id": "152cbe16-dfbd-4249-a9d6-dad2347f6b79",
+        "reason": null,
+        "status": null,
+        "canSubmit": null,
+        "isOverdue": false,
+        "listHasCanSubmit": false
+      }
+    },
+    {
+      "name": "Assignment permission contract",
+      "passed": false,
+      "details": {
+        "detailHasCanSubmit": false,
+        "id": "2fe1b8eb-00f7-4682-ac39-d8e7004f90ec",
+        "reason": null,
+        "status": null,
+        "canSubmit": null,
+        "isOverdue": false,
+        "listHasCanSubmit": false
+      }
+    },
+    {
+      "name": "Submission list",
+      "passed": true,
+      "details": {
+        "totalCount": 0
+      }
+    },
+    {
+      "name": "New assignment explicitly permits submission",
+      "passed": false,
+      "details": {
+        "hasCanSubmit": false,
+        "canSubmit": null
+      }
+    },
+    {
+      "name": "Synthetic upload fixture",
+      "passed": true,
+      "details": {
+        "format": "PCM WAV 16kHz mono",
+        "bytes": 96044,
+        "durationSeconds": 3
+      }
+    },
+    {
+      "name": "Logout test session Member",
+      "passed": true,
+      "details": {
+        "status": 204
+      }
+    },
+    {
+      "name": "Logout test session Director",
+      "passed": true,
+      "details": {
+        "status": 204
+      }
+    }
+  ],
+  "httpRequests": [
+    {
+      "atUtc": "2026-10-17T07:40:06.3334689Z",
+      "method": "GET",
+      "path": "/swagger/v1/swagger.json",
+      "status": 200,
+      "code": null,
+      "traceId": null,
+      "requestId": null,
+      "contentType": "application/json; charset=utf-8",
+      "responseDate": "Sat, 17 Oct 2026 07:40:02 GMT",
+      "elapsedMs": 447
+    },
+    {
+      "atUtc": "2026-10-17T07:40:23.5894693Z",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "status": 200,
+      "code": null,
+      "traceId": null,
+      "requestId": null,
+      "contentType": "application/json; charset=utf-8",
+      "responseDate": "Sat, 17 Oct 2026 07:40:19 GMT",
+      "elapsedMs": 351
+    },
+    {
+      "atUtc": "2026-10-17T07:40:23.9568736Z",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "status": 200,
+      "code": null,
+      "traceId": null,
+      "requestId": null,
+      "contentType": "application/json; charset=utf-8",
+      "responseDate": "Sat, 17 Oct 2026 07:40:19 GMT",
+      "elapsedMs": 298
+    },
+    {
+      "atUtc": "2026-10-17T07:40:24.282239Z",
+      "method": "GET",
+      "path": "/api/auth/me",
+      "status": 200,
+      "code": null,
+      "traceId": null,
+      "requestId": null,
+      "contentType": "application/json; charset=utf-8",
+      "responseDate": "Sat, 17 Oct 2026 07:40:19 GMT",
+      "elapsedMs": 564
+    },
+    {
+      "atUtc": "2026-10-17T07:40:24.8621082Z",
+      "method": "GET",
+      "path": "/api/member-profiles/me",
+      "status": 200,
+      "code": null,
+      "traceId": null,
+      "requestId": null,
+      "contentType": "application/json; charset=utf-8",
+      "responseDate": "Sat, 17 Oct 2026 07:40:21 GMT",
+      "elapsedMs": 185
+    },
+    {
+      "atUtc": "2026-10-17T07:40:25.0521387Z",
+      "method": "GET",
+      "path": "/api/practice-assignments/mine?pageNumber=1&pageSize=50",
+      "status": 200,
+      "code": null,
+      "traceId": null,
+      "requestId": null,
+      "contentType": "application/json; charset=utf-8",
+      "responseDate": "Sat, 17 Oct 2026 07:40:21 GMT",
+      "elapsedMs": 347
+    },
+    {
+      "atUtc": "2026-10-17T07:40:25.4036078Z",
+      "method": "GET",
+      "path": "/api/practice-assignments/mine/counts",
+      "status": 200,
+      "code": null,
+      "traceId": null,
+      "requestId": null,
+      "contentType": "application/json; charset=utf-8",
+      "responseDate": "Sat, 17 Oct 2026 07:40:21 GMT",
+      "elapsedMs": 262
+    },
+    {
+      "atUtc": "2026-10-17T07:40:25.6995984Z",
+      "method": "GET",
+      "path": "/api/practice-assignments/mine/152cbe16-dfbd-4249-a9d6-dad2347f6b79",
+      "status": 200,
+      "code": null,
+      "traceId": null,
+      "requestId": null,
+      "contentType": "application/json; charset=utf-8",
+      "responseDate": "Sat, 17 Oct 2026 07:40:21 GMT",
+      "elapsedMs": 286
+    },
+    {
+      "atUtc": "2026-10-17T07:40:26.0071067Z",
+      "method": "GET",
+      "path": "/api/practice-assignments/mine/2fe1b8eb-00f7-4682-ac39-d8e7004f90ec",
+      "status": 200,
+      "code": null,
+      "traceId": null,
+      "requestId": null,
+      "contentType": "application/json; charset=utf-8",
+      "responseDate": "Sat, 17 Oct 2026 07:40:22 GMT",
+      "elapsedMs": 157
+    },
+    {
+      "atUtc": "2026-10-17T07:40:26.1795551Z",
+      "method": "GET",
+      "path": "/api/practice-submissions/mine?pageNumber=1&pageSize=50",
+      "status": 200,
+      "code": null,
+      "traceId": null,
+      "requestId": null,
+      "contentType": "application/json; charset=utf-8",
+      "responseDate": "Sat, 17 Oct 2026 07:40:22 GMT",
+      "elapsedMs": 319
+    },
+    {
+      "atUtc": "2026-10-17T07:40:26.525518Z",
+      "method": "POST",
+      "path": "/api/practice-assignments",
+      "status": 200,
+      "code": null,
+      "traceId": null,
+      "requestId": null,
+      "contentType": "application/json; charset=utf-8",
+      "responseDate": "Sat, 17 Oct 2026 07:40:22 GMT",
+      "elapsedMs": 311
+    },
+    {
+      "atUtc": "2026-10-17T07:40:26.8519567Z",
+      "method": "GET",
+      "path": "/api/practice-assignments/mine/9d487b82-d1db-4fa1-95d7-4b23f9d76933",
+      "status": 200,
+      "code": null,
+      "traceId": null,
+      "requestId": null,
+      "contentType": "application/json; charset=utf-8",
+      "responseDate": "Sat, 17 Oct 2026 07:40:22 GMT",
+      "elapsedMs": 230
+    },
+    {
+      "atUtc": "2026-10-17T07:40:27.519286Z",
+      "method": "POST",
+      "path": "/api/practice-assignments/9d487b82-d1db-4fa1-95d7-4b23f9d76933/submissions",
+      "status": 502,
+      "code": "EXTERNAL_STORAGE_FAILED",
+      "traceId": null,
+      "requestId": null,
+      "contentType": "application/json; charset=utf-8",
+      "responseDate": "Sat, 17 Oct 2026 07:40:24 GMT",
+      "elapsedMs": 1951
+    },
+    {
+      "atUtc": "2026-10-17T07:40:29.4830439Z",
+      "method": "POST",
+      "path": "/api/auth/logout",
+      "status": 204,
+      "code": null,
+      "traceId": null,
+      "requestId": null,
+      "contentType": null,
+      "responseDate": "Sat, 17 Oct 2026 07:40:24 GMT",
+      "elapsedMs": 181
+    },
+    {
+      "atUtc": "2026-10-17T07:40:29.6791193Z",
+      "method": "POST",
+      "path": "/api/auth/logout",
+      "status": 204,
+      "code": null,
+      "traceId": null,
+      "requestId": null,
+      "contentType": null,
+      "responseDate": "Sat, 17 Oct 2026 07:40:25 GMT",
+      "elapsedMs": 186
+    }
+  ],
+  "testResources": [
+    {
+      "kind": "PracticeAssignment",
+      "id": "9d487b82-d1db-4fa1-95d7-4b23f9d76933",
+      "prefix": "[MOBILE-LIVE-20261017]"
+    }
+  ],
+  "flutter": {
+    "failed": 2,
+    "exitCode": 1,
+    "passed": 5,
+    "requests": [
+      {
+        "atUtc": "2026-10-17T07:43:26.605266Z",
+        "method": "POST",
+        "path": "/api/auth/login",
+        "status": 200
+      },
+      {
+        "atUtc": "2026-10-17T07:43:26.691869Z",
+        "method": "GET",
+        "path": "/api/auth/me",
+        "status": 200
+      },
+      {
+        "atUtc": "2026-10-17T07:43:26.757179Z",
+        "method": "GET",
+        "path": "/api/practice-assignments/mine",
+        "status": 200
+      },
+      {
+        "atUtc": "2026-10-17T07:43:26.812812Z",
+        "method": "GET",
+        "path": "/api/practice-assignments/mine/9d487b82-d1db-4fa1-95d7-4b23f9d76933",
+        "status": 200
+      },
+      {
+        "atUtc": "2026-10-17T07:43:26.867528Z",
+        "method": "GET",
+        "path": "/api/practice-assignments/mine/9d487b82-d1db-4fa1-95d7-4b23f9d76933",
+        "status": 200
+      },
+      {
+        "atUtc": "2026-10-17T07:43:26.916826Z",
+        "method": "GET",
+        "path": "/api/practice-assignments/mine",
+        "status": 200
+      },
+      {
+        "atUtc": "2026-10-17T07:43:27.017498Z",
+        "method": "GET",
+        "path": "/api/practice-assignments/mine/9d487b82-d1db-4fa1-95d7-4b23f9d76933",
+        "status": 200
+      },
+      {
+        "atUtc": "2026-10-17T07:43:28.58752Z",
+        "method": "POST",
+        "path": "/api/practice-assignments/9d487b82-d1db-4fa1-95d7-4b23f9d76933/submissions",
+        "status": 502,
+        "code": "EXTERNAL_STORAGE_FAILED"
+      },
+      {
+        "atUtc": "2026-10-17T07:43:28.736873Z",
+        "method": "GET",
+        "path": "/api/practice-submissions/mine",
+        "status": 200
+      },
+      {
+        "atUtc": "2026-10-17T07:43:28.825611Z",
+        "method": "GET",
+        "path": "/api/practice-assignments/mine/counts",
+        "status": 200
+      },
+      {
+        "atUtc": "2026-10-17T07:43:28.869789Z",
+        "method": "GET",
+        "path": "/api/practice-assignments/mine",
+        "status": 200
+      },
+      {
+        "atUtc": "2026-10-17T07:43:28.922848Z",
+        "method": "POST",
+        "path": "/api/auth/logout",
+        "status": 204
+      }
+    ],
+    "checks": {
+      "accountReadable": true,
+      "listAndDetailReadable": {
+        "totalCount": 3,
+        "id": "9d487b82-d1db-4fa1-95d7-4b23f9d76933"
+      },
+      "capabilityFields": {
+        "detailCanSubmit": false,
+        "detailCannotSubmitReason": false,
+        "listCanSubmit": false,
+        "listCannotSubmitReason": false,
+        "detailFieldNames": [
+          "id",
+          "title",
+          "instruction",
+          "scope",
+          "dueDate",
+          "eventId",
+          "eventDate",
+          "eventTime",
+          "eventTitle",
+          "songId",
+          "songTitle",
+          "materialId",
+          "materialTitle",
+          "materialType",
+          "latestSubmissionStatus",
+          "latestSubmittedAt",
+          "isOverdue"
+        ]
+      },
+      "missingCapabilitySafelyBlocked": true,
+      "upload": {
+        "succeeded": false,
+        "status": 502,
+        "code": "EXTERNAL_STORAGE_FAILED",
+        "uiMessage": "Dịch vụ lưu trữ đang gặp sự cố. Vui lòng thử lại sau."
+      },
+      "submissionReadback": {
+        "totalCount": 0,
+        "expectedUploadSucceeded": false
+      },
+      "countsConsistent": {
+        "total": 3,
+        "submitted": 0,
+        "passed": 0,
+        "needsRevision": 0
+      },
+      "logoutCreatedSession": true
+    }
+  },
+  "blocked": [
+    "Azure list/detail missing canSubmit and cannotSubmitReason",
+    "Audio upload HTTP502 EXTERNAL_STORAGE_FAILED",
+    "Feedback, signed-audio playback and native Azure end-to-end not exercised"
+  ],
+  "productFilesVerifiedUnchanged": [
+    "lib\\features\\practice\\data\\practice_models.dart",
+    "lib\\features\\practice\\data\\practice_repository.dart",
+    "lib\\features\\practice\\data\\practice_api_service.dart",
+    "lib\\features\\practice\\presentation\\practice_detail_screen.dart",
+    "lib\\core\\errors\\error_messages.dart",
+    "test\\practice_recording_test.dart",
+    "test\\practice_submission_permission_test.dart"
+  ]
+}

@@ -145,4 +145,19 @@ class MusicApiService {
       throw ApiClient.parseDioException(e);
     }
   }
+
+  Future<SongListDto?> getApprovedSongListForEvent(String eventId) async {
+    try {
+      final response = await _client.dio.get(
+        ApiEndpoints.approvedSongList(eventId),
+      );
+      if (response.data == null) return null;
+      return SongListDto.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        return null;
+      }
+      throw ApiClient.parseDioException(e);
+    }
+  }
 }

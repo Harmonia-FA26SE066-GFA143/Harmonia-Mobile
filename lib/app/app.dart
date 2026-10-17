@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/di/core_providers.dart';
 import '../../core/session/session_manager.dart';
+import '../features/calendar/data/calendar_repository.dart';
 import '../features/notifications/presentation/notification_notifier.dart';
+import '../features/practice/data/practice_repository.dart';
 import '../features/profile/data/profile_repository.dart';
 import 'router/app_router.dart';
 import 'theme/app_theme.dart';
@@ -17,7 +19,7 @@ class HarmoniaApp extends ConsumerWidget {
     final router = ref.watch(appRouterProvider);
     final signalRService = ref.watch(signalRServiceProvider);
 
-    // Coordinate SignalR and notification state with session lifecycle per Rule 04 & 06
+    // Coordinate SignalR, notification and feature state with session lifecycle per Rule 04 & 06
     ref.listen<AuthStatus>(sessionManagerProvider.select((s) => s.status), (
       previous,
       next,
@@ -25,11 +27,16 @@ class HarmoniaApp extends ConsumerWidget {
       if (next == AuthStatus.authenticated) {
         signalRService.connect();
         ref.read(notificationNotifierProvider.notifier).reconnectRealtime();
+        ref.read(notificationNotifierProvider.notifier).loadInitial();
         ref.invalidate(currentMemberProfileProvider);
+        ref.invalidate(practiceListNotifierProvider);
+        ref.invalidate(calendarNotifierProvider);
       } else if (next == AuthStatus.unauthenticated) {
         signalRService.stop();
         ref.read(notificationNotifierProvider.notifier).reset();
         ref.invalidate(currentMemberProfileProvider);
+        ref.invalidate(practiceListNotifierProvider);
+        ref.invalidate(calendarNotifierProvider);
       }
     });
 

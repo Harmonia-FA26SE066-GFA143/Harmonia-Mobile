@@ -50,4 +50,13 @@ class NotificationApiService {
       throw ApiClient.parseDioException(e);
     }
   }
+
+  Future<void> markAllAsRead() async {
+    try {
+      // 200/204 No Content per Rule 03
+      await _client.dio.put(ApiEndpoints.markAllNotificationsAsRead);
+    } on DioException catch (e) {
+      throw ApiClient.parseDioException(e);
+    }
+  }
 }

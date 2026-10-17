@@ -5,6 +5,7 @@ import '../../../core/di/core_providers.dart';
 
 import '../../../core/errors/app_exceptions.dart';
 import '../../../core/errors/error_messages.dart';
+import '../../../core/session/session_manager.dart';
 import '../data/auth_api_service.dart';
 import '../data/auth_dto.dart';
 import '../data/auth_repository.dart';
@@ -65,23 +66,94 @@ class AuthState {
   }
 }
 
-enum AuthAction {
-  none,
-  login,
-  googleSignIn,
-  resetPassword,
-  forgotPassword,
-}
+enum AuthAction { none, login, googleSignIn, resetPassword, forgotPassword }
 
 class AuthNotifier extends Notifier<AuthState> {
   AuthAction _activeAction = AuthAction.none;
+  bool _logoutInProgress = false;
 
   @override
-  AuthState build() => const AuthState();
+  AuthState build() {
+    ref.listen<int>(
+      sessionManagerProvider.select((session) => session.sessionEpoch),
+      (_, _) {
+        final session = ref.read(sessionManagerProvider);
+        state = AuthState(
+          isLoading: session.isAuthenticated && state.isLoading,
+        );
+      },
+    );
+    return const AuthState();
+  }
 
   AuthRepository get _repository => ref.read(authRepositoryProvider);
   GoogleAuthService get _googleAuthService =>
       ref.read(googleAuthServiceProvider);
+
+  Future<bool> restoreSession() async {
+    if (state.isLoading) return false;
+    state = const AuthState(isLoading: true);
+    final session = ref.read(sessionManagerProvider);
+    final initialEpoch = session.sessionEpoch;
+    if (session.status != AuthStatus.restoring) {
+      await session.initialize(verifyAccount: true);
+      if (!ref.mounted || session.sessionEpoch != initialEpoch + 1) {
+        return false;
+      }
+    }
+    if (session.status != AuthStatus.restoring) {
+      state = const AuthState();
+      return false;
+    }
+    return _loadAccount();
+  }
+
+  Future<bool> synchronizeAccount() async {
+    if (state.isLoading || !ref.read(sessionManagerProvider).isAuthenticated) {
+      return false;
+    }
+    state = state.copyWith(isLoading: true);
+    return _loadAccount();
+  }
+
+  Future<bool> _loadAccount() async {
+    final session = ref.read(sessionManagerProvider);
+    final epoch = session.sessionEpoch;
+    try {
+      final user = await _repository.getMe();
+      if (!ref.mounted ||
+          session.sessionEpoch != epoch ||
+          !session.isAuthenticated) {
+        return false;
+      }
+      state = AuthState(user: user);
+      return true;
+    } catch (error) {
+      if (!ref.mounted) return false;
+      final current = session.sessionEpoch == epoch && session.isAuthenticated;
+      final ended =
+          session.sessionEpoch == epoch + 1 &&
+          session.status == AuthStatus.unauthenticated &&
+          error is AppException &&
+          const [
+            'AUTH_ACCOUNT_INACTIVE',
+            'USER_NOT_FOUND',
+            'FORBIDDEN_ROLE',
+          ].contains(error.code);
+      if (!current && !ended) return false;
+      state = AuthState(
+        user: current ? state.user : null,
+        errorMessage: error is UnauthorizedException && current
+            ? 'Không thể xác minh phiên đăng nhập. Vui lòng kiểm tra kết nối và thử lại.'
+            : ErrorMessages.forException(
+                error,
+                defaultMessage:
+                    'Không thể đồng bộ tài khoản. Vui lòng thử lại.',
+              ),
+      );
+      return false;
+    }
+  }
 
   Future<bool> login({
     required String email,
@@ -149,13 +221,17 @@ class AuthNotifier extends Notifier<AuthState> {
         idToken: idToken,
         platform: platform,
       );
-      if (!ref.mounted || _activeAction != AuthAction.googleSignIn) return false;
+      if (!ref.mounted || _activeAction != AuthAction.googleSignIn) {
+        return false;
+      }
       _activeAction = AuthAction.none;
       state = state.copyWith(isLoading: false, user: user);
       return true;
     } on AppException catch (e) {
       await _googleAuthService.signOut();
-      if (!ref.mounted || _activeAction != AuthAction.googleSignIn) return false;
+      if (!ref.mounted || _activeAction != AuthAction.googleSignIn) {
+        return false;
+      }
       _activeAction = AuthAction.none;
       String msg;
       if (e.code == 'AUTH_INVALID_CREDENTIALS') {
@@ -269,12 +345,16 @@ class AuthNotifier extends Notifier<AuthState> {
     );
     try {
       await _repository.forgotPassword(email: email, platform: platform);
-      if (!ref.mounted || _activeAction != AuthAction.forgotPassword) return false;
+      if (!ref.mounted || _activeAction != AuthAction.forgotPassword) {
+        return false;
+      }
       _activeAction = AuthAction.none;
       state = state.copyWith(isLoading: false);
       return true;
     } on AppException catch (e) {
-      if (!ref.mounted || _activeAction != AuthAction.forgotPassword) return false;
+      if (!ref.mounted || _activeAction != AuthAction.forgotPassword) {
+        return false;
+      }
       _activeAction = AuthAction.none;
       final msg = ErrorMessages.getMessage(e.code, fallback: e.message);
       state = state.copyWith(
@@ -284,7 +364,9 @@ class AuthNotifier extends Notifier<AuthState> {
       );
       return false;
     } catch (_) {
-      if (!ref.mounted || _activeAction != AuthAction.forgotPassword) return false;
+      if (!ref.mounted || _activeAction != AuthAction.forgotPassword) {
+        return false;
+      }
       _activeAction = AuthAction.none;
       state = state.copyWith(
         isLoading: false,
@@ -371,15 +453,41 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   Future<void> logout() async {
+    if (_logoutInProgress) return;
+    _logoutInProgress = true;
+    final session = ref.read(sessionManagerProvider);
+    final epoch = session.sessionEpoch;
     state = state.copyWith(isLoading: true);
-    await _repository.logout();
-    state = const AuthState();
+    try {
+      await _repository.logout();
+      if (ref.mounted &&
+          session.sessionEpoch == epoch + 1 &&
+          !session.isAuthenticated) {
+        state = const AuthState();
+      }
+    } finally {
+      _logoutInProgress = false;
+    }
   }
 
-  Future<void> logoutAll() async {
+  Future<bool> logoutAll() async {
+    if (_logoutInProgress) return false;
+    _logoutInProgress = true;
+    final session = ref.read(sessionManagerProvider);
+    final epoch = session.sessionEpoch;
     state = state.copyWith(isLoading: true);
-    await _repository.logoutAll();
-    state = const AuthState();
+    try {
+      final revoked = await _repository.logoutAll();
+      if (!ref.mounted ||
+          session.sessionEpoch != epoch + 1 ||
+          session.isAuthenticated) {
+        return false;
+      }
+      state = const AuthState();
+      return revoked;
+    } finally {
+      _logoutInProgress = false;
+    }
   }
 
   void clearErrors() {

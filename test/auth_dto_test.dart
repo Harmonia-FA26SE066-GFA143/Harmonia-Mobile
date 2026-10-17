@@ -3,10 +3,10 @@ import 'package:harmonia_mobile/features/auth/data/auth_dto.dart';
 
 void main() {
   group('Auth DTOs Contract Test', () {
-    test('DevicePlatform maps correctly to wire integers', () {
-      expect(DevicePlatform.android.value, 0);
-      expect(DevicePlatform.ios.value, 1);
-      expect(DevicePlatform.web.value, 2);
+    test('DevicePlatform maps correctly to wire strings', () {
+      expect(DevicePlatform.android.wireName, 'Android');
+      expect(DevicePlatform.ios.wireName, 'iOS');
+      expect(DevicePlatform.web.wireName, 'Web');
     });
 
     test('LoginRequest serializes properly without extra fields', () {
@@ -14,14 +14,14 @@ void main() {
         email: 'member@harmonia.org',
         password: 'Password123!',
         deviceId: 'dev-123',
-        platform: 0,
+        platform: 'Android',
       );
 
       final json = req.toJson();
       expect(json['email'], 'member@harmonia.org');
       expect(json['password'], 'Password123!');
       expect(json['deviceId'], 'dev-123');
-      expect(json['platform'], 0);
+      expect(json['platform'], 'Android');
     });
 
     test('LoginResponse decodes direct response without envelope', () {

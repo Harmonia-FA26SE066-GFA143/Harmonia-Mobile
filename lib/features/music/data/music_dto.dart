@@ -433,3 +433,64 @@ class MaterialLearningProgressDto {
     );
   }
 }
+
+class SongListItemDto {
+  final String id;
+  final String songId;
+  final String songTitle;
+  final String slotId;
+  final String slotName;
+  final int displayOrder;
+  final String? note;
+
+  const SongListItemDto({
+    required this.id,
+    required this.songId,
+    required this.songTitle,
+    required this.slotId,
+    required this.slotName,
+    required this.displayOrder,
+    this.note,
+  });
+
+  factory SongListItemDto.fromJson(Map<String, dynamic> json) {
+    return SongListItemDto(
+      id: json['id']?.toString() ?? '',
+      songId: json['songId']?.toString() ?? '',
+      songTitle: json['songTitle']?.toString() ?? '',
+      slotId: json['slotId']?.toString() ?? '',
+      slotName: json['slotName']?.toString() ?? '',
+      displayOrder: (json['displayOrder'] as num?)?.toInt() ?? 1,
+      note: json['note']?.toString(),
+    );
+  }
+}
+
+class SongListDto {
+  final String id;
+  final String eventId;
+  final int version;
+  final String status;
+  final List<SongListItemDto> items;
+
+  const SongListDto({
+    required this.id,
+    required this.eventId,
+    required this.version,
+    required this.status,
+    required this.items,
+  });
+
+  factory SongListDto.fromJson(Map<String, dynamic> json) {
+    final rawItems = json['items'] as List<dynamic>? ?? [];
+    return SongListDto(
+      id: json['id']?.toString() ?? '',
+      eventId: json['eventId']?.toString() ?? '',
+      version: (json['version'] as num?)?.toInt() ?? 1,
+      status: json['status']?.toString() ?? '',
+      items: rawItems
+          .map((e) => SongListItemDto.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}

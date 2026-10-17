@@ -48,10 +48,13 @@ class AuthApiService {
     }
   }
 
-  Future<void> logoutAll() async {
+  Future<void> logoutAll({int? expectedSessionEpoch}) async {
     try {
       // 204 No Content per Rule 03
-      await _client.dio.post(ApiEndpoints.logoutAll);
+      await _client.dio.post(
+        ApiEndpoints.logoutAll,
+        options: Options(extra: {'expectedSessionEpoch': expectedSessionEpoch}),
+      );
     } on DioException catch (e) {
       throw ApiClient.parseDioException(e);
     }
@@ -100,6 +103,35 @@ class AuthApiService {
         ApiEndpoints.resetPassword,
         data: request.toJson(),
       );
+    } on DioException catch (e) {
+      throw ApiClient.parseDioException(e);
+    }
+  }
+
+  Future<UserDto> getMe({int? expectedSessionEpoch}) async {
+    try {
+      final response = await _client.dio.get(
+        ApiEndpoints.authMe,
+        options: Options(extra: {'expectedSessionEpoch': expectedSessionEpoch}),
+      );
+      final data = response.data as Map<String, dynamic>;
+      if (data['isActive'] is! bool ||
+          data['isPasswordChangeRequired'] is! bool) {
+        throw const FormatException('Incomplete account status response.');
+      }
+      return UserDto.fromJson(data);
+    } on DioException catch (e) {
+      throw ApiClient.parseDioException(e);
+    }
+  }
+
+  Future<UserDto> updateMe(UpdateMyUserRequest request) async {
+    try {
+      final response = await _client.dio.put(
+        ApiEndpoints.authMe,
+        data: request.toJson(),
+      );
+      return UserDto.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw ApiClient.parseDioException(e);
     }

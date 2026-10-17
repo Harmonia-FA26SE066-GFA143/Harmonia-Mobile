@@ -1,18 +1,17 @@
 enum DevicePlatform {
-  android(0, 'Android'),
-  ios(1, 'iOS'),
-  web(2, 'Web');
+  android('Android'),
+  ios('iOS'),
+  web('Web');
 
-  final int value;
   final String wireName;
-  const DevicePlatform(this.value, this.wireName);
+  const DevicePlatform(this.wireName);
 }
 
 class LoginRequest {
   final String email;
   final String password;
   final String? deviceId;
-  final int? platform;
+  final String? platform;
 
   const LoginRequest({
     required this.email,
@@ -32,7 +31,7 @@ class LoginRequest {
 class GoogleLoginRequest {
   final String idToken;
   final String? deviceId;
-  final int? platform;
+  final String? platform;
 
   const GoogleLoginRequest({
     required this.idToken,
@@ -81,7 +80,7 @@ class ChangePasswordRequest {
 
 class ForgotPasswordRequest {
   final String email;
-  final int? platform;
+  final String? platform;
 
   const ForgotPasswordRequest({required this.email, this.platform});
 
@@ -106,12 +105,18 @@ class UserDto {
   final String email;
   final String fullName;
   final String roleName;
+  final String? phone;
+  final bool isActive;
+  final bool isPasswordChangeRequired;
 
   const UserDto({
     required this.id,
     required this.email,
     required this.fullName,
     required this.roleName,
+    this.phone,
+    this.isActive = true,
+    this.isPasswordChangeRequired = false,
   });
 
   factory UserDto.fromJson(Map<String, dynamic> json) {
@@ -120,6 +125,10 @@ class UserDto {
       email: json['email']?.toString() ?? '',
       fullName: json['fullName']?.toString() ?? '',
       roleName: json['roleName']?.toString() ?? '',
+      phone: json['phone']?.toString(),
+      isActive: json['isActive'] as bool? ?? true,
+      isPasswordChangeRequired:
+          json['isPasswordChangeRequired'] as bool? ?? false,
     );
   }
 
@@ -128,7 +137,24 @@ class UserDto {
     'email': email,
     'fullName': fullName,
     'roleName': roleName,
+    if (phone != null) 'phone': phone,
+    'isActive': isActive,
+    'isPasswordChangeRequired': isPasswordChangeRequired,
   };
+}
+
+class UpdateMyUserRequest {
+  final String? fullName;
+  final String? phone;
+
+  const UpdateMyUserRequest({this.fullName, this.phone});
+
+  Map<String, dynamic> toJson() {
+    final map = <String, dynamic>{};
+    if (fullName != null) map['fullName'] = fullName;
+    if (phone != null) map['phone'] = phone;
+    return map;
+  }
 }
 
 class LoginResponse {

@@ -1,0 +1,878 @@
+[
+  {
+    "Method": "GET",
+    "Path": "/api/audit-logs",
+    "HasResponseSchema": false,
+    "Tag": "AuditLogs"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/auth/login",
+    "HasResponseSchema": false,
+    "Tag": "Auth"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/auth/google",
+    "HasResponseSchema": false,
+    "Tag": "Auth"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/auth/refresh",
+    "HasResponseSchema": false,
+    "Tag": "Auth"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/auth/logout",
+    "HasResponseSchema": false,
+    "Tag": "Auth"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/auth/logout-all",
+    "HasResponseSchema": false,
+    "Tag": "Auth"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/auth/change-password",
+    "HasResponseSchema": false,
+    "Tag": "Auth"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/auth/me",
+    "HasResponseSchema": false,
+    "Tag": "Auth"
+  },
+  {
+    "Method": "PUT",
+    "Path": "/api/auth/me",
+    "HasResponseSchema": false,
+    "Tag": "Auth"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/auth/forgot-password",
+    "HasResponseSchema": false,
+    "Tag": "Auth"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/auth/reset-password",
+    "HasResponseSchema": false,
+    "Tag": "Auth"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/director-notes/recipients",
+    "HasResponseSchema": false,
+    "Tag": "DirectorNotes"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/director-notes",
+    "HasResponseSchema": false,
+    "Tag": "DirectorNotes"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/director-notes",
+    "HasResponseSchema": false,
+    "Tag": "DirectorNotes"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/director-notes/{id}",
+    "HasResponseSchema": false,
+    "Tag": "DirectorNotes"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/event-participations",
+    "HasResponseSchema": false,
+    "Tag": "EventParticipations"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/event-participations",
+    "HasResponseSchema": false,
+    "Tag": "EventParticipations"
+  },
+  {
+    "Method": "PUT",
+    "Path": "/api/event-participations/mine/{eventId}",
+    "HasResponseSchema": false,
+    "Tag": "EventParticipations"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/liturgical-days",
+    "HasResponseSchema": false,
+    "Tag": "LiturgicalDays"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/liturgical-days/{date}",
+    "HasResponseSchema": false,
+    "Tag": "LiturgicalDays"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/liturgical-days/import",
+    "HasResponseSchema": false,
+    "Tag": "LiturgicalDays"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/liturgical-events",
+    "HasResponseSchema": false,
+    "Tag": "LiturgicalEvents"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/liturgical-events",
+    "HasResponseSchema": false,
+    "Tag": "LiturgicalEvents"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/liturgical-events/{id}",
+    "HasResponseSchema": false,
+    "Tag": "LiturgicalEvents"
+  },
+  {
+    "Method": "PUT",
+    "Path": "/api/liturgical-events/{id}",
+    "HasResponseSchema": false,
+    "Tag": "LiturgicalEvents"
+  },
+  {
+    "Method": "PATCH",
+    "Path": "/api/liturgical-events/{id}/publish",
+    "HasResponseSchema": false,
+    "Tag": "LiturgicalEvents"
+  },
+  {
+    "Method": "PATCH",
+    "Path": "/api/liturgical-events/{id}/cancel",
+    "HasResponseSchema": false,
+    "Tag": "LiturgicalEvents"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/liturgical-events/{id}/preparation-progress",
+    "HasResponseSchema": false,
+    "Tag": "LiturgicalEvents"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/liturgical-events/{id}/preparation-status",
+    "HasResponseSchema": false,
+    "Tag": "LiturgicalEvents"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/lookups/mass-types",
+    "HasResponseSchema": false,
+    "Tag": "Lookups"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/lookups/mass-types",
+    "HasResponseSchema": false,
+    "Tag": "Lookups"
+  },
+  {
+    "Method": "PUT",
+    "Path": "/api/lookups/mass-types/{id}",
+    "HasResponseSchema": false,
+    "Tag": "Lookups"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/lookups/ceremony-types",
+    "HasResponseSchema": false,
+    "Tag": "Lookups"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/lookups/ceremony-types",
+    "HasResponseSchema": false,
+    "Tag": "Lookups"
+  },
+  {
+    "Method": "PUT",
+    "Path": "/api/lookups/ceremony-types/{id}",
+    "HasResponseSchema": false,
+    "Tag": "Lookups"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/lookups/event-categories",
+    "HasResponseSchema": false,
+    "Tag": "Lookups"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/lookups/event-categories",
+    "HasResponseSchema": false,
+    "Tag": "Lookups"
+  },
+  {
+    "Method": "PUT",
+    "Path": "/api/lookups/event-categories/{id}",
+    "HasResponseSchema": false,
+    "Tag": "Lookups"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/lookups/song-themes",
+    "HasResponseSchema": false,
+    "Tag": "Lookups"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/lookups/song-themes",
+    "HasResponseSchema": false,
+    "Tag": "Lookups"
+  },
+  {
+    "Method": "PUT",
+    "Path": "/api/lookups/song-themes/{id}",
+    "HasResponseSchema": false,
+    "Tag": "Lookups"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/lookups/skill-categories",
+    "HasResponseSchema": false,
+    "Tag": "Lookups"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/lookups/skill-categories",
+    "HasResponseSchema": false,
+    "Tag": "Lookups"
+  },
+  {
+    "Method": "PUT",
+    "Path": "/api/lookups/skill-categories/{id}",
+    "HasResponseSchema": false,
+    "Tag": "Lookups"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/lookups/liturgical-seasons",
+    "HasResponseSchema": false,
+    "Tag": "Lookups"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/lookups/liturgical-seasons",
+    "HasResponseSchema": false,
+    "Tag": "Lookups"
+  },
+  {
+    "Method": "PUT",
+    "Path": "/api/lookups/liturgical-seasons/{id}",
+    "HasResponseSchema": false,
+    "Tag": "Lookups"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/lookups/liturgical-slots",
+    "HasResponseSchema": false,
+    "Tag": "Lookups"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/lookups/liturgical-slots",
+    "HasResponseSchema": false,
+    "Tag": "Lookups"
+  },
+  {
+    "Method": "PUT",
+    "Path": "/api/lookups/liturgical-slots/{id}",
+    "HasResponseSchema": false,
+    "Tag": "Lookups"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/lookups/worship-locations",
+    "HasResponseSchema": false,
+    "Tag": "Lookups"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/lookups/worship-locations",
+    "HasResponseSchema": false,
+    "Tag": "Lookups"
+  },
+  {
+    "Method": "PUT",
+    "Path": "/api/lookups/worship-locations/{id}",
+    "HasResponseSchema": false,
+    "Tag": "Lookups"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/lookups/skills",
+    "HasResponseSchema": false,
+    "Tag": "Lookups"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/lookups/skills",
+    "HasResponseSchema": false,
+    "Tag": "Lookups"
+  },
+  {
+    "Method": "PUT",
+    "Path": "/api/lookups/skills/{id}",
+    "HasResponseSchema": false,
+    "Tag": "Lookups"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/member-profiles/me",
+    "HasResponseSchema": false,
+    "Tag": "MemberProfiles"
+  },
+  {
+    "Method": "PUT",
+    "Path": "/api/member-profiles/me",
+    "HasResponseSchema": false,
+    "Tag": "MemberProfiles"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/member-profiles/me/history",
+    "HasResponseSchema": false,
+    "Tag": "MemberProfiles"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/member-profiles",
+    "HasResponseSchema": false,
+    "Tag": "MemberProfiles"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/member-profiles/{id}",
+    "HasResponseSchema": false,
+    "Tag": "MemberProfiles"
+  },
+  {
+    "Method": "PUT",
+    "Path": "/api/member-profiles/{id}",
+    "HasResponseSchema": false,
+    "Tag": "MemberProfiles"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/member-skills",
+    "HasResponseSchema": false,
+    "Tag": "MemberSkills"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/member-skills/mine",
+    "HasResponseSchema": false,
+    "Tag": "MemberSkills"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/member-skills/{id}",
+    "HasResponseSchema": false,
+    "Tag": "MemberSkills"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/member-skills/pending",
+    "HasResponseSchema": false,
+    "Tag": "MemberSkills"
+  },
+  {
+    "Method": "PATCH",
+    "Path": "/api/member-skills/{id}/approve",
+    "HasResponseSchema": false,
+    "Tag": "MemberSkills"
+  },
+  {
+    "Method": "PATCH",
+    "Path": "/api/member-skills/{id}/reject",
+    "HasResponseSchema": false,
+    "Tag": "MemberSkills"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/music-materials",
+    "HasResponseSchema": false,
+    "Tag": "MusicMaterials"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/music-materials",
+    "HasResponseSchema": false,
+    "Tag": "MusicMaterials"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/music-materials/mine",
+    "HasResponseSchema": false,
+    "Tag": "MusicMaterials"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/music-materials/{id}/learning-progress",
+    "HasResponseSchema": false,
+    "Tag": "MusicMaterials"
+  },
+  {
+    "Method": "PUT",
+    "Path": "/api/music-materials/{id}/learning-progress",
+    "HasResponseSchema": false,
+    "Tag": "MusicMaterials"
+  },
+  {
+    "Method": "PUT",
+    "Path": "/api/music-materials/{id}",
+    "HasResponseSchema": false,
+    "Tag": "MusicMaterials"
+  },
+  {
+    "Method": "DELETE",
+    "Path": "/api/music-materials/{id}",
+    "HasResponseSchema": false,
+    "Tag": "MusicMaterials"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/notifications",
+    "HasResponseSchema": false,
+    "Tag": "Notifications"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/notifications/unread-count",
+    "HasResponseSchema": false,
+    "Tag": "Notifications"
+  },
+  {
+    "Method": "PUT",
+    "Path": "/api/notifications/{id}/read",
+    "HasResponseSchema": false,
+    "Tag": "Notifications"
+  },
+  {
+    "Method": "PUT",
+    "Path": "/api/notifications/read-all",
+    "HasResponseSchema": false,
+    "Tag": "Notifications"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/practice-assignments",
+    "HasResponseSchema": false,
+    "Tag": "PracticeAssignments"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/practice-assignments",
+    "HasResponseSchema": false,
+    "Tag": "PracticeAssignments"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/practice-assignments/mine",
+    "HasResponseSchema": false,
+    "Tag": "PracticeAssignments"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/practice-assignments/mine/counts",
+    "HasResponseSchema": false,
+    "Tag": "PracticeAssignments"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/practice-assignments/mine/{id}",
+    "HasResponseSchema": false,
+    "Tag": "PracticeAssignments"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/practice-assignments/{id}/submissions",
+    "HasResponseSchema": false,
+    "Tag": "PracticeAssignments"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/practice-assignments/{id}/submissions",
+    "HasResponseSchema": false,
+    "Tag": "PracticeAssignments"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/practice-submissions",
+    "HasResponseSchema": false,
+    "Tag": "PracticeSubmissions"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/practice-submissions/{id}",
+    "HasResponseSchema": false,
+    "Tag": "PracticeSubmissions"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/practice-submissions/{id}/feedback",
+    "HasResponseSchema": false,
+    "Tag": "PracticeSubmissions"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/practice-submissions/{id}/comments",
+    "HasResponseSchema": false,
+    "Tag": "PracticeSubmissions"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/practice-submissions/mine",
+    "HasResponseSchema": false,
+    "Tag": "PracticeSubmissions"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/practice-submissions/mine/{id}",
+    "HasResponseSchema": false,
+    "Tag": "PracticeSubmissions"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/rehearsals",
+    "HasResponseSchema": false,
+    "Tag": "Rehearsals"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/rehearsals",
+    "HasResponseSchema": false,
+    "Tag": "Rehearsals"
+  },
+  {
+    "Method": "PUT",
+    "Path": "/api/rehearsals/{id}",
+    "HasResponseSchema": false,
+    "Tag": "Rehearsals"
+  },
+  {
+    "Method": "DELETE",
+    "Path": "/api/rehearsals/{id}",
+    "HasResponseSchema": false,
+    "Tag": "Rehearsals"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/rehearsals/default-songs",
+    "HasResponseSchema": false,
+    "Tag": "Rehearsals"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/rehearsals/{id}/songs",
+    "HasResponseSchema": false,
+    "Tag": "Rehearsals"
+  },
+  {
+    "Method": "PUT",
+    "Path": "/api/rehearsals/{id}/songs",
+    "HasResponseSchema": false,
+    "Tag": "Rehearsals"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/rehearsals/{id}/attendances",
+    "HasResponseSchema": false,
+    "Tag": "Rehearsals"
+  },
+  {
+    "Method": "PUT",
+    "Path": "/api/rehearsals/{id}/attendances",
+    "HasResponseSchema": false,
+    "Tag": "Rehearsals"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/reports/service-history",
+    "HasResponseSchema": false,
+    "Tag": "Reports"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/reports/song-usage",
+    "HasResponseSchema": false,
+    "Tag": "Reports"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/reports/user-activity",
+    "HasResponseSchema": false,
+    "Tag": "Reports"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/reports/rehearsal-attendance",
+    "HasResponseSchema": false,
+    "Tag": "Reports"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/reports/participation",
+    "HasResponseSchema": false,
+    "Tag": "Reports"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/reports/assignment-completion",
+    "HasResponseSchema": false,
+    "Tag": "Reports"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/reports/export",
+    "HasResponseSchema": false,
+    "Tag": "Reports"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/reports/exports",
+    "HasResponseSchema": false,
+    "Tag": "Reports"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/schedule/events",
+    "HasResponseSchema": false,
+    "Tag": "Schedule"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/schedule/rehearsals",
+    "HasResponseSchema": false,
+    "Tag": "Schedule"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/service-rosters/suggestions",
+    "HasResponseSchema": false,
+    "Tag": "ServiceRosters"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/service-rosters",
+    "HasResponseSchema": false,
+    "Tag": "ServiceRosters"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/service-rosters/shortages",
+    "HasResponseSchema": false,
+    "Tag": "ServiceRosters"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/service-rosters/assignments",
+    "HasResponseSchema": false,
+    "Tag": "ServiceRosters"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/service-rosters/assignments/{id}/replacement",
+    "HasResponseSchema": false,
+    "Tag": "ServiceRosters"
+  },
+  {
+    "Method": "DELETE",
+    "Path": "/api/service-rosters/assignments/{id}",
+    "HasResponseSchema": false,
+    "Tag": "ServiceRosters"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/service-rosters/{id}/finalization",
+    "HasResponseSchema": false,
+    "Tag": "ServiceRosters"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/service-rosters/{id}/notifications",
+    "HasResponseSchema": false,
+    "Tag": "ServiceRosters"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/song-list-items/{id}/personnel-requirements",
+    "HasResponseSchema": false,
+    "Tag": "SongListItems"
+  },
+  {
+    "Method": "PUT",
+    "Path": "/api/song-list-items/{id}/personnel-requirements",
+    "HasResponseSchema": false,
+    "Tag": "SongListItems"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/song-lists/event/{eventId}/approved",
+    "HasResponseSchema": false,
+    "Tag": "SongLists"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/song-lists/event/{eventId}/latest",
+    "HasResponseSchema": false,
+    "Tag": "SongLists"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/song-lists/{id}",
+    "HasResponseSchema": false,
+    "Tag": "SongLists"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/song-lists/pending",
+    "HasResponseSchema": false,
+    "Tag": "SongLists"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/song-lists",
+    "HasResponseSchema": false,
+    "Tag": "SongLists"
+  },
+  {
+    "Method": "PUT",
+    "Path": "/api/song-lists/{id}/items",
+    "HasResponseSchema": false,
+    "Tag": "SongLists"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/song-lists/{id}/submit",
+    "HasResponseSchema": false,
+    "Tag": "SongLists"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/song-lists/{id}/review",
+    "HasResponseSchema": false,
+    "Tag": "SongLists"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/songs",
+    "HasResponseSchema": false,
+    "Tag": "Songs"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/songs",
+    "HasResponseSchema": false,
+    "Tag": "Songs"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/songs/{id}",
+    "HasResponseSchema": false,
+    "Tag": "Songs"
+  },
+  {
+    "Method": "PUT",
+    "Path": "/api/songs/{id}",
+    "HasResponseSchema": false,
+    "Tag": "Songs"
+  },
+  {
+    "Method": "DELETE",
+    "Path": "/api/songs/{id}",
+    "HasResponseSchema": false,
+    "Tag": "Songs"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/songs/{id}/classification",
+    "HasResponseSchema": false,
+    "Tag": "Songs"
+  },
+  {
+    "Method": "PUT",
+    "Path": "/api/songs/{id}/classification",
+    "HasResponseSchema": false,
+    "Tag": "Songs"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/system-settings",
+    "HasResponseSchema": false,
+    "Tag": "SystemSettings"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/system-settings/public",
+    "HasResponseSchema": false,
+    "Tag": "SystemSettings"
+  },
+  {
+    "Method": "PUT",
+    "Path": "/api/system-settings/{id}",
+    "HasResponseSchema": false,
+    "Tag": "SystemSettings"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/users",
+    "HasResponseSchema": false,
+    "Tag": "Users"
+  },
+  {
+    "Method": "POST",
+    "Path": "/api/users",
+    "HasResponseSchema": false,
+    "Tag": "Users"
+  },
+  {
+    "Method": "GET",
+    "Path": "/api/users/{id}",
+    "HasResponseSchema": false,
+    "Tag": "Users"
+  },
+  {
+    "Method": "PUT",
+    "Path": "/api/users/{id}",
+    "HasResponseSchema": false,
+    "Tag": "Users"
+  },
+  {
+    "Method": "PATCH",
+    "Path": "/api/users/{id}/activate",
+    "HasResponseSchema": false,
+    "Tag": "Users"
+  },
+  {
+    "Method": "PATCH",
+    "Path": "/api/users/{id}/deactivate",
+    "HasResponseSchema": false,
+    "Tag": "Users"
+  },
+  {
+    "Method": "PUT",
+    "Path": "/api/users/{id}/role",
+    "HasResponseSchema": false,
+    "Tag": "Users"
+  }
+]
