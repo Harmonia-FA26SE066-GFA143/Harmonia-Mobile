@@ -1,320 +1,154 @@
 # 03 — Hợp đồng API cho frontend Flutter
 
-## Nguồn chuẩn
-
-Hợp đồng dưới đây được đối chiếu trực tiếp từ source Harmonia-BE nhánh `origin/main`
-(commit `16686f7`).
-
-Trước khi tích hợp, đối chiếu controller, DTO, validator và cấu hình
-serializer mới nhất hoặc hợp đồng API đã được backend xác nhận.
-
-Không tự suy ra endpoint từ tên entity, màn hình Stitch hoặc mã lỗi.
-Nếu thiếu API, báo rõ và dùng unintegrated / mock repository khi phạm vi công việc cho phép.
-
-## Ranh giới gọi API
-
-- Widget không gọi HTTP trực tiếp.
-- API service quản lý endpoint, query, request và giải mã response.
-- Repository cung cấp dữ liệu có kiểu cho tầng quản lý state.
-- HTTP client dùng chung xử lý cấu hình kết nối và phối hợp quản lý phiên.
-- Không truyền response HTTP hoặc JSON map thô đến các màn hình.
-- Không kết nối SQL Server trực tiếp từ Flutter.
-
-Giữ HTTP package đã được repo chọn. Không tự thêm hoặc thay Dio/http
-khi chưa được duyệt.
-
-## Base URL và môi trường
-
-- Base URL lấy từ cấu hình tập trung theo môi trường (`AppEnv.apiBaseUrl`, mặc định `http://localhost:5259` hoặc `http://10.0.2.2:5259` trên Android emulator).
-- Không hardcode URL trong widget hoặc repository riêng lẻ.
-- Phân biệt API base URL và hub URL (`/hubs/notifications`) để không ghép sai đường dẫn.
-- Không đưa secret backend vào cấu hình ứng dụng.
-- Không vô hiệu hoá kiểm tra chứng chỉ để vượt lỗi HTTPS.
-- Địa chỉ localhost trên thiết bị/emulator không mặc nhiên là máy backend;
-  xác nhận địa chỉ kết nối theo môi trường chạy.
-
-Không tự thay đổi backend, CORS hoặc cấu hình triển khai để chữa lỗi kết nối.
-
-## Định dạng HTTP
-
-- REST sử dụng JSON cho các endpoint hiện có.
-- Endpoint cần xác thực gửi:
-  `Authorization: Bearer <accessToken>`.
-- Chỉ gửi token Harmonia đến backend Harmonia được cấu hình.
-- Không đính kèm token vào request tải file từ dịch vụ bên thứ ba.
-- Enum trên backend hiện tại được serialize thành dạng chuỗi (`JsonStringEnumConverter`).
-- Giữ nguyên nullable và kiểu dữ liệu theo DTO.
-
-API thành công trả payload trực tiếp, không có envelope:
-
-```text
-Không mặc định có:
-data
-value
-isSuccess
-```
-
-`Result<T>` là chi tiết nội bộ backend, không phải response Flutter nhận.
-
-Response `204 No Content` không có body. Không đưa response này vào
-bộ giải mã bắt buộc có JSON.
-
-## Endpoint hiện có trên backend (origin/main)
-
-| Nhóm | Method | Path | Request | Thành công |
-|---|---|---|---|---|
-| **Auth** | POST | `/api/auth/login` | LoginRequest; anonymous | 200 LoginResponse |
-| | POST | `/api/auth/google` | GoogleLoginRequest; anonymous | 200 LoginResponse |
-| | POST | `/api/auth/refresh` | `{refreshToken}`; anonymous | 200 LoginResponse |
-| | POST | `/api/auth/logout` | `{refreshToken}`; Bearer | 204 No Content |
-| | POST | `/api/auth/logout-all` | Không có body nghiệp vụ; Bearer | 204 No Content |
-| | POST | `/api/auth/change-password` | ChangePasswordRequest; Bearer | 200/204 |
-| | POST | `/api/auth/forgot-password` | ForgotPasswordRequest; anonymous | 200/204 |
-| | POST | `/api/auth/reset-password` | ResetPasswordRequest; anonymous | 200/204 |
-| **Hồ sơ** | GET | `/api/member-profiles/me` | Bearer | 200 MemberProfileDto |
-| | PUT | `/api/member-profiles/me` | UpdateMyMemberProfileRequest; Bearer | 200 MemberProfileDto |
-| **Bài hát** | GET | `/api/songs` | SearchSongsRequest query; Bearer | 200 PagedList<SongDto> |
-| | GET | `/api/songs/{id}` | SongId; Bearer | 200 SongDto |
-| | GET | `/api/songs/{id}/classification` | SongId; Bearer | 200 SongClassificationDto |
-| **Tài liệu** | GET | `/api/music-materials` | SearchMusicMaterialsRequest; Bearer | 200 PagedList<MusicMaterialDto> |
-| | GET | `/api/music-materials/mine` | SearchMusicMaterialsRequest; Bearer | 200 PagedList<MusicMaterialDetailDto> |
-| | PUT | `/api/music-materials/{id}/learning-progress` | UpdateMaterialLearningProgressRequest; Bearer | 200 MaterialLearningProgressDto |
-| **Danh mục** | GET | `/api/lookups/mass-types` | Bearer | 200 List<LookupItemDto> |
-| | GET | `/api/lookups/ceremony-types` | Bearer | 200 List<LookupItemDto> |
-| | GET | `/api/lookups/event-categories` | Bearer | 200 List<LookupItemDto> |
-| | GET | `/api/lookups/song-themes` | Bearer | 200 List<LookupItemDto> |
-| | GET | `/api/lookups/skill-categories` | Bearer | 200 List<LookupItemDto> |
-| | GET | `/api/lookups/liturgical-seasons` | Bearer | 200 List<LiturgicalSeasonDto> |
-| | GET | `/api/lookups/liturgical-slots` | Bearer | 200 List<LiturgicalSlotDto> |
-| | GET | `/api/lookups/worship-locations` | Bearer | 200 List<WorshipLocationDto> |
-| | GET | `/api/lookups/skills` | Bearer | 200 List<SkillDto> |
-| **Thông báo** | GET | `/api/notifications` | Query phân trang; Bearer | 200 PagedList<NotificationDto> |
-| | GET | `/api/notifications/unread-count` | Bearer | 200 int |
-| | PUT | `/api/notifications/{id}/read` | NotificationId; Bearer | 204 No Content |
-| | SignalR | `/hubs/notifications` | AccessToken query; Bearer | Event `ReceiveNotificationAsync` |
-
-## Đăng nhập
-
-LoginRequest:
-
-```json
-{
-  "email": "member@example.com",
-  "password": "<mật khẩu Harmonia>",
-  "deviceId": "<mã thiết bị tùy chọn>",
-  "platform": 0
-}
-```
-
-- `email`: bắt buộc.
-- `password`: bắt buộc.
-- `deviceId`: nullable/tùy chọn.
-- `platform`: nullable/tùy chọn.
-
-DevicePlatform:
-
-| Nền tảng | Giá trị gửi API |
-|---|---|
-| Android | 0 |
-| iOS | 1 |
-| Web | 2 |
-
-Ánh xạ các giá trị này rõ ràng; không phụ thuộc vào thứ tự enum Dart.
-
-`deviceId` không phải push token và không phải bằng chứng phân quyền.
-
-LoginResponse:
-
-```text
-accessToken: string
-accessTokenExpiresAt: timestamp
-refreshToken: string
-user:
-  id: Guid string
-  email: string
-  roleName: string
-```
-
-Response hiện chưa có:
-- memberId
-- fullName
-- avatarUrl
-- thời điểm hết hạn refresh token
-
-Không tự tạo các giá trị này từ email hoặc user.id.
-
-Đăng nhập hiện dùng email và mật khẩu Harmonia.
-Địa chỉ Gmail có thể là email tài khoản, nhưng không đồng nghĩa backend
-đã hỗ trợ Google Sign-In. Không gửi mật khẩu Gmail để đăng nhập Harmonia.
-
-## Refresh và logout
-
-RefreshRequest:
-
-```json
-{
-  "refreshToken": "<refresh token hiện tại>"
-}
-```
-
-Refresh trả LoginResponse với cặp token mới.
-Không chỉ cập nhật access token rồi tiếp tục dùng refresh token cũ.
-
-LogoutRequest:
-
-```json
-{
-  "refreshToken": "<refresh token hiện tại>"
-}
-```
-
-Logout cần cả Bearer access token và refresh token trong body.
-Logout-all cần Bearer access token, không cần body nghiệp vụ.
-
-Quy trình refresh đồng thời, retry và kết thúc phiên tuân theo
-`mobile-rules-04-auth-security.md`.
-
-## Phân trang
-
-Query:
-
-```text
-GET /api/notifications?pageNumber=1&pageSize=20
-```
-
-Quy tắc hiện tại:
-
-- pageNumber bắt đầu từ 1.
-- pageNumber dưới 1 được server đưa về 1.
-- pageSize mặc định là 20.
-- pageSize dưới 1 được đưa về 20.
-- pageSize tối đa là 100.
-
-Response:
-
-```text
-items: list<T>
-pageNumber: int
-pageSize: int
-totalCount: int
-totalPages: int
-hasPreviousPage: bool
-hasNextPage: bool
-```
-
-Frontend phải:
-- Đọc danh sách từ `items`.
-- Dùng metadata server trả về.
-- Không gửi nhiều request tải cùng một trang đồng thời.
-- Giữ dữ liệu cũ khi tải thêm thất bại.
-- Bỏ kết quả request cũ khi đổi bộ lọc hoặc tài khoản.
-- Khử trùng theo ID khi ghép trang.
-
-Thông báo hiện sắp xếp mới trước theo CreatedAt và dùng phân trang offset.
-Dữ liệu mới có thể làm dịch chuyển trang; không giả định tổng số hoặc
-vị trí từng bản ghi bất biến trong quá trình tải.
-
-## Thông báo
-
-NotificationDto:
-
-```text
-id: Guid string
-type: int
-title: string
-content: string
-referenceType: string?
-referenceId: Guid string?
-createdAt: timestamp
-isRead: bool
-readAt: timestamp?
-```
-
-NotificationType:
-
-| Loại | Giá trị |
-|---|---|
-| WeekPublished | 0 |
-| SongListDecision | 1 |
-| ParticipationRequest | 2 |
-| AssignmentNotice | 3 |
-| PracticeFeedback | 4 |
-| DirectorNote | 5 |
-
-Có fallback cho giá trị type chưa hỗ trợ.
-
-`GET /api/notifications/unread-count` trả số nguyên trực tiếp:
-
-```json
-5
-```
-
-Không giải mã thành `{ "count": 5 }`.
-
-Đánh dấu đã đọc dùng `NotificationDto.id`, tức NotificationId.
-Không dùng NotificationRecipientId.
-
-Không tự suy ra route điều hướng từ referenceType.
-Chỉ điều hướng qua bảng mapping những loại đã được hỗ trợ.
-
-## Response lỗi
-
-Hình dạng lỗi chuẩn:
-
-```json
-{
-  "code": "VALIDATION_FAILED",
-  "message": "Validation failed",
-  "errors": {
-    "email": ["AUTH_EMAIL_INVALID_FORMAT"]
-  }
-}
-```
-
-- `code`: mã dùng để phân loại và dịch thông báo.
-- `message`: thông tin từ backend; không dùng để so sánh nghiệp vụ.
-- `errors`: tùy chọn, map tên field đến danh sách mã lỗi validation.
-
-Frontend phải hỗ trợ cả lỗi ngoài hình dạng chuẩn:
-- Body rỗng.
-- Proxy trả HTML.
-- JSON sai hoặc thiếu field.
-- Route không tồn tại.
-- Lỗi authorization không có ErrorResponse.
-
-Không để lỗi parser che mất HTTP status hoặc làm crash màn hình.
-Cách hiển thị tuân theo `mobile-rules-05-errors-ui.md`.
-
-## Timeout, huỷ request và retry
-
-- Cấu hình timeout tập trung theo loại tác vụ.
-- Không retry vô hạn.
-- Request bị huỷ do rời màn hình không nên hiện thông báo lỗi như lỗi server.
-- Không tự phát lại thao tác ghi khi timeout hoặc mất mạng:
-  server có thể đã xử lý dù client chưa nhận response.
-- Chỉ retry khi hiểu rõ tính an toàn của endpoint.
-- Không tự thêm idempotency key rồi giả định backend hỗ trợ.
-- Không tự phát lại stream upload đã bị tiêu thụ.
-
-## API backend chưa cung cấp (chờ backend bổ sung)
-
-Chưa có endpoint trên Harmonia-BE cho các tính năng:
-- **Lịch phụng vụ và buổi tập**: chưa có controller/endpoint (hiển thị trạng thái chưa kết nối máy chủ).
-- **Xác nhận tham gia & Điểm danh**: chưa có endpoint ghi nhận tham dự hay điểm danh thực tế.
-- **Bài tập thanh nhạc & Nộp bản thu**: chưa có endpoint giao bài tập hay nộp file ghi âm bài tập.
-- **Kỹ năng ca viên riêng**: chưa có endpoint gán/duyệt kỹ năng cho ca viên (`/api/member-skills`).
-- **Push token registration**: chưa có endpoint đăng ký FCM/APNS token.
-
-Trong chế độ thật (`USE_MOCK=false`), các repository tương ứng (`UnintegratedCalendarRepositoryImpl`, `UnintegratedPracticeRepositoryImpl`) hiển thị trạng thái `FEATURE_UNINTEGRATED` một cách trung thực, tuyệt đối không giả lập thành công hay tạo endpoint ảo.
-
-## Khi hợp đồng thay đổi
-
-Cập nhật đồng thời:
-- Request/response model.
-- Mapping enum và lỗi.
-- Repository/API service liên quan.
-- Test giải mã và xử lý lỗi phù hợp.
-- Tài liệu hợp đồng này nếu có thay đổi.
-
-Không sửa backend hoặc tự điều chỉnh nghiệp vụ để làm client hiện tại chạy được.
-Nếu tài liệu và API thực tế khác nhau, báo rõ khác biệt trước khi chốt cách xử lý.
+## Nguồn và giới hạn
+
+Đối chiếu ngày 2026-10-16 với source BE `origin/main` đang có tại máy:
+`cea85534a1aecc9b8117275194dc74623bf4ed99`.
+Đây là snapshot local, không chứng minh Azure đã triển khai cùng commit.
+Trước khi thay hợp đồng, đọc controller, DTO, validator, serializer và quyền của endpoint.
+
+[Bảng tích hợp](mobile-api-integration-status.md) ghi nơi gọi thực tế và phần chưa kiểm chứng.
+Không suy ra endpoint từ entity hoặc thiết kế Stitch; không sửa backend để khớp UI.
+
+## Ranh giới và định dạng
+
+- Widget hiển thị; notifier điều phối; repository/API service gọi API.
+- Giữ Dio, Riverpod, GoRouter và cơ chế quản lý phiên đang dùng.
+- API thành công trả payload trực tiếp, không bọc data/value/isSuccess.
+- 204 không có body; không bắt buộc parse JSON.
+- ID là Guid string; giữ nullable. UserId khác MemberProfileId.
+- Chỉ gửi token Harmonia đến backend Harmonia. Client tải file riêng không gắn Bearer.
+- Cấu hình tập trung tại AppEnv; không hardcode base URL trong widget.
+- Không bỏ kiểm tra TLS, không đưa backend secrets vào app.
+- Enum gửi giá trị wire theo từng DTO; không dùng enum.index hoặc nhãn tiếng Việt.
+
+## Auth
+
+| Method | Path | Nội dung |
+|---|---|---|
+| POST | /api/auth/login | email, password; deviceId/platform tùy chọn |
+| POST | /api/auth/google | idToken Google; deviceId/platform tùy chọn |
+| POST | /api/auth/refresh | refreshToken |
+| POST | /api/auth/logout | Bearer và body refreshToken; 204 |
+| POST | /api/auth/logout-all | Bearer; 204 |
+| GET / PUT | /api/auth/me | Tài khoản hiện tại / cập nhật |
+| POST | /api/auth/change-password | currentPassword, newPassword |
+| POST | /api/auth/forgot-password | email, platform tùy chọn |
+| POST | /api/auth/reset-password | token, newPassword |
+
+Login/Google/refresh trả accessToken, accessTokenExpiresAt, refreshToken và user.
+User DTO hiện có fullName, roleName, isPasswordChangeRequired cùng các trường tài khoản.
+Không dùng snapshot cũ cho rằng response chỉ có id/email/roleName.
+
+DevicePlatform gửi chuỗi **Android**, **iOS**, **Web** theo DTO hiện tại.
+Google đăng nhập bằng SDK native và ID token, không gửi mật khẩu Gmail.
+
+Chỉ ChoirMember được vào ứng dụng. Backend vẫn là nơi quyết định quyền.
+AUTH_PASSWORD_CHANGE_REQUIRED chuyển sang đổi mật khẩu; không refresh để vượt 403.
+Đổi/reset mật khẩu yêu cầu đăng nhập lại theo hành vi thu hồi phiên của BE.
+Refresh thay cả cặp token, tối đa một lần retry phù hợp; xử lý đồng thời và epoch theo Rule 04.
+
+## Hồ sơ, kỹ năng, lịch, luyện tập và thông báo
+
+Các route đã có trong snapshot được liệt kê tại bảng tích hợp:
+hồ sơ /me và /me/history; member-skills/mine và chi tiết; schedule/events,
+schedule/rehearsals; practice-assignments/mine, counts, chi tiết, submissions;
+practice-submissions/mine và chi tiết; notifications, unread-count và đánh dấu đọc.
+
+- Khai báo kỹ năng gửi skillId và level **Beginner/Intermediate/Advanced** theo contract; UI dùng nhãn tiếng Việt.
+- Danh sách bài tập dùng status wire hợp lệ; lọc chưa nộp bằng hasSubmission=false.
+- Không gửi Pending như trạng thái bản nộp.
+- Nộp bản thu dùng multipart theo API: file và durationSeconds nếu có.
+- Cập nhật 17/10/2026, source BE `a0105d7`: danh sách và chi tiết bài tập trả
+  `canSubmit` và `cannotSubmitReason`. Chỉ mở thu/nộp khi `canSubmit == true`;
+  không suy quyền từ `isOverdue`, trạng thái hoặc đồng hồ thiết bị. Thiếu cờ là
+  chưa xác minh được quyền, cần tải lại; không mặc định cho phép.
+- Dịch `PRACTICE_SUBMISSION_ALREADY_PASSED` và `PRACTICE_SUBMISSION_PAST_DUE`
+  sang tiếng Việt. Kiểm tra lại quyền trước upload; POST vẫn quyết định cuối.
+  Giữ bản nháp có thể nghe lại khi kiểm tra quyền/upload thất bại, kể cả GET
+  chi tiết trả 404. Không gửi bản thu của phiên cũ bằng token phiên mới.
+- File bản thu theo snapshot: mp3/m4a/wav, tối đa 20 MB; thời lượng 1–3600 giây khi được gửi.
+- UTC timestamp hiển thị theo giờ local; DateOnly giữ nguyên ngày.
+- unread-count trả số nguyên trực tiếp, không phải object count.
+- SignalR /hubs/notifications, sự kiện ReceiveNotificationAsync.
+- Phản hồi tham gia đã nối PUT /api/event-participations/mine/{eventId}; đọc chi tiết bên dưới.
+
+## Thư viện bài hát và tài liệu
+
+| Method | Path | Contract chính |
+|---|---|---|
+| GET | /api/songs | PagedList<SongDto>; keyword và bộ lọc phân loại |
+| GET | /api/songs/{id} | SongDto |
+| GET | /api/songs/{id}/classification | SongClassificationDto |
+| GET | /api/song-lists/event/{eventId}/approved | Danh sách được duyệt, không dùng endpoint dành riêng cho ca trưởng/cha xứ |
+| GET | /api/music-materials | Bắt buộc songId; phân trang |
+| GET | /api/music-materials/mine | Tài liệu của ca viên, bao gồm tiến độ học |
+| PUT | /api/music-materials/{id}/learning-progress | Body status; trả materialId, status, updatedAt |
+
+SearchSongsRequest hỗ trợ keyword, liturgicalSeasonId, massTypeId,
+ceremonyTypeId, songThemeId, skillId và paging.
+SearchMusicMaterialsRequest hỗ trợ keyword, songId, liturgicalSeasonId,
+skillId, materialType, learningStatus và paging; các bộ lọc kết hợp AND.
+
+MaterialType: SheetMusic, Lyrics, SampleAudio, RehearsalMaterial.
+LearningStatus: NotStarted, NeedsPractice, Learned.
+Progress thuộc **MusicMaterialId**, không thuộc SongId và không tự chọn tài liệu đầu tiên.
+
+GET /mine chỉ trả tài liệu dành cho mọi người hoặc phù hợp kỹ năng đã được duyệt.
+Chi tiết bài hát trên mobile lấy tài liệu /mine theo songId để hiện tiến độ đúng tài khoản.
+Không có endpoint GET một tài liệu /mine/{id} trong snapshot:
+tìm ID trong các trang /mine?songId=... khi mở tài liệu.
+
+Không biến notes thành lời bài hát đã được xác minh.
+Không tự tạo tác giả, giọng hoặc tempo khi API không cung cấp.
+
+FileUrl có thể là URL ký và hết hạn. Lấy URL mới trước khi mở; không log URL,
+không gửi Harmonia token tới host file. Không retry vô hạn.
+PDF/audio phải mở nội dung thật; định dạng chưa hỗ trợ phải báo rõ.
+
+## Phân trang và vòng đời
+
+PagedList gồm items, pageNumber, pageSize, totalCount, totalPages,
+hasPreviousPage, hasNextPage. Trang bắt đầu từ 1; pageSize mặc định 20,
+giới hạn theo PagingRequest backend.
+
+- Dùng metadata server, không tải tất cả bằng pageSize rất lớn.
+- Chặn tải cùng trang đồng thời, chỉ tiến trang sau thành công.
+- Ghép trang và khử trùng theo ID.
+- Tải thêm lỗi giữ dữ liệu và cho thử lại đúng trang.
+- Đổi từ khóa/bộ lọc, refresh hoặc đổi phiên phải bỏ response cũ.
+- Không dùng số item đã tải làm tổng unread-count.
+- Phân trang offset có thể dịch chuyển khi dữ liệu mới được thêm.
+
+## Lỗi
+
+Lỗi chuẩn có code, message và errors tùy chọn (field → danh sách mã).
+Dịch theo code tại ErrorMessages; có fallback cho body rỗng/HTML/sai JSON.
+Không so sánh message để quyết định nghiệp vụ và không hiển thị stack trace hoặc URL ký.
+Network/timeout/5xx không tự chứng minh refresh token đã vô hiệu.
+403 không tự refresh; 404 không tiết lộ tài nguyên ngoài quyền.
+Không tự retry thao tác ghi khi mất mạng nếu chưa biết server đã thực hiện hay chưa.
+
+## Lịch phụng vụ, buổi tập, thông tin ca đoàn và phản hồi tham gia
+
+| Method | Route | Quyền / contract |
+|---|---|---|
+| GET | /api/liturgical-days?fromDate=&toDate= | Đăng nhập; bare array LiturgicalDayDto, tối đa 366 ngày tính cả hai đầu |
+| GET | /api/liturgical-days/{date} | Đăng nhập; DTO hoặc 404 CALENDAR_DAY_NOT_FOUND |
+| GET | /api/system-settings/public | Đăng nhập; bare array key/value string, chỉ Choir.Name, Parish.Name, System.Announcement |
+| GET | /api/rehearsals/{id}/songs | Đăng nhập; bare array songId, songTitle, displayOrder, note |
+| PUT | /api/event-participations/mine/{eventId} | ChoirMember; body status + note tùy chọn; EventParticipationDto |
+
+- Status gửi **Confirmed/Declined/Unsure**; Invited và unknown không phải giá trị gửi. Note tối đa 300 ký tự.
+- Backend yêu cầu Active, được mời, chưa phản hồi và sự kiện còn cho phản hồi. Mỗi lời mời chỉ phản hồi một lần, kể cả Unsure. UI cần xác nhận trước, không âm thầm retry PUT.
+- GET schedule/events vẫn là summary. Ghép trạng thái từ GET /api/event-participations/mine và phân công từ GET /api/schedule/assignments; không gán mặc định Invited. Màn hình chi tiết gọi GET /api/schedule/events/{id}, buổi tập gọi GET /api/schedule/rehearsals/{id}. Không phụ thuộc ID có trong lịch sắp tới.
+- Dùng canRespond của MyParticipationDto để điều khiển UI; PUT preflight tải lại lời mời, giữ expectedSessionEpoch đến khi gửi request. Thành công invalidate chi tiết và tải lại lịch bằng generation mới, không giữ map phản hồi tạm trong repository.
+- myAttendanceStatus nullable: null là chưa có bản ghi điểm danh, không đổi thành Absent. Chỉ hiển thị dữ liệu của người gọi theo DTO BE.
+- DateOnly không đổi múi giờ. Rehearsal startTime/endTime UTC đổi local. EventDate + Time là giờ Việt Nam theo BE; canRespond/cannotRespondReason quyết định còn quyền phản hồi. Không có responseDeadlineAt riêng để hiển thị hạn mẫu.
+- Service-rosters và rehearsal attendances hiện dành cho ChoirDirector; không gọi dưới quyền ca viên để thay dữ liệu còn thiếu bằng mock.
+- DirectorNotes là linh mục gửi ca trưởng; không phải ghi chú được phép hiển thị cho ca viên.
+- Xem [yêu cầu BE](mobile-backend-api-requests-2026-10-15.md) và [kết quả đối chiếu](mobile-api-audit-2026-10-15.md).
+
+**Giới hạn cập nhật tiến độ:** PUT learning-progress chỉ gửi Learned hoặc NeedsPractice. NotStarted chỉ dùng đọc/lọc; không cho chọn làm giá trị ghi dù UI vẫn hiển thị được trạng thái này.
+
+Bốn GET cá nhân đã tích hợp theo commit cea8553; xem [báo cáo kiểm chứng mới nhất](mobile-api-integration-2026-10-16.md). Bản yêu cầu BE ngày 15/10 là lịch sử, không dùng để kết luận bốn API này còn thiếu.

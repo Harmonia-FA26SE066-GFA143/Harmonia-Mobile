@@ -46,13 +46,14 @@ Nếu repo Flutter đã có `CLAUDE.md`, đọc và hợp nhất thay vì ghi đ
 
 ## Mức độ hoàn thiện backend
 
-Snapshot được đọc từ source Harmonia-BE ngày **2026-10-01**, chưa xác nhận bằng gọi API runtime:
+Đối chiếu ngày **2026-10-16** với snapshot source BE `origin/main` local
+`cea85534a1aecc9b8117275194dc74623bf4ed99`; chưa chứng minh Azure chạy cùng commit.
 
-- Bốn endpoint auth: login, refresh, logout, logout-all.
-- Ba endpoint thông báo: danh sách, số chưa đọc, đánh dấu đã đọc.
-- Hub `/hubs/notifications`, sự kiện `ReceiveNotificationAsync`.
-
-Các nghiệp vụ mobile còn lại có mô hình hoặc tài liệu nhưng chưa có controller tương ứng trong snapshot. Kiểm tra hợp đồng mới nhất trước khi tích hợp. Không mô tả UI/mock là đã kết nối API; không tự đặt payload, giới hạn upload hoặc định dạng ngày giờ cho API chưa có.
+Backend đã có auth mở rộng, hồ sơ, kỹ năng, lịch, thư viện/tài liệu, luyện tập/bản thu,
+thông báo và SignalR. Đọc `doc/mobile-rules-03-api-contract.md` và
+`doc/mobile-api-integration-status.md` để biết route, nơi gọi UI và giới hạn kiểm chứng.
+Không dùng snapshot cũ để kết luận các module này chưa có API.
+Không mô tả mock hoặc chỉ có API service là đã hoàn tất tích hợp/live test.
 
 ## Luật làm việc
 
