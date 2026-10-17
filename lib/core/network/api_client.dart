@@ -7,11 +7,12 @@ import '../storage/secure_storage_service.dart';
 import 'auth_interceptor.dart';
 
 class ApiClient {
+  final SessionManager sessionManager;
   late final Dio dio;
 
   ApiClient({
     required SecureStorageService storage,
-    required SessionManager sessionManager,
+    required this.sessionManager,
     Dio? customDio,
   }) {
     dio =

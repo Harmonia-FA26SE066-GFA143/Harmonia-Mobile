@@ -29,7 +29,9 @@ abstract class AuthRepository {
     required String newPassword,
   });
   Future<void> logout();
-  Future<void> logoutAll();
+  Future<bool> logoutAll();
+  Future<UserDto> getMe();
+  Future<UserDto> updateMe(UpdateMyUserRequest request);
 }
 
 class AuthRepositoryImpl implements AuthRepository {
@@ -54,7 +56,7 @@ class AuthRepositoryImpl implements AuthRepository {
       email: email,
       password: password,
       deviceId: deviceId,
-      platform: platform?.value,
+      platform: platform?.wireName,
     );
 
     final response = await apiService.login(request);
@@ -89,8 +91,14 @@ class AuthRepositoryImpl implements AuthRepository {
       roleName: response.user.roleName,
       fullName: response.user.fullName,
     );
+    await storage.savePasswordChangeRequired(
+      response.user.isPasswordChangeRequired,
+    );
 
-    sessionManager.markAuthenticated(role: response.user.roleName);
+    sessionManager.markAuthenticated(
+      role: response.user.roleName,
+      isPasswordChangeRequired: response.user.isPasswordChangeRequired,
+    );
     return response.user;
   }
 
@@ -103,7 +111,7 @@ class AuthRepositoryImpl implements AuthRepository {
     final request = GoogleLoginRequest(
       idToken: idToken,
       deviceId: deviceId,
-      platform: platform?.value,
+      platform: platform?.wireName,
     );
 
     final response = await apiService.loginWithGoogle(request);
@@ -140,8 +148,14 @@ class AuthRepositoryImpl implements AuthRepository {
       roleName: response.user.roleName,
       fullName: response.user.fullName,
     );
+    await storage.savePasswordChangeRequired(
+      response.user.isPasswordChangeRequired,
+    );
 
-    sessionManager.markAuthenticated(role: response.user.roleName);
+    sessionManager.markAuthenticated(
+      role: response.user.roleName,
+      isPasswordChangeRequired: response.user.isPasswordChangeRequired,
+    );
     return response.user;
   }
 
@@ -155,6 +169,9 @@ class AuthRepositoryImpl implements AuthRepository {
       newPassword: newPassword,
     );
     await apiService.changePassword(request);
+    // Backend revokes all sessions upon password change.
+    // Client must end local session and require re-login.
+    await sessionManager.endSession();
   }
 
   @override
@@ -164,7 +181,7 @@ class AuthRepositoryImpl implements AuthRepository {
   }) async {
     final request = ForgotPasswordRequest(
       email: email,
-      platform: platform?.value,
+      platform: platform?.wireName,
     );
     await apiService.forgotPassword(request);
   }
@@ -195,13 +212,85 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<void> logoutAll() async {
+  Future<bool> logoutAll() async {
+    final epoch = sessionManager.sessionEpoch;
+    var revoked = false;
     try {
-      await apiService.logoutAll();
+      await apiService.logoutAll(expectedSessionEpoch: epoch);
+      revoked = true;
     } catch (_) {
-      // Local cleanup on failure
+      // Local logout does not prove that other devices were revoked.
     }
-    await sessionManager.endSession();
+    if (sessionManager.sessionEpoch == epoch) {
+      await sessionManager.endSession();
+    }
+    return revoked;
+  }
+
+  @override
+  Future<UserDto> getMe() async {
+    final epoch = sessionManager.sessionEpoch;
+    bool current() =>
+        sessionManager.sessionEpoch == epoch && sessionManager.isAuthenticated;
+    try {
+      final user = await apiService.getMe(expectedSessionEpoch: epoch);
+      if (!current()) {
+        throw const AppException(
+          code: 'SESSION_CHANGED',
+          message: 'Phiên đăng nhập đã thay đổi.',
+        );
+      }
+      if (user.id.isEmpty || user.email.isEmpty || user.roleName.isEmpty) {
+        throw const FormatException('Incomplete account response.');
+      }
+      if (!user.isActive || user.roleName != 'ChoirMember') {
+        await sessionManager.endSession();
+        throw AppException(
+          code: !user.isActive ? 'AUTH_ACCOUNT_INACTIVE' : 'FORBIDDEN_ROLE',
+          message: !user.isActive
+              ? 'Tài khoản ca viên đã bị vô hiệu hoá.'
+              : 'Tài khoản hiện không còn quyền truy cập ứng dụng ca viên.',
+        );
+      }
+      await storage.saveUser(
+        id: user.id,
+        email: user.email,
+        roleName: user.roleName,
+        fullName: user.fullName,
+      );
+      if (!current()) {
+        throw const AppException(
+          code: 'SESSION_CHANGED',
+          message: 'Phiên đăng nhập đã thay đổi.',
+        );
+      }
+      await sessionManager.markPasswordChangeRequired(
+        user.isPasswordChangeRequired,
+        epoch: epoch,
+      );
+      if (!current()) {
+        throw const AppException(
+          code: 'SESSION_CHANGED',
+          message: 'Phiên đăng nhập đã thay đổi.',
+        );
+      }
+      sessionManager.completeRestoration(epoch);
+      return user;
+    } on AppException catch (error) {
+      if (current() &&
+          (error.code == 'AUTH_ACCOUNT_INACTIVE' ||
+              error.code == 'USER_NOT_FOUND')) {
+        await sessionManager.endSession();
+      }
+      // The interceptor ends sessions only when refresh is definitively rejected.
+      // A surfaced 401 may also follow a transient refresh failure; retain tokens.
+      rethrow;
+    }
+  }
+
+  @override
+  Future<UserDto> updateMe(UpdateMyUserRequest request) {
+    return apiService.updateMe(request);
   }
 }
 
@@ -273,7 +362,29 @@ class MockAuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<void> logoutAll() async {
+  Future<bool> logoutAll() async {
     await sessionManager.endSession();
+    return true;
+  }
+
+  @override
+  Future<UserDto> getMe() async {
+    return const UserDto(
+      id: 'mock-choir-member',
+      email: 'maria.mai@harmonia.org',
+      fullName: 'Maria Nguyễn Thị Mai',
+      roleName: 'ChoirMember',
+    );
+  }
+
+  @override
+  Future<UserDto> updateMe(UpdateMyUserRequest request) async {
+    return UserDto(
+      id: 'mock-choir-member',
+      email: 'maria.mai@harmonia.org',
+      fullName: request.fullName ?? 'Maria Nguyễn Thị Mai',
+      phone: request.phone,
+      roleName: 'ChoirMember',
+    );
   }
 }

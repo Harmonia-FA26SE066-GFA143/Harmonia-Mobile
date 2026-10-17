@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 
 import '../network/api_client.dart';
 import '../realtime/signalr_service.dart';
@@ -9,16 +11,20 @@ final secureStorageServiceProvider = Provider<SecureStorageService>((ref) {
   return SecureStorageService();
 });
 
-final sessionManagerProvider = Provider<SessionManager>((ref) {
+final sessionManagerProvider = ChangeNotifierProvider<SessionManager>((ref) {
   final storage = ref.watch(secureStorageServiceProvider);
-  final session = SessionManager(storage);
-  ref.onDispose(() => session.dispose());
-  return session;
-});
+  return SessionManager(storage);
+}, disposeNotifier: false);
+
+extension ChangeNotifierProviderOverrideWithValueExt<T extends ChangeNotifier?>
+    on ChangeNotifierProvider<T> {
+  dynamic overrideWithValue(T value) =>
+      overrideWith((ref) => value, disposeNotifier: false);
+}
 
 final apiClientProvider = Provider<ApiClient>((ref) {
   final storage = ref.watch(secureStorageServiceProvider);
-  final sessionManager = ref.watch(sessionManagerProvider);
+  final sessionManager = ref.watch(sessionManagerProvider.notifier);
   return ApiClient(storage: storage, sessionManager: sessionManager);
 });
 
