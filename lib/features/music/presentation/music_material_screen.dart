@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../app/app_env.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/di/core_providers.dart';
 import '../../../core/errors/error_messages.dart';
@@ -126,9 +125,6 @@ class _MusicMaterialScreenState extends ConsumerState<MusicMaterialScreen> {
         } catch (_) {
           // Fetch a fresh URL once if the buffered source can no longer resume.
         }
-      }
-      if (AppEnv.useMock) {
-        throw const FormatException('Demo materials are not downloadable.');
       }
       final fresh = await ref
           .read(musicRepositoryProvider)

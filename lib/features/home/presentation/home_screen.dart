@@ -53,7 +53,8 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final calendarState = ref.watch(calendarNotifierProvider);
-    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final nowVn = DateTime.now().toUtc().add(const Duration(hours: 7));
+    final today = DateFormat('yyyy-MM-dd').format(nowVn);
     final dayState = ref.watch(liturgicalDayProvider(today));
     final settings = ref.watch(publicAppSettingsProvider).value;
     final choirLabel = settings?.choirName.isNotEmpty == true
@@ -243,9 +244,10 @@ class HomeScreen extends ConsumerWidget {
                               data: (day) => day == null
                                   ? 'Chưa có lịch lễ hôm nay'
                                   : [
-                                      day.celebrationName,
-                                      if (day.seasonName?.isNotEmpty == true)
-                                        day.seasonName!,
+                                      day.celebrationLabel,
+                                      if (day.rankLabel != null) day.rankLabel!,
+                                      if (day.seasonLabel != null)
+                                        day.seasonLabel!,
                                     ].join(' • '),
                               loading: () => 'Đang tải lịch lễ…',
                               error: (_, _) => 'Chưa tải được lịch lễ hôm nay',

@@ -1,9 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../app/app_env.dart';
 import '../../../core/di/core_providers.dart';
 import '../../../core/errors/app_exceptions.dart';
-import '../../../core/session/session_manager.dart';
 import '../../notifications/data/notification_dto.dart';
 import 'member_profile_api_service.dart';
 import 'member_profile_dto.dart';
@@ -18,44 +18,6 @@ final memberProfileApiServiceProvider = Provider<MemberProfileApiService>((
   final client = ref.watch(apiClientProvider);
   return MemberProfileApiService(client);
 });
-
-class MockProfileData {
-  static final MemberProfileDto profile = MemberProfileDto(
-    id: 'member-01',
-    fullName: 'Maria Nguyễn Thị Mai',
-    email: 'maria.mai@harmonia.org',
-    phone: '0912 345 678',
-    dateOfBirth: '1995-05-15',
-    joinedDate: '2023-08-15',
-    status: MemberStatus.active,
-    avatarUrl: null,
-  );
-
-  static final List<MemberSkill> skills = [
-    const MemberSkill(
-      id: 'skill-01',
-      name: 'Xướng âm & Hát đơn ca (Solo)',
-      categoryName: 'Kỹ năng thanh nhạc',
-      level: 'Nâng cao',
-      status: SkillApprovalStatus.approved,
-    ),
-    const MemberSkill(
-      id: 'skill-02',
-      name: 'Thị tấu & Đọc nốt nhạc nhanh',
-      categoryName: 'Kỹ năng thanh nhạc',
-      level: 'Trung cấp',
-      status: SkillApprovalStatus.approved,
-    ),
-    const MemberSkill(
-      id: 'skill-03',
-      name: 'Đệm đàn Organ phụng vụ',
-      categoryName: 'Kỹ năng nhạc cụ',
-      level: 'Trung cấp',
-      status: SkillApprovalStatus.pending,
-      note: 'Đã hoàn thành khóa đệm thánh ca phụng vụ cơ bản.',
-    ),
-  ];
-}
 
 abstract class ProfileRepository {
   Future<MemberProfileDto> getProfile();
@@ -206,165 +168,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
   }
 }
 
-class MockProfileRepositoryImpl implements ProfileRepository {
-  MemberProfileDto _profile = MockProfileData.profile;
-  List<MemberSkill> _skills = List.from(MockProfileData.skills);
-
-  @override
-  Future<MemberProfileDto> getProfile() async {
-    await Future.delayed(const Duration(milliseconds: 100));
-    return _profile;
-  }
-
-  @override
-  Future<MemberProfileDto> updateProfile(
-    UpdateMyMemberProfileRequest request,
-  ) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    _profile = MemberProfileDto(
-      id: _profile.id,
-      fullName: request.fullName,
-      email: _profile.email,
-      phone: request.phone ?? _profile.phone,
-      dateOfBirth: request.dateOfBirth ?? _profile.dateOfBirth,
-      joinedDate: _profile.joinedDate,
-      status: _profile.status,
-      avatarUrl: _profile.avatarUrl,
-    );
-    return _profile;
-  }
-
-  @override
-  Future<List<MemberSkill>> getSkills({
-    String? status,
-    int pageNumber = 1,
-    int pageSize = 50,
-  }) async {
-    final paged = await getSkillsPaged(
-      status: status,
-      pageNumber: pageNumber,
-      pageSize: pageSize,
-    );
-    return paged.items;
-  }
-
-  @override
-  Future<PagedList<MemberSkill>> getSkillsPaged({
-    String? status,
-    int pageNumber = 1,
-    int pageSize = 50,
-  }) async {
-    await Future.delayed(const Duration(milliseconds: 150));
-    List<MemberSkill> filtered = _skills;
-    if (status != null && status.isNotEmpty) {
-      filtered = _skills
-          .where(
-            (s) =>
-                s.status.name.toLowerCase() == status.toLowerCase() ||
-                s.status.label.toLowerCase() == status.toLowerCase(),
-          )
-          .toList();
-    }
-    final startIndex = (pageNumber - 1) * pageSize;
-    final items = startIndex < filtered.length
-        ? filtered.skip(startIndex).take(pageSize).toList()
-        : <MemberSkill>[];
-    final totalPages = (filtered.length / pageSize).ceil();
-    final hasNext = pageNumber < totalPages;
-    return PagedList<MemberSkill>(
-      items: items,
-      pageNumber: pageNumber,
-      pageSize: pageSize,
-      totalCount: filtered.length,
-      totalPages: totalPages > 0 ? totalPages : 1,
-      hasPreviousPage: pageNumber > 1,
-      hasNextPage: hasNext,
-    );
-  }
-
-  @override
-  Future<MemberSkill?> getSkillById(String id) async {
-    await Future.delayed(const Duration(milliseconds: 100));
-    try {
-      return _skills.firstWhere((s) => s.id == id);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  @override
-  Future<void> declareNewSkill({
-    required String skillId,
-    String? level,
-    String? name,
-    String? categoryName,
-    String? note,
-  }) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    final newSkill = MemberSkill(
-      id: 'skill-${DateTime.now().millisecondsSinceEpoch}',
-      skillId: skillId,
-      name: name ?? 'Kỹ năng mới',
-      categoryName: categoryName ?? 'Kỹ năng thanh nhạc',
-      level: level ?? 'Sơ cấp',
-      status: SkillApprovalStatus.pending,
-      note: note,
-      declaredAt: DateTime.now(),
-    );
-    _skills = [..._skills, newSkill];
-  }
-
-  @override
-  Future<PagedList<ParticipationHistoryDto>> getParticipationHistory({
-    String? liturgicalSeasonId,
-    String? fromDate,
-    String? toDate,
-    int pageNumber = 1,
-    int pageSize = 20,
-  }) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    final mockItems = [
-      const ParticipationHistoryDto(
-        eventId: 'event-01',
-        eventDate: '2026-09-27',
-        title: 'Chúa nhật XXVI Thường niên',
-        liturgicalSeasonName: 'Mùa Thường niên',
-        participationStatus: 'Confirmed',
-        servedSkills: ['Soprano'],
-        rehearsalsHeld: 2,
-        rehearsalsAttended: 2,
-        assignmentsTotal: 2,
-        assignmentsPassed: 2,
-      ),
-      const ParticipationHistoryDto(
-        eventId: 'event-02',
-        eventDate: '2026-09-20',
-        title: 'Chúa nhật XXV Thường niên',
-        liturgicalSeasonName: 'Mùa Thường niên',
-        participationStatus: 'Confirmed',
-        servedSkills: ['Soprano'],
-        rehearsalsHeld: 2,
-        rehearsalsAttended: 1,
-        assignmentsTotal: 3,
-        assignmentsPassed: 2,
-      ),
-    ];
-    return PagedList<ParticipationHistoryDto>(
-      items: mockItems,
-      pageNumber: pageNumber,
-      pageSize: pageSize,
-      totalCount: mockItems.length,
-      totalPages: 1,
-      hasPreviousPage: false,
-      hasNextPage: false,
-    );
-  }
-}
-
 final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
-  if (AppEnv.useMock) {
-    return MockProfileRepositoryImpl();
-  }
   final apiService = ref.watch(memberProfileApiServiceProvider);
   return ProfileRepositoryImpl(apiService: apiService);
 });
@@ -431,6 +235,7 @@ class MemberSkillsNotifier extends Notifier<MemberSkillsState> {
   ProfileRepository get _repository => ref.read(profileRepositoryProvider);
   int _requestId = 0;
   String? _currentStatus;
+  final _reviewNotificationIds = <String>{};
 
   static const int defaultPageSize = 10;
   bool _buildLoadScheduled = false;
@@ -438,11 +243,39 @@ class MemberSkillsNotifier extends Notifier<MemberSkillsState> {
 
   @override
   MemberSkillsState build() {
-    ref.listen<SessionManager>(sessionManagerProvider, (prev, next) {
-      if (prev != null &&
-          (prev.sessionEpoch != next.sessionEpoch || !next.isAuthenticated)) {
-        reset();
+    ref.listen<int>(sessionManagerProvider.select((s) => s.sessionEpoch), (
+      previous,
+      next,
+    ) {
+      reset();
+      if (ref.read(sessionManagerProvider).isAuthenticated) {
+        unawaited(loadInitial());
       }
+    });
+    final realtime = ref.read(signalRServiceProvider).notificationStream.listen(
+      (data) {
+        if (!ref.mounted || !ref.read(sessionManagerProvider).isAuthenticated) {
+          return;
+        }
+        final notification = NotificationDto.fromJson(data);
+        if (notification.type == NotificationType.skillReview &&
+            _reviewNotificationIds.add(notification.id)) {
+          unawaited(refresh());
+        }
+      },
+    );
+    final connected = ref.read(signalRServiceProvider).connectedStream.listen((
+      _,
+    ) {
+      if (ref.mounted && ref.read(sessionManagerProvider).isAuthenticated) {
+        unawaited(refresh());
+      }
+    });
+    ref.onDispose(() {
+      _requestId++;
+      _buildLoadScheduled = false;
+      realtime.cancel();
+      connected.cancel();
     });
 
     _buildLoadScheduled = true;
@@ -457,6 +290,8 @@ class MemberSkillsNotifier extends Notifier<MemberSkillsState> {
 
   void reset() {
     _requestId++;
+    _reviewNotificationIds.clear();
+    _currentStatus = null;
     _buildLoadScheduled = false;
     _inFlightInitialLoad = null;
     state = const MemberSkillsState();
@@ -485,7 +320,7 @@ class MemberSkillsNotifier extends Notifier<MemberSkillsState> {
         pageNumber: 1,
         pageSize: defaultPageSize,
       );
-      if (_requestId != reqId) return;
+      if (!ref.mounted || _requestId != reqId) return;
 
       state = state.copyWith(
         items: pagedList.items,
@@ -496,10 +331,10 @@ class MemberSkillsNotifier extends Notifier<MemberSkillsState> {
         clearLoadMoreError: true,
       );
     } on AppException catch (e) {
-      if (_requestId != reqId) return;
+      if (!ref.mounted || _requestId != reqId) return;
       state = state.copyWith(isLoading: false, errorMessage: e.message);
     } catch (_) {
-      if (_requestId != reqId) return;
+      if (!ref.mounted || _requestId != reqId) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Không thể tải danh sách kỹ năng. Vui lòng thử lại.',
@@ -519,24 +354,35 @@ class MemberSkillsNotifier extends Notifier<MemberSkillsState> {
         pageNumber: 1,
         pageSize: defaultPageSize,
       );
-      if (_requestId != reqId) return;
+      if (!ref.mounted || _requestId != reqId) return;
 
       state = state.copyWith(
         items: pagedList.items,
         isRefreshing: false,
+        isLoading: false,
+        isLoadingMore: false,
         pageNumber: 1,
         hasNextPage: pagedList.hasNextPage,
         totalCount: pagedList.totalCount,
         clearLoadMoreError: true,
       );
     } catch (_) {
-      if (_requestId != reqId) return;
-      state = state.copyWith(isRefreshing: false);
+      if (!ref.mounted || _requestId != reqId) return;
+      state = state.copyWith(
+        isRefreshing: false,
+        isLoading: false,
+        isLoadingMore: false,
+      );
     }
   }
 
   Future<void> loadMore() async {
-    if (state.isLoadingMore || !state.hasNextPage || state.isLoading) return;
+    if (state.isLoadingMore ||
+        state.isRefreshing ||
+        !state.hasNextPage ||
+        state.isLoading) {
+      return;
+    }
 
     final reqId = _requestId;
     final nextPage = state.pageNumber + 1;
@@ -548,7 +394,7 @@ class MemberSkillsNotifier extends Notifier<MemberSkillsState> {
         pageNumber: nextPage,
         pageSize: defaultPageSize,
       );
-      if (_requestId != reqId) return;
+      if (!ref.mounted || _requestId != reqId) return;
 
       final existingIds = state.items.map((e) => e.id).toSet();
       final newItems = pagedList.items
@@ -564,7 +410,7 @@ class MemberSkillsNotifier extends Notifier<MemberSkillsState> {
         clearLoadMoreError: true,
       );
     } catch (_) {
-      if (_requestId != reqId) return;
+      if (!ref.mounted || _requestId != reqId) return;
       state = state.copyWith(
         isLoadingMore: false,
         loadMoreErrorMessage: 'Không thể tải thêm kỹ năng. Vui lòng thử lại.',
@@ -588,3 +434,10 @@ final currentMemberSkillsProvider = FutureProvider<List<MemberSkill>>((
   }
   return state.items;
 });
+
+final memberSkillDetailProvider = FutureProvider.autoDispose
+    .family<MemberSkill?, String>((ref, id) {
+      // Refresh an open detail sheet even if the reviewed item leaves the current filter.
+      ref.watch(memberSkillsNotifierProvider.select((state) => state.items));
+      return ref.watch(profileRepositoryProvider).getSkillById(id);
+    });

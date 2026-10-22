@@ -2,6 +2,7 @@ import 'package:intl/intl.dart';
 
 import 'calendar_dto.dart';
 import 'liturgical_models.dart';
+import 'liturgical_translator.dart';
 
 class MyParticipation {
   final String participationId;
@@ -127,11 +128,13 @@ class MemberEventDetail {
         date: DateTime.parse(json['eventDate'] as String),
         timeRange: json['time'] as String,
         location: json['locationName'] as String,
-        categoryName:
-            json['massTypeName'] as String? ??
-            json['ceremonyTypeName'] as String? ??
-            'PHỤNG VỤ',
-        seasonName: json['liturgicalSeasonName'] as String? ?? '',
+        categoryName: LiturgicalTranslator.translateCategory(
+          json['massTypeName'] as String? ??
+              json['ceremonyTypeName'] as String?,
+        ),
+        seasonName: LiturgicalTranslator.translateSeason(
+          json['liturgicalSeasonName'] as String? ?? '',
+        ),
         assignedVocalPart: assignments
             .map((a) => a.skillName)
             .toSet()

@@ -1,3 +1,5 @@
+import 'support/fake_google_auth_service.dart';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -9,7 +11,6 @@ import 'package:harmonia_mobile/core/storage/secure_storage_service.dart';
 import 'package:harmonia_mobile/features/auth/data/auth_api_service.dart';
 import 'package:harmonia_mobile/features/auth/data/auth_dto.dart';
 import 'package:harmonia_mobile/features/auth/data/auth_repository.dart';
-import 'package:harmonia_mobile/features/auth/data/google_auth_service.dart';
 import 'package:harmonia_mobile/features/auth/presentation/auth_notifier.dart';
 
 class FakeAuthApiService extends AuthApiService {

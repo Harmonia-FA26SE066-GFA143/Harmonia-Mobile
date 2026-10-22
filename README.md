@@ -17,12 +17,14 @@ Bật máy ảo từ Android Studio → Device Manager, hoặc chạy
 
 ```powershell
 flutter devices
-flutter run -d emulator-5554 --dart-define=USE_MOCK=false --dart-define=API_BASE_URL=https://harmonia-be-a7hneqh4aacsd2e6.southeastasia-01.azurewebsites.net
+flutter run -d emulator-5554 --dart-define-from-file=.env
 ```
 
-Thay `emulator-5554` bằng ID thực tế. Lệnh trên dùng backend Azure, không cần chạy backend local.
+Thay `emulator-5554` bằng ID thực tế. Ứng dụng hỗ trợ nạp cấu hình từ file `.env` ở root dự án (mẫu tại `.env.example`), bao gồm `API_BASE_URL`, `API_KEY`, `GOOGLE_CLIENT_ID` và `NOTIFICATION_HUB_URL`. Nếu không dùng `.env`, app mặc định kết nối backend Azure
+`https://harmonia-be-a7hneqh4aacsd2e6.southeastasia-01.azurewebsites.net`,
+không cần chạy backend local. App yêu cầu đăng nhập thật trước khi vào màn ca viên.
 
-Để dùng Google Sign-In, thêm `--dart-define=GOOGLE_CLIENT_ID=<WEB_OAUTH_CLIENT_ID>` vào lệnh chạy. Đây là Web OAuth Client ID được BE chấp nhận, khác Android OAuth Client ID. Android OAuth phải khớp package `com.harmonia.mobile.harmonia_mobile` và SHA-1 của bản ký. Không dùng Client Secret trong ứng dụng. Tài khoản đăng nhập phải thuộc role ChoirMember.
+Để dùng Google Sign-In, cấu hình `GOOGLE_CLIENT_ID=<WEB_OAUTH_CLIENT_ID>` trong `.env` hoặc thêm `--dart-define=GOOGLE_CLIENT_ID=<WEB_OAUTH_CLIENT_ID>` vào lệnh chạy. Đây là Web OAuth Client ID được BE chấp nhận, khác Android OAuth Client ID. Android OAuth phải khớp package `com.harmonia.mobile.harmonia_mobile` và SHA-1 của bản ký. Không dùng Client Secret trong ứng dụng. Tài khoản đăng nhập phải thuộc role ChoirMember.
 
 Chạy backend local trong terminal riêng:
 
@@ -33,13 +35,9 @@ dotnet run --project src/Harmonia.API
 
 Sau đó chạy Flutter với `--dart-define=API_BASE_URL=http://10.0.2.2:5259`. Địa chỉ này dành cho Android Emulator; điện thoại thật cần địa chỉ máy chủ có thể truy cập được.
 
-Xem dữ liệu demo:
-
-```powershell
-flutter run -d emulator-5554 --dart-define=USE_MOCK=true
-```
-
-Demo tách khỏi API thật; danh mục bài hát có fixture, thư viện tài liệu cá nhân hiện trả danh sách rỗng. Demo không xác minh đăng nhập, tải file hoặc cập nhật tiến độ trên server.
+Ứng dụng đã bỏ chế độ demo, dữ liệu mẫu và cấu hình `USE_MOCK`. Các repository
+trong `lib/` chỉ gọi backend thật; dữ liệu test nằm riêng trong `test/support/`.
+Các báo cáo cũ có nhắc demo/fixture là kết quả lịch sử, không phải chế độ chạy hiện tại.
 
 Khi app đang chạy: `r` hot reload, `R` hot restart, `q` dừng. Đổi dart-define cần dừng và chạy lại.
 
@@ -48,7 +46,8 @@ Khi app đang chạy: `r` hot reload, `R` hot restart, `q` dừng. Đổi dart-d
 - Android và iOS có thư mục nền tảng; Windows/Web chưa được scaffold.
 - Dart SDK theo `pubspec.yaml`: ^3.13.5; dùng Flutter tương thích.
 - Android compileSdk 37, NDK 27.1.12297006 theo `android/app/build.gradle.kts`.
-- Cấu hình môi trường: `lib/app/app_env.dart`. Mặc định API thật, URL local `http://10.0.2.2:5259`.
+- Cấu hình môi trường: `.env` (mẫu tại `.env.example`) và `lib/app/app_env.dart`. Hỗ trợ các biến `API_BASE_URL`, `API_KEY`, `GOOGLE_CLIENT_ID`, `NOTIFICATION_HUB_URL` nạp qua `--dart-define-from-file=.env`. Mặc định kết nối API thật trên Harmonia Azure;
+  `API_BASE_URL` chỉ dùng khi cần chỉ định một backend thật khác.
 - SignalR mặc định lấy origin của API_BASE_URL cộng `/hubs/notifications`; có thể ghi đè bằng NOTIFICATION_HUB_URL.
 - Kiểm tra môi trường bằng `flutter doctor -v`. Không dùng kết quả build cũ để kết luận máy khác đã đủ SDK.
 
@@ -67,7 +66,10 @@ Từ **Trang chủ → Thư viện thánh ca**:
 
 Đã cập nhật BE main cea8553 và tích hợp lịch lễ theo ngày, thông tin ca đoàn/thông báo, lịch tập/bài hát buổi tập và phản hồi tham gia một lần. NotStarted chỉ dùng đọc/lọc tiến độ; cập nhật chỉ chọn Learned/NeedsPractice.
 
-Xem [báo cáo tích hợp và kiểm thử 16/10](doc/mobile-api-integration-2026-10-16.md), [báo cáo 15/10](doc/mobile-api-audit-2026-10-15.md) và [nội dung gửi BE về API còn thiếu](doc/mobile-backend-api-requests-2026-10-15.md). Lịch/bài tập/tài liệu Azure đang rỗng với tài khoản kiểm thử; cần dữ liệu để xác nhận các thao tác thành công trên server.
+Xem [báo cáo tích hợp và kiểm thử 16/10](doc/mobile-api-integration-2026-10-16.md), [báo cáo 15/10](doc/mobile-api-audit-2026-10-15.md) và [nội dung gửi BE về API còn thiếu](doc/mobile-backend-api-requests-2026-10-15.md).
+Quan sát dữ liệu rỗng trong các báo cáo cũ là kết quả lịch sử. Lượt
+[kiểm thử lại luyện tập 17/10](doc/mobile-practice-azure-retest-2026-10-17.md)
+đã nộp WAV, nhận xét, nộp lại, khóa sau Passed và tải audio thành công trên Azure.
 
 Xem [bảng API và phạm vi kiểm chứng](doc/mobile-api-integration-status.md).
 Bảng này phân biệt code có nơi gọi, test tự động và kiểm tra live; không coi có API service là đã hoàn tất tính năng.
@@ -81,9 +83,9 @@ Deep link đặt lại mật khẩu hiện có trên Android:
 dart format --output=none --set-exit-if-changed lib test
 flutter analyze --no-pub
 flutter test --no-pub
-flutter build apk --debug --no-pub --dart-define=USE_MOCK=false --dart-define=API_BASE_URL=https://harmonia-be-a7hneqh4aacsd2e6.southeastasia-01.azurewebsites.net
+flutter build apk --debug --no-pub
 ```
 
 Các lệnh --no-pub giả định đã chạy flutter pub get. Kết quả kiểm tra của lần bàn giao nằm trong [báo cáo kiểm chứng](doc/mobile-task-05-06-verification.md).
 
-Quy tắc tại [CLAUDE.md](CLAUDE.md), các file [doc/mobile-rules-*.md](doc/) và [quy ước commit](doc/mobile-commit-convention.md). Không tự commit, push hoặc merge các thay đổi chưa được người dùng yêu cầu.
+Quy tắc tại [AGENTS.md](AGENTS.md), [CLAUDE.md](CLAUDE.md), các file [doc/mobile-rules-*.md](doc/) và [quy ước commit](doc/mobile-commit-convention.md). Không tự commit, push hoặc merge các thay đổi chưa được người dùng yêu cầu.

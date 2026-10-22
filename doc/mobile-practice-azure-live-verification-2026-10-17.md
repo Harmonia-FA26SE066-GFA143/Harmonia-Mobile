@@ -1,5 +1,10 @@
 # Kiểm thử luyện tập trên Azure — 17/10/2026
 
+**Cập nhật 21:37–21:44 UTC+7:** Hai vấn đề dưới đây đã không còn tái hiện.
+Lượt mới đã kiểm tra upload, review, nộp lại, chặn sau Passed và tải file âm thanh.
+Xem [báo cáo kiểm thử lại](mobile-practice-azure-retest-2026-10-17.md).
+Các kết quả 5/7 bên dưới là bằng chứng lịch sử của lượt 14:40–14:43.
+
 Kiểm tra HTTP thật lúc **14:40–14:43 UTC+7**, môi trường Azure Harmonia.
 Source FE là bản trên nhánh `feat/api-contract-fix`; source BE đối chiếu local
 `a0105d7e29a3aa868d1828050cd7611bcf41881c`. Không biết commit đang deploy trên Azure.

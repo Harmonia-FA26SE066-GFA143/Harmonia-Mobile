@@ -105,32 +105,3 @@ class GoogleAuthServiceImpl implements GoogleAuthService {
     }
   }
 }
-
-class MockGoogleAuthService implements GoogleAuthService {
-  final String? mockToken;
-  final bool shouldCancel;
-  final AppException? errorToThrow;
-
-  MockGoogleAuthService({
-    this.mockToken = 'mock-google-id-token',
-    this.shouldCancel = false,
-    this.errorToThrow,
-  });
-
-  @override
-  Future<void> initialize() async {}
-
-  @override
-  Future<String?> getIdToken() async {
-    if (errorToThrow != null) {
-      throw errorToThrow!;
-    }
-    if (shouldCancel) {
-      return null;
-    }
-    return mockToken;
-  }
-
-  @override
-  Future<void> signOut() async {}
-}

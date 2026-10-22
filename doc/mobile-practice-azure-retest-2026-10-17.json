@@ -1,0 +1,675 @@
+{
+  "environment": "Harmonia Azure",
+  "timeZone": "Asia/Saigon",
+  "initialProbe": {
+    "updatedAtUtc": "2026-10-17T14:38:12.6733757Z",
+    "environment": "https://harmonia-be-a7hneqh4aacsd2e6.southeastasia-01.azurewebsites.net",
+    "requests": [
+      {
+        "atUtc": "2026-10-17T14:37:38.2699633Z",
+        "method": "GET",
+        "path": "/swagger/v1/swagger.json",
+        "status": 200,
+        "code": null,
+        "traceId": null,
+        "requestId": null,
+        "contentType": "application/json; charset=utf-8",
+        "responseDate": "Sat, 17 Oct 2026 14:37:38 GMT",
+        "elapsedMs": 1081
+      },
+      {
+        "atUtc": "2026-10-17T14:38:04.1706105Z",
+        "method": "POST",
+        "path": "/api/auth/login",
+        "status": 200,
+        "code": null,
+        "traceId": null,
+        "requestId": null,
+        "contentType": "application/json; charset=utf-8",
+        "responseDate": "Sat, 17 Oct 2026 14:38:04 GMT",
+        "elapsedMs": 410
+      },
+      {
+        "atUtc": "2026-10-17T14:38:04.6088629Z",
+        "method": "POST",
+        "path": "/api/auth/login",
+        "status": 200,
+        "code": null,
+        "traceId": null,
+        "requestId": null,
+        "contentType": "application/json; charset=utf-8",
+        "responseDate": "Sat, 17 Oct 2026 14:38:04 GMT",
+        "elapsedMs": 308
+      },
+      {
+        "atUtc": "2026-10-17T14:38:04.9404026Z",
+        "method": "GET",
+        "path": "/api/auth/me",
+        "status": 200,
+        "code": null,
+        "traceId": null,
+        "requestId": null,
+        "contentType": "application/json; charset=utf-8",
+        "responseDate": "Sat, 17 Oct 2026 14:38:04 GMT",
+        "elapsedMs": 162
+      },
+      {
+        "atUtc": "2026-10-17T14:38:05.1428677Z",
+        "method": "GET",
+        "path": "/api/member-profiles/me",
+        "status": 200,
+        "code": null,
+        "traceId": null,
+        "requestId": null,
+        "contentType": "application/json; charset=utf-8",
+        "responseDate": "Sat, 17 Oct 2026 14:38:04 GMT",
+        "elapsedMs": 206
+      },
+      {
+        "atUtc": "2026-10-17T14:38:05.3605031Z",
+        "method": "GET",
+        "path": "/api/practice-assignments/mine?pageNumber=1&pageSize=50",
+        "status": 200,
+        "code": null,
+        "traceId": null,
+        "requestId": null,
+        "contentType": "application/json; charset=utf-8",
+        "responseDate": "Sat, 17 Oct 2026 14:38:05 GMT",
+        "elapsedMs": 301
+      },
+      {
+        "atUtc": "2026-10-17T14:38:05.6671777Z",
+        "method": "GET",
+        "path": "/api/practice-assignments/mine/counts",
+        "status": 200,
+        "code": null,
+        "traceId": null,
+        "requestId": null,
+        "contentType": "application/json; charset=utf-8",
+        "responseDate": "Sat, 17 Oct 2026 14:38:05 GMT",
+        "elapsedMs": 156
+      },
+      {
+        "atUtc": "2026-10-17T14:38:05.8762136Z",
+        "method": "GET",
+        "path": "/api/practice-assignments/mine/9d487b82-d1db-4fa1-95d7-4b23f9d76933",
+        "status": 200,
+        "code": null,
+        "traceId": null,
+        "requestId": null,
+        "contentType": "application/json; charset=utf-8",
+        "responseDate": "Sat, 17 Oct 2026 14:38:05 GMT",
+        "elapsedMs": 177
+      },
+      {
+        "atUtc": "2026-10-17T14:38:06.0818908Z",
+        "method": "GET",
+        "path": "/api/practice-assignments/mine/152cbe16-dfbd-4249-a9d6-dad2347f6b79",
+        "status": 200,
+        "code": null,
+        "traceId": null,
+        "requestId": null,
+        "contentType": "application/json; charset=utf-8",
+        "responseDate": "Sat, 17 Oct 2026 14:38:05 GMT",
+        "elapsedMs": 164
+      },
+      {
+        "atUtc": "2026-10-17T14:38:06.2640555Z",
+        "method": "GET",
+        "path": "/api/practice-assignments/mine/2fe1b8eb-00f7-4682-ac39-d8e7004f90ec",
+        "status": 200,
+        "code": null,
+        "traceId": null,
+        "requestId": null,
+        "contentType": "application/json; charset=utf-8",
+        "responseDate": "Sat, 17 Oct 2026 14:38:05 GMT",
+        "elapsedMs": 133
+      },
+      {
+        "atUtc": "2026-10-17T14:38:06.4177616Z",
+        "method": "GET",
+        "path": "/api/practice-submissions/mine?pageNumber=1&pageSize=50",
+        "status": 200,
+        "code": null,
+        "traceId": null,
+        "requestId": null,
+        "contentType": "application/json; charset=utf-8",
+        "responseDate": "Sat, 17 Oct 2026 14:38:05 GMT",
+        "elapsedMs": 181
+      },
+      {
+        "atUtc": "2026-10-17T14:38:06.6276552Z",
+        "method": "GET",
+        "path": "/api/practice-assignments/mine/9d487b82-d1db-4fa1-95d7-4b23f9d76933",
+        "status": 200,
+        "code": null,
+        "traceId": null,
+        "requestId": null,
+        "contentType": "application/json; charset=utf-8",
+        "responseDate": "Sat, 17 Oct 2026 14:38:06 GMT",
+        "elapsedMs": 146
+      },
+      {
+        "atUtc": "2026-10-17T14:38:07.3283896Z",
+        "method": "POST",
+        "path": "/api/practice-assignments/9d487b82-d1db-4fa1-95d7-4b23f9d76933/submissions",
+        "status": 200,
+        "code": null,
+        "traceId": null,
+        "requestId": null,
+        "contentType": "application/json; charset=utf-8",
+        "responseDate": "Sat, 17 Oct 2026 14:38:09 GMT",
+        "elapsedMs": 2159
+      },
+      {
+        "atUtc": "2026-10-17T14:38:09.5005364Z",
+        "method": "GET",
+        "path": "/api/practice-submissions/mine/0c94bdfa-64ad-4cb9-bd32-5a95b6da89b7",
+        "status": 200,
+        "code": null,
+        "traceId": null,
+        "requestId": null,
+        "contentType": "application/json; charset=utf-8",
+        "responseDate": "Sat, 17 Oct 2026 14:38:09 GMT",
+        "elapsedMs": 177
+      },
+      {
+        "atUtc": "2026-10-17T14:38:09.7267553Z",
+        "method": "POST",
+        "path": "/api/practice-submissions/0c94bdfa-64ad-4cb9-bd32-5a95b6da89b7/feedback",
+        "status": 200,
+        "code": null,
+        "traceId": null,
+        "requestId": null,
+        "contentType": "application/json; charset=utf-8",
+        "responseDate": "Sat, 17 Oct 2026 14:38:09 GMT",
+        "elapsedMs": 394
+      },
+      {
+        "atUtc": "2026-10-17T14:38:10.1256857Z",
+        "method": "GET",
+        "path": "/api/practice-submissions/mine/0c94bdfa-64ad-4cb9-bd32-5a95b6da89b7",
+        "status": 200,
+        "code": null,
+        "traceId": null,
+        "requestId": null,
+        "contentType": "application/json; charset=utf-8",
+        "responseDate": "Sat, 17 Oct 2026 14:38:10 GMT",
+        "elapsedMs": 139
+      },
+      {
+        "atUtc": "2026-10-17T14:38:10.2704813Z",
+        "method": "GET",
+        "path": "/api/practice-assignments/mine/9d487b82-d1db-4fa1-95d7-4b23f9d76933",
+        "status": 200,
+        "code": null,
+        "traceId": null,
+        "requestId": null,
+        "contentType": "application/json; charset=utf-8",
+        "responseDate": "Sat, 17 Oct 2026 14:38:10 GMT",
+        "elapsedMs": 144
+      },
+      {
+        "atUtc": "2026-10-17T14:38:10.4454929Z",
+        "method": "POST",
+        "path": "/api/practice-assignments/9d487b82-d1db-4fa1-95d7-4b23f9d76933/submissions",
+        "status": 200,
+        "code": null,
+        "traceId": null,
+        "requestId": null,
+        "contentType": "application/json; charset=utf-8",
+        "responseDate": "Sat, 17 Oct 2026 14:38:11 GMT",
+        "elapsedMs": 1253
+      },
+      {
+        "atUtc": "2026-10-17T14:38:11.7042096Z",
+        "method": "GET",
+        "path": "/api/practice-submissions/mine/0b1f21b6-7ae4-43ad-8b06-98fcfedac667",
+        "status": 200,
+        "code": null,
+        "traceId": null,
+        "requestId": null,
+        "contentType": "application/json; charset=utf-8",
+        "responseDate": "Sat, 17 Oct 2026 14:38:11 GMT",
+        "elapsedMs": 160
+      },
+      {
+        "atUtc": "2026-10-17T14:38:11.8934157Z",
+        "method": "POST",
+        "path": "/api/practice-submissions/0b1f21b6-7ae4-43ad-8b06-98fcfedac667/feedback",
+        "status": 200,
+        "code": null,
+        "traceId": null,
+        "requestId": null,
+        "contentType": "application/json; charset=utf-8",
+        "responseDate": "Sat, 17 Oct 2026 14:38:11 GMT",
+        "elapsedMs": 175
+      },
+      {
+        "atUtc": "2026-10-17T14:38:12.0744406Z",
+        "method": "GET",
+        "path": "/api/practice-submissions/mine/0b1f21b6-7ae4-43ad-8b06-98fcfedac667",
+        "status": 200,
+        "code": null,
+        "traceId": null,
+        "requestId": null,
+        "contentType": "application/json; charset=utf-8",
+        "responseDate": "Sat, 17 Oct 2026 14:38:11 GMT",
+        "elapsedMs": 152
+      },
+      {
+        "atUtc": "2026-10-17T14:38:12.2308031Z",
+        "method": "GET",
+        "path": "/api/practice-assignments/mine/9d487b82-d1db-4fa1-95d7-4b23f9d76933",
+        "status": 200,
+        "code": null,
+        "traceId": null,
+        "requestId": null,
+        "contentType": "application/json; charset=utf-8",
+        "responseDate": "Sat, 17 Oct 2026 14:38:11 GMT",
+        "elapsedMs": 130
+      },
+      {
+        "atUtc": "2026-10-17T14:38:12.4127017Z",
+        "method": "POST",
+        "path": "/api/auth/logout",
+        "status": 204,
+        "code": null,
+        "traceId": null,
+        "requestId": null,
+        "contentType": null,
+        "responseDate": "Sat, 17 Oct 2026 14:38:11 GMT",
+        "elapsedMs": 116
+      },
+      {
+        "atUtc": "2026-10-17T14:38:12.5491697Z",
+        "method": "POST",
+        "path": "/api/auth/logout",
+        "status": 204,
+        "code": null,
+        "traceId": null,
+        "requestId": null,
+        "contentType": null,
+        "responseDate": "Sat, 17 Oct 2026 14:38:11 GMT",
+        "elapsedMs": 107
+      }
+    ],
+    "checks": [
+      {
+        "name": "Swagger available",
+        "passed": true,
+        "details": {
+          "practiceResponseHasContent": true,
+          "hasPracticeSchema": true
+        }
+      },
+      {
+        "name": "Login Member",
+        "passed": true,
+        "details": {
+          "passwordChangeRequired": false,
+          "role": "ChoirMember"
+        }
+      },
+      {
+        "name": "Login Director",
+        "passed": true,
+        "details": {
+          "passwordChangeRequired": false,
+          "role": "ChoirDirector"
+        }
+      },
+      {
+        "name": "Authenticated account",
+        "passed": true,
+        "details": {
+          "role": "ChoirMember",
+          "status": 200
+        }
+      },
+      {
+        "name": "Assignment list response",
+        "passed": true,
+        "details": {
+          "seedItems": 3,
+          "totalCount": 5
+        }
+      },
+      {
+        "name": "Assignment permission contract",
+        "passed": true,
+        "details": {
+          "reason": null,
+          "id": "9d487b82-d1db-4fa1-95d7-4b23f9d76933",
+          "status": null,
+          "listHasCanSubmit": true,
+          "isOverdue": false,
+          "detailHasCanSubmit": true,
+          "canSubmit": true
+        }
+      },
+      {
+        "name": "Assignment permission contract",
+        "passed": true,
+        "details": {
+          "reason": null,
+          "id": "152cbe16-dfbd-4249-a9d6-dad2347f6b79",
+          "status": null,
+          "listHasCanSubmit": true,
+          "isOverdue": false,
+          "detailHasCanSubmit": true,
+          "canSubmit": true
+        }
+      },
+      {
+        "name": "Assignment permission contract",
+        "passed": true,
+        "details": {
+          "reason": null,
+          "id": "2fe1b8eb-00f7-4682-ac39-d8e7004f90ec",
+          "status": null,
+          "listHasCanSubmit": true,
+          "isOverdue": false,
+          "detailHasCanSubmit": true,
+          "canSubmit": true
+        }
+      },
+      {
+        "name": "Submission list",
+        "passed": true,
+        "details": {
+          "totalCount": 0
+        }
+      },
+      {
+        "name": "Existing test assignment explicitly permits submission",
+        "passed": true,
+        "details": {
+          "reason": null,
+          "canSubmit": true,
+          "hasCanSubmit": true
+        }
+      },
+      {
+        "name": "Synthetic upload fixture",
+        "passed": true,
+        "details": {
+          "durationSeconds": 3,
+          "format": "PCM WAV 16kHz mono",
+          "bytes": 96044
+        }
+      },
+      {
+        "name": "Submitted readback",
+        "passed": true,
+        "details": {
+          "hasAudioUrl": true,
+          "attemptNo": 1,
+          "status": "Submitted"
+        }
+      },
+      {
+        "name": "Expected audio storage host",
+        "passed": false,
+        "details": {
+          "host": "api.cloudinary.com",
+          "scheme": "https"
+        }
+      },
+      {
+        "name": "Feedback NeedsRevision",
+        "passed": true,
+        "details": {
+          "feedbackCount": 1,
+          "status": "NeedsRevision"
+        }
+      },
+      {
+        "name": "Permission after NeedsRevision",
+        "passed": true,
+        "details": {
+          "reason": null,
+          "canSubmit": true
+        }
+      },
+      {
+        "name": "Submitted readback",
+        "passed": true,
+        "details": {
+          "hasAudioUrl": true,
+          "attemptNo": 2,
+          "status": "Submitted"
+        }
+      },
+      {
+        "name": "Expected audio storage host",
+        "passed": false,
+        "details": {
+          "host": "api.cloudinary.com",
+          "scheme": "https"
+        }
+      },
+      {
+        "name": "Feedback Passed",
+        "passed": true,
+        "details": {
+          "feedbackCount": 1,
+          "status": "Passed"
+        }
+      },
+      {
+        "name": "Permission after Passed",
+        "passed": true,
+        "details": {
+          "reason": "PRACTICE_SUBMISSION_ALREADY_PASSED",
+          "canSubmit": false
+        }
+      },
+      {
+        "name": "Logout test session Member",
+        "passed": true,
+        "details": {
+          "status": 204
+        }
+      },
+      {
+        "name": "Logout test session Director",
+        "passed": true,
+        "details": {
+          "status": 204
+        }
+      }
+    ],
+    "resources": [
+      {
+        "kind": "ExistingPracticeAssignment",
+        "id": "9d487b82-d1db-4fa1-95d7-4b23f9d76933",
+        "prefix": "[MOBILE-LIVE-20261017]"
+      },
+      {
+        "kind": "PracticeSubmission",
+        "id": "0c94bdfa-64ad-4cb9-bd32-5a95b6da89b7",
+        "assignmentId": "9d487b82-d1db-4fa1-95d7-4b23f9d76933"
+      },
+      {
+        "kind": "PracticeSubmission",
+        "id": "0b1f21b6-7ae4-43ad-8b06-98fcfedac667",
+        "assignmentId": "9d487b82-d1db-4fa1-95d7-4b23f9d76933"
+      }
+    ],
+    "blocked": []
+  },
+  "playbackAndRejectionProbe": {
+    "updatedAtUtc": "2026-10-17T14:44:02.7711696Z",
+    "requests": [
+      {
+        "atUtc": "2026-10-17T14:43:57.1450123Z",
+        "method": "POST",
+        "path": "/api/auth/login",
+        "status": 200,
+        "code": null
+      },
+      {
+        "atUtc": "2026-10-17T14:43:57.390116Z",
+        "method": "GET",
+        "path": "/api/practice-submissions/mine/0c94bdfa-64ad-4cb9-bd32-5a95b6da89b7",
+        "status": 200,
+        "code": null
+      },
+      {
+        "atUtc": "2026-10-17T14:43:59.7706823Z",
+        "method": "GET",
+        "path": "/api/practice-submissions/mine/0b1f21b6-7ae4-43ad-8b06-98fcfedac667",
+        "status": 200,
+        "code": null
+      },
+      {
+        "atUtc": "2026-10-17T14:44:01.968221Z",
+        "method": "GET",
+        "path": "/api/practice-assignments/mine/9d487b82-d1db-4fa1-95d7-4b23f9d76933",
+        "status": 200,
+        "code": null
+      },
+      {
+        "atUtc": "2026-10-17T14:44:02.1951484Z",
+        "method": "GET",
+        "path": "/api/practice-submissions/mine?assignmentId=9d487b82-d1db-4fa1-95d7-4b23f9d76933&pageNumber=1&pageSize=20",
+        "status": 200,
+        "code": null
+      },
+      {
+        "atUtc": "2026-10-17T14:44:02.4407213Z",
+        "method": "POST",
+        "path": "/api/practice-assignments/9d487b82-d1db-4fa1-95d7-4b23f9d76933/submissions",
+        "status": 409,
+        "code": "PRACTICE_SUBMISSION_ALREADY_PASSED"
+      },
+      {
+        "atUtc": "2026-10-17T14:44:02.6037049Z",
+        "method": "GET",
+        "path": "/api/practice-submissions/mine?assignmentId=9d487b82-d1db-4fa1-95d7-4b23f9d76933&pageNumber=1&pageSize=20",
+        "status": 200,
+        "code": null
+      },
+      {
+        "atUtc": "2026-10-17T14:44:02.7695152Z",
+        "method": "POST",
+        "path": "/api/auth/logout",
+        "status": 204,
+        "code": null
+      }
+    ],
+    "audio": [
+      {
+        "submissionId": "0c94bdfa-64ad-4cb9-bd32-5a95b6da89b7",
+        "status": 200,
+        "host": "api.cloudinary.com",
+        "hasExpiry": true,
+        "contentType": "audio/wav",
+        "bytes": 96044,
+        "sentHarmoniaBearer": false,
+        "sha256": "96983B3BFD337AEC0D3FF7628FAE29FB8CCB40821D1EA00E5C0191E38B0C9026",
+        "rms": 707.12,
+        "peak": 1000,
+        "sampleRate": 16000
+      },
+      {
+        "submissionId": "0b1f21b6-7ae4-43ad-8b06-98fcfedac667",
+        "status": 200,
+        "host": "api.cloudinary.com",
+        "hasExpiry": true,
+        "contentType": "audio/wav",
+        "bytes": 96044,
+        "sentHarmoniaBearer": false,
+        "sha256": "96983B3BFD337AEC0D3FF7628FAE29FB8CCB40821D1EA00E5C0191E38B0C9026",
+        "rms": 707.12,
+        "peak": 1000,
+        "sampleRate": 16000
+      }
+    ],
+    "checks": [
+      {
+        "name": "Signed audio download",
+        "passed": true,
+        "details": {
+          "status": 200,
+          "submissionId": "0c94bdfa-64ad-4cb9-bd32-5a95b6da89b7"
+        }
+      },
+      {
+        "name": "Downloaded audio matches synthetic upload",
+        "passed": true,
+        "details": {
+          "bytes": 96044,
+          "submissionId": "0c94bdfa-64ad-4cb9-bd32-5a95b6da89b7"
+        }
+      },
+      {
+        "name": "Synthetic recording contains non-silent PCM",
+        "passed": true,
+        "details": {
+          "peak": 1000,
+          "rms": 707.12,
+          "submissionId": "0c94bdfa-64ad-4cb9-bd32-5a95b6da89b7"
+        }
+      },
+      {
+        "name": "Signed audio download",
+        "passed": true,
+        "details": {
+          "status": 200,
+          "submissionId": "0b1f21b6-7ae4-43ad-8b06-98fcfedac667"
+        }
+      },
+      {
+        "name": "Downloaded audio matches synthetic upload",
+        "passed": true,
+        "details": {
+          "bytes": 96044,
+          "submissionId": "0b1f21b6-7ae4-43ad-8b06-98fcfedac667"
+        }
+      },
+      {
+        "name": "Synthetic recording contains non-silent PCM",
+        "passed": true,
+        "details": {
+          "peak": 1000,
+          "rms": 707.12,
+          "submissionId": "0b1f21b6-7ae4-43ad-8b06-98fcfedac667"
+        }
+      },
+      {
+        "name": "Passed assignment denies resubmission",
+        "passed": true,
+        "details": {
+          "code": "PRACTICE_SUBMISSION_ALREADY_PASSED",
+          "canSubmit": false
+        }
+      },
+      {
+        "name": "Server rejects upload after Passed",
+        "passed": true,
+        "details": {
+          "code": "PRACTICE_SUBMISSION_ALREADY_PASSED",
+          "status": 409
+        }
+      },
+      {
+        "name": "Rejected upload creates no extra attempt",
+        "passed": true,
+        "details": {
+          "after": 2,
+          "before": 2
+        }
+      }
+    ],
+    "logoutStatus": 204
+  },
+  "interpretation": {
+    "androidRecordingUploadPlaybackEndToEndVerified": false,
+    "androidAppStarted": true,
+    "backendCapabilityAndStorageBlockersResolved": true,
+    "existingAndroidSessionPreserved": true,
+    "obsoleteHostAssertion": "Initial script only accepted res.cloudinary.com; backend now uses signed api.cloudinary.com private download. Follow-up verifies both audio files and server rejection."
+  }
+}

@@ -1,3 +1,5 @@
+import 'support/fake_practice_repository.dart';
+
 import 'dart:async';
 
 import 'package:dio/dio.dart';
@@ -511,6 +513,8 @@ void main() {
           storage: storage,
           sessionManager: sessionManager,
           dio: dio,
+          // Keep the simulated refresh timeout on this test client.
+          refreshClient: dio,
         );
 
         await storage.saveTokens(

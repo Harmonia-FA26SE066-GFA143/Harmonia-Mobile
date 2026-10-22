@@ -34,6 +34,14 @@ Nếu repo Flutter đã có `CLAUDE.md`, đọc và hợp nhất thay vì ghi đ
 
 ## Kiến trúc và tích hợp
 
+- Ứng dụng chỉ chạy với API backend thật; không có UI demo, cờ `USE_MOCK`,
+  repository mẫu hoặc đường vào bỏ qua xác thực trong `lib/`.
+- Backend mặc định là Harmonia Azure trong `lib/app/app_env.dart`. Chỉ ghi đè
+  `API_BASE_URL` khi nhiệm vụ chỉ định backend thật khác. Không tự chuyển sang
+  dữ liệu giả khi server lỗi, thiếu API hoặc trả dữ liệu rỗng.
+- Dữ liệu giả/test doubles chỉ nằm trong `test/` để kiểm thử tự động. Với các
+  phiên sửa lỗi sau, phải tái hiện và xác minh trên app dùng API thật, phân biệt
+  kết quả unit/widget test với bằng chứng kiểm tra backend/thiết bị thực tế.
 - Đọc `pubspec.yaml`, cấu trúc `lib/`, test và cấu hình hiện hữu trước khi chọn cách triển khai.
 - Giữ thư viện quản lý state, HTTP, router và cách tổ chức đã được dự án chọn. Chưa có lựa chọn thì đề xuất trước; không tự cài package.
 - Widget hiển thị và nhận thao tác; state/controller điều phối; repository/API service xử lý dữ liệu. Không gọi HTTP, đọc token hay mở SignalR trong `build`.

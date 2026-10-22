@@ -1,3 +1,5 @@
+import 'support/fake_profile_repository.dart';
+
 import 'dart:async';
 import 'dart:convert';
 

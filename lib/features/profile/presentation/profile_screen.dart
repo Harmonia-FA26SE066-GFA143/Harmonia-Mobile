@@ -1,9 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../../../app/app_env.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/di/core_providers.dart';
@@ -24,19 +25,36 @@ class ProfileScreen extends ConsumerStatefulWidget {
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Key _profileRefreshKey = UniqueKey();
   bool _logoutDialogOpen = false;
+  late final AppLifecycleListener _lifecycleListener;
+
+  @override
+  void initState() {
+    super.initState();
+    _lifecycleListener = AppLifecycleListener(
+      onResume: () {
+        if (!ref.read(sessionManagerProvider).isAuthenticated) return;
+        unawaited(ref.read(signalRServiceProvider).connect());
+        unawaited(ref.read(memberSkillsNotifierProvider.notifier).refresh());
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _lifecycleListener.dispose();
+    super.dispose();
+  }
 
   Future<void> _refreshProfile() async {
-    if (!AppEnv.useMock) {
-      final synced = await ref
-          .read(authNotifierProvider.notifier)
-          .synchronizeAccount();
-      if (!mounted || !ref.read(sessionManagerProvider).isAuthenticated) return;
-      if (!synced) {
-        final message = ref.read(authNotifierProvider).errorMessage;
-        if (message != null) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text(message)));
-        }
+    final synced = await ref
+        .read(authNotifierProvider.notifier)
+        .synchronizeAccount();
+    if (!mounted || !ref.read(sessionManagerProvider).isAuthenticated) return;
+    if (!synced) {
+      final message = ref.read(authNotifierProvider).errorMessage;
+      if (message != null) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(message)));
       }
     }
     ref.invalidate(currentMemberProfileProvider);
@@ -441,209 +459,214 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  void _showSkillDetailDialog(
-    BuildContext context,
-    String skillId,
-    ProfileRepository repo,
-  ) {
+  void _showSkillDetailDialog(BuildContext context, String skillId) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (context) {
-        return FutureBuilder<MemberSkill?>(
-          future: repo.getSkillById(skillId),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Padding(
-                padding: EdgeInsets.all(32),
-                child: Center(
-                  child: CircularProgressIndicator(color: AppColors.primary),
-                ),
-              );
-            }
-            if (snapshot.hasError) {
-              return Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.error_outline_rounded,
-                      size: 40,
-                      color: AppColors.statusDanger,
+        return Consumer(
+          builder: (context, ref, _) {
+            return FutureBuilder<MemberSkill?>(
+              future: ref.watch(memberSkillDetailProvider(skillId).future),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Padding(
+                    padding: EdgeInsets.all(32),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.primary,
+                      ),
                     ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Không thể tải chi tiết kỹ năng: ${snapshot.error}',
-                      style: AppTypography.bodyMedium,
-                      textAlign: TextAlign.center,
+                  );
+                }
+                if (snapshot.hasError) {
+                  return Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.error_outline_rounded,
+                          size: 40,
+                          color: AppColors.statusDanger,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Không thể tải chi tiết kỹ năng: ${snapshot.error}',
+                          style: AppTypography.bodyMedium,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('Đóng'),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Đóng'),
-                    ),
-                  ],
-                ),
-              );
-            }
+                  );
+                }
 
-            final skill = snapshot.data;
-            if (skill == null) {
-              return Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('Không tìm thấy thông tin kỹ năng.'),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Đóng'),
+                final skill = snapshot.data;
+                if (skill == null) {
+                  return Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('Không tìm thấy thông tin kỹ năng.'),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('Đóng'),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              );
-            }
+                  );
+                }
 
-            Color badgeBg;
-            Color badgeFg;
-            if (skill.status == SkillApprovalStatus.approved) {
-              badgeBg = AppColors.statusSuccessSoft;
-              badgeFg = AppColors.statusSuccess;
-            } else if (skill.status == SkillApprovalStatus.rejected) {
-              badgeBg = AppColors.statusDangerSoft;
-              badgeFg = AppColors.statusDanger;
-            } else {
-              badgeBg = AppColors.statusWarningSoft;
-              badgeFg = AppColors.statusWarning;
-            }
+                Color badgeBg;
+                Color badgeFg;
+                if (skill.status == SkillApprovalStatus.approved) {
+                  badgeBg = AppColors.statusSuccessSoft;
+                  badgeFg = AppColors.statusSuccess;
+                } else if (skill.status == SkillApprovalStatus.rejected) {
+                  badgeBg = AppColors.statusDangerSoft;
+                  badgeFg = AppColors.statusDanger;
+                } else {
+                  badgeBg = AppColors.statusWarningSoft;
+                  badgeFg = AppColors.statusWarning;
+                }
 
-            return Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                return Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text('Chi tiết kỹ năng', style: AppTypography.titleLarge),
-                      IconButton(
-                        icon: const Icon(Icons.close_rounded),
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                    ],
-                  ),
-                  const Divider(),
-                  const SizedBox(height: 8),
-                  Text(
-                    skill.name,
-                    style: AppTypography.headlineSmall.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    skill.categoryName,
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: AppColors.muted,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: badgeBg,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          skill.status.label,
-                          style: AppTypography.labelSmall.copyWith(
-                            color: badgeFg,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceContainerLow,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          'Cấp độ: ${skill.levelLabel}',
-                          style: AppTypography.labelSmall.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  if (skill.declaredAt != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: Text(
-                        'Ngày khai báo: ${DateFormat('dd/MM/yyyy HH:mm').format(skill.declaredAt!)}',
-                        style: AppTypography.bodySmall,
-                      ),
-                    ),
-                  if (skill.approvedAt != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: Text(
-                        'Ngày duyệt: ${DateFormat('dd/MM/yyyy HH:mm').format(skill.approvedAt!)}',
-                        style: AppTypography.bodySmall,
-                      ),
-                    ),
-                  if (skill.status == SkillApprovalStatus.rejected &&
-                      skill.rejectReason != null &&
-                      skill.rejectReason!.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppColors.statusDangerSoft,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Lý do từ chối từ Ca trưởng:',
-                            style: AppTypography.labelSmall.copyWith(
-                              color: AppColors.statusDanger,
-                              fontWeight: FontWeight.bold,
+                            'Chi tiết kỹ năng',
+                            style: AppTypography.titleLarge,
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded),
+                            onPressed: () => Navigator.of(context).pop(),
+                          ),
+                        ],
+                      ),
+                      const Divider(),
+                      const SizedBox(height: 8),
+                      Text(
+                        skill.name,
+                        style: AppTypography.headlineSmall.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        skill.categoryName,
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: AppColors.muted,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: badgeBg,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              skill.status.label,
+                              style: AppTypography.labelSmall.copyWith(
+                                color: badgeFg,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            skill.rejectReason!,
-                            style: AppTypography.bodySmall.copyWith(
-                              color: AppColors.statusDanger,
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceContainerLow,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              'Cấp độ: ${skill.levelLabel}',
+                              style: AppTypography.labelSmall.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Đóng'),
+                      const SizedBox(height: 16),
+                      if (skill.declaredAt != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Text(
+                            'Ngày khai báo: ${DateFormat('dd/MM/yyyy HH:mm').format(skill.declaredAt!)}',
+                            style: AppTypography.bodySmall,
+                          ),
+                        ),
+                      if (skill.approvedAt != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Text(
+                            'Ngày duyệt: ${DateFormat('dd/MM/yyyy HH:mm').format(skill.approvedAt!)}',
+                            style: AppTypography.bodySmall,
+                          ),
+                        ),
+                      if (skill.status == SkillApprovalStatus.rejected &&
+                          skill.rejectReason != null &&
+                          skill.rejectReason!.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColors.statusDangerSoft,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Lý do từ chối từ Ca trưởng:',
+                                style: AppTypography.labelSmall.copyWith(
+                                  color: AppColors.statusDanger,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                skill.rejectReason!,
+                                style: AppTypography.bodySmall.copyWith(
+                                  color: AppColors.statusDanger,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Đóng'),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                );
+              },
             );
           },
         );
@@ -1021,11 +1044,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
                                 return InkWell(
                                   borderRadius: BorderRadius.circular(8),
-                                  onTap: () => _showSkillDetailDialog(
-                                    context,
-                                    skill.id,
-                                    repo,
-                                  ),
+                                  onTap: () =>
+                                      _showSkillDetailDialog(context, skill.id),
                                   child: Padding(
                                     padding: const EdgeInsets.symmetric(
                                       vertical: 6,

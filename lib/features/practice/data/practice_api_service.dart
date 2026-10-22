@@ -89,10 +89,26 @@ class PracticeApiService {
         );
       }
       final fileName = file.uri.pathSegments.last;
+      DioMediaType? mediaType;
+      switch (ext) {
+        case 'm4a':
+          mediaType = DioMediaType('audio', 'm4a');
+          break;
+        case 'mp3':
+          mediaType = DioMediaType('audio', 'mpeg');
+          break;
+        case 'wav':
+          mediaType = DioMediaType('audio', 'wav');
+          break;
+      }
 
       final formData = FormData.fromMap({
         'durationSeconds': durationSeconds,
-        'file': await MultipartFile.fromFile(filePath, filename: fileName),
+        'file': await MultipartFile.fromFile(
+          filePath,
+          filename: fileName,
+          contentType: mediaType,
+        ),
       });
 
       await _client.dio.post(

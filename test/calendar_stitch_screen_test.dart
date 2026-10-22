@@ -1,3 +1,6 @@
+import 'support/fake_calendar_repository.dart';
+import 'support/fake_music_repository.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -70,7 +73,9 @@ class StitchCalendarRepository extends MockCalendarRepositoryImpl {
   ) async {
     ranges.add((fromDate: fromDate, toDate: toDate));
     final start = DateTime.parse(fromDate);
-    return List.generate(7, (i) {
+    final end = DateTime.parse(toDate);
+    final count = end.difference(start).inDays + 1;
+    return List.generate(count, (i) {
       final date = DateTime(start.year, start.month, start.day + i);
       return LiturgicalDay(
         date: date,
@@ -252,39 +257,32 @@ void main() {
     expect(find.text('Lịch của tôi'), findsOneWidget);
     expect(find.text('Ca đoàn API'), findsOneWidget);
     expect(find.text('Lịch tuần'), findsOneWidget);
-    expect(find.text('Điểm danh'), findsOneWidget);
+    expect(find.text('Lịch phụng vụ'), findsOneWidget);
+    expect(find.text('Điểm danh'), findsNothing);
     expect(find.byTooltip('Tuần sau'), findsOneWidget);
     expect(find.text('Hôm nay'), findsOneWidget);
-    expect(find.text('Lễ ngày ${dateKey(repo.day)}'), findsOneWidget);
+    expect(find.textContaining('buổi tập trong ngày'), findsOneWidget);
     expect(find.text('Lịch lễ 7 ngày tới'), findsNothing);
-    final monday = repo.day.subtract(Duration(days: repo.day.weekday - 1));
-    expect(repo.ranges.last.fromDate, dateKey(monday));
-    expect(
-      repo.ranges.last.toDate,
-      dateKey(monday.add(const Duration(days: 6))),
-    );
+    // Reload and notification icons are removed
+    expect(find.byIcon(Icons.refresh_rounded), findsNothing);
+    expect(find.byIcon(Icons.notifications_none_rounded), findsNothing);
   });
 
   testWidgets(
-    'timeline merges real events and rehearsals chronologically with own detail',
+    'week timeline displays rehearsal sessions and hides BE liturgical events',
     (tester) async {
       await open(tester);
       expect(
-        tester
-            .getTopLeft(
-              find.byKey(const ValueKey('timeline-rehearsal-rehearsal-api')),
-            )
-            .dy,
-        lessThan(
-          tester
-              .getTopLeft(
-                find.byKey(const ValueKey('timeline-event-event-api')),
-              )
-              .dy,
-        ),
+        find.byKey(const ValueKey('timeline-rehearsal-rehearsal-api')),
+        findsOneWidget,
       );
-      expect(find.textContaining('Soprano'), findsWidgets);
-      expect(find.textContaining('Đã xác nhận'), findsOneWidget);
+      // Liturgical events from BE are NOT displayed in the week timeline
+      expect(
+        find.byKey(const ValueKey('timeline-event-event-api')),
+        findsNothing,
+      );
+      expect(find.text('Buổi tập từ API'), findsOneWidget);
+      expect(find.text('Thánh lễ từ API'), findsNothing);
       expect(find.textContaining('Có mặt'), findsOneWidget);
       expect(repo.detailCalls, 1);
       expect(tester.takeException(), isNull);
@@ -292,29 +290,7 @@ void main() {
   );
 
   testWidgets(
-    'parish clock orders event TimeOnly and UTC rehearsal instants together',
-    (tester) async {
-      repo.eventTime = '17:00:00';
-      repo.rehearsalTimeRange = '11:00 – 11:45';
-      await open(tester);
-      expect(
-        tester
-            .getTopLeft(find.byKey(const ValueKey('timeline-event-event-api')))
-            .dy,
-        lessThan(
-          tester
-              .getTopLeft(
-                find.byKey(const ValueKey('timeline-rehearsal-rehearsal-api')),
-              )
-              .dy,
-        ),
-      );
-      expect(find.text('18:00'), findsOneWidget);
-    },
-  );
-
-  testWidgets(
-    'UTC rehearsal from the previous UTC date stays on the Vietnamese day',
+    'UTC rehearsal instant formats with parish clock on the week timeline',
     (tester) async {
       repo.rehearsalInstant = DateTime.utc(
         repo.day.year,
@@ -332,29 +308,12 @@ void main() {
     },
   );
 
-  testWidgets('approved songs keep server order and open the real song route', (
-    tester,
-  ) async {
-    await open(tester);
-    final first = find.textContaining('Bài API đầu');
-    await tester.ensureVisible(first);
-    expect(
-      tester.getTopLeft(first).dy,
-      lessThan(tester.getTopLeft(find.textContaining('Bài API sau')).dy),
-    );
-    expect(find.text('SATB 4 Bè'), findsNothing);
-    await tester.tap(first);
-    await tester.pumpAndSettle();
-    expect(find.text('SONG song-1'), findsOneWidget);
-  });
-
   testWidgets(
     'week navigation filters the selected day and Today restores it',
     (tester) async {
       await open(tester);
       await tester.tap(find.byTooltip('Tuần sau'));
       await tester.pumpAndSettle();
-      expect(find.text('Thánh lễ từ API'), findsNothing);
       expect(find.text('Buổi tập từ API'), findsNothing);
       expect(find.textContaining('Chưa có lịch'), findsOneWidget);
       await tester.tap(find.text('Hôm nay'));
@@ -369,65 +328,64 @@ void main() {
     },
   );
 
-  testWidgets('attendance tab uses own rehearsal attendance', (tester) async {
-    await open(tester);
-    await tester.tap(find.text('Điểm danh'));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('Có mặt'), findsOneWidget);
-    expect(find.textContaining('Bài API đầu'), findsNothing);
-    expect(find.textContaining('Chưa có thông tin điểm danh'), findsOneWidget);
-  });
+  testWidgets(
+    'liturgical tab renders month calendar and date detail dialog when day tapped',
+    (tester) async {
+      await open(tester);
+      await tester.tap(find.text('Lịch phụng vụ'));
+      await tester.pumpAndSettle();
 
-  testWidgets('song-list failure keeps retry separate from empty state', (
-    tester,
-  ) async {
-    music.fail = true;
-    await open(tester);
-    final retry = find.text('Thử lại bộ lễ');
-    await tester.ensureVisible(retry);
-    expect(
-      find.textContaining('Chưa có danh sách bài hát được duyệt'),
-      findsNothing,
-    );
-    music.fail = false;
-    await tester.tap(retry);
-    await tester.pumpAndSettle();
-    expect(find.textContaining('Bài API đầu'), findsOneWidget);
-  });
+      // Month selector title is present
+      expect(find.textContaining('Tháng'), findsWidgets);
+      // Weekday column headers matching Image 1
+      for (final col in ['CN', 'Th2', 'Th3', 'Th4', 'Th5', 'Th6', 'Th7']) {
+        expect(find.text(col), findsOneWidget);
+      }
 
-  for (final mismatched in [false, true]) {
-    testWidgets(
-      'only Approved songs for the selected event are rendered: mismatch=$mismatched',
-      (tester) async {
-        if (mismatched) {
-          music.eventIdOverride = 'another-event';
-        } else {
-          music.status = 'Draft';
-        }
-        await open(tester);
-        expect(find.textContaining('Bài API đầu'), findsNothing);
-        expect(find.textContaining('Bài API sau'), findsNothing);
-        expect(
-          find.textContaining(
-            mismatched ? 'không thuộc sự kiện' : 'chưa được duyệt',
-          ),
-          findsOneWidget,
-        );
-      },
-    );
-  }
+      // Tap on day in month grid
+      final dayFinder =
+          find.byKey(ValueKey('calendar-month-day-${repo.day.day}'));
+      expect(dayFinder, findsOneWidget);
+      await tester.tap(dayFinder);
+      await tester.pumpAndSettle();
+
+      // Dialog shows formatted date dd/MM/yyyy and liturgical celebration name
+      expect(
+        find.text(DateFormat('dd/MM/yyyy').format(repo.day)),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('Lễ ngày ${dateKey(repo.day)}'),
+        findsOneWidget,
+      );
+
+      // Close dialog
+      await tester.tap(find.text('Đóng'));
+      await tester.pumpAndSettle();
+      expect(find.text('Đóng'), findsNothing);
+    },
+  );
 
   testWidgets(
-    'event source failure keeps rehearsal visible and retry restores events',
+    'month selector opens dialog to choose month and year',
     (tester) async {
-      repo.failEvents = true;
       await open(tester);
-      expect(find.text('Buổi tập từ API'), findsOneWidget);
-      expect(find.text('Thánh lễ từ API'), findsNothing);
-      repo.failEvents = false;
-      await tester.tap(find.text('Thử lại lịch lễ'));
+      await tester.tap(find.text('Lịch phụng vụ'));
       await tester.pumpAndSettle();
-      expect(find.text('Thánh lễ từ API'), findsOneWidget);
+
+      // Tap on month title to open picker
+      final monthTitle = find.textContaining('Tháng ${repo.day.month}');
+      await tester.tap(monthTitle.first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Chọn tháng và năm'), findsOneWidget);
+      expect(find.text('Tháng 12'), findsOneWidget);
+
+      // Tap Tháng 12
+      await tester.tap(find.text('Tháng 12'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Tháng 12'), findsWidgets);
     },
   );
 

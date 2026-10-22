@@ -128,6 +128,18 @@ class CalendarApiService {
     }
   }
 
+  Future<int> syncLiturgicalDays(int year) async {
+    try {
+      final response = await _client.dio.post(
+        ApiEndpoints.syncLiturgicalDays,
+        data: {'year': year},
+      );
+      return (response.data as num).toInt();
+    } on DioException catch (error) {
+      throw ApiClient.parseDioException(error);
+    }
+  }
+
   Future<PublicAppSettings> getPublicSettings() async =>
       PublicAppSettings.fromList(
         await _getList(ApiEndpoints.publicSystemSettings),

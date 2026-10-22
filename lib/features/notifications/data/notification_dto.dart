@@ -1,18 +1,24 @@
 enum NotificationType {
-  weekPublished(0, 'Tuần phụng vụ mới'),
-  songListDecision(1, 'Duyệt danh sách bài hát'),
-  participationRequest(2, 'Yêu cầu điểm diện / tham gia'),
-  assignmentNotice(3, 'Phân công phục vụ'),
-  practiceFeedback(4, 'Nhận xét bài thu âm'),
-  directorNote(5, 'Ghi chú từ Ca trưởng');
+  weekPublished(0, 'Tuần phụng vụ mới', 'EventPublished'),
+  songListDecision(1, 'Duyệt danh sách bài hát', 'SongListDecision'),
+  participationRequest(
+    2,
+    'Yêu cầu điểm diện / tham gia',
+    'ParticipationRequest',
+  ),
+  assignmentNotice(3, 'Phân công phục vụ', 'AssignmentNotice'),
+  practiceFeedback(4, 'Nhận xét bài thu âm', 'PracticeFeedback'),
+  directorNote(5, 'Ghi chú từ Ca trưởng', 'DirectorNote'),
+  skillReview(6, 'Kết quả duyệt kỹ năng', 'SkillReview');
 
   final int value;
   final String label;
-  const NotificationType(this.value, this.label);
+  final String wireName;
+  const NotificationType(this.value, this.label, this.wireName);
 
-  static NotificationType fromValue(int value) {
+  static NotificationType fromValue(Object? value) {
     return NotificationType.values.firstWhere(
-      (e) => e.value == value,
+      (e) => e.value == value || e.wireName == value,
       orElse: () => NotificationType.directorNote,
     );
   }
@@ -58,9 +64,7 @@ class NotificationDto {
   factory NotificationDto.fromJson(Map<String, dynamic> json) {
     return NotificationDto(
       id: json['id']?.toString() ?? '',
-      type: NotificationType.fromValue(
-        json['type'] is int ? json['type'] as int : 5,
-      ),
+      type: NotificationType.fromValue(json['type']),
       title: json['title']?.toString() ?? '',
       content: json['content']?.toString() ?? '',
       referenceType: json['referenceType']?.toString(),

@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
-import '../../../app/app_env.dart';
 import '../../../core/di/core_providers.dart';
 import '../../../core/errors/error_messages.dart';
 import '../data/music_dto.dart';
@@ -174,9 +173,7 @@ final musicLibraryProvider =
       final epoch = session.sessionEpoch;
       final notifier = MusicLibraryNotifier(
         ref.watch(musicRepositoryProvider),
-        canLoad: () =>
-            session.sessionEpoch == epoch &&
-            (AppEnv.useMock || session.isAuthenticated),
+        canLoad: () => session.sessionEpoch == epoch && session.isAuthenticated,
       );
       ref.listen<int>(sessionManagerProvider.select((s) => s.sessionEpoch), (
         _,
