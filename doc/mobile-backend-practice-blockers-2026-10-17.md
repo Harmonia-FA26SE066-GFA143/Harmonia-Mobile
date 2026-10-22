@@ -1,4 +1,9 @@
-# Nhờ BE xử lý hai vấn đề chặn luồng luyện tập Mobile
+# Hai vấn đề luyện tập Mobile — đã gỡ chặn
+
+**Cập nhật 17/10/2026, 21:37–21:44 UTC+7:** Azure đã trả đủ cờ quyền, upload
+thành công hai lần, review/nộp lại/khóa sau Passed đúng, audio tải được và có
+tín hiệu PCM. Chi tiết tại [báo cáo kiểm thử lại](mobile-practice-azure-retest-2026-10-17.md).
+Phần bên dưới giữ lại sự cố lịch sử lúc 14:40–14:43, không phải lỗi đang chặn.
 
 Đã kiểm tra lại Azure ngày **17/10/2026, 14:40–14:43 UTC+7**.
 Login `member@harmonia.local` và `director@harmonia.local` đều 200, trả đúng

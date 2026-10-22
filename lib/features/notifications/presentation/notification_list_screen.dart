@@ -51,6 +51,8 @@ class _NotificationListScreenState
         return Icons.assignment_ind_rounded;
       case NotificationType.practiceFeedback:
         return Icons.rate_review_rounded;
+      case NotificationType.skillReview:
+        return Icons.verified_rounded;
       case NotificationType.directorNote:
         return Icons.notes_rounded;
     }

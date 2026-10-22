@@ -10,19 +10,21 @@ class SignalRService {
   HubConnection? _hubConnection;
   final _notificationStreamController =
       StreamController<Map<String, dynamic>>.broadcast();
+  final _connectedStreamController = StreamController<void>.broadcast();
 
   Stream<Map<String, dynamic>> get notificationStream =>
       _notificationStreamController.stream;
+  Stream<void> get connectedStream => _connectedStreamController.stream;
 
   SignalRService(this._storage);
 
   bool _isConnecting = false;
+  int _connectionEpoch = 0;
 
   bool get isConnected => _hubConnection?.state == HubConnectionState.Connected;
 
   Future<void> connect() async {
-    if (_isConnecting) return;
-
+    if (_isConnecting || _notificationStreamController.isClosed) return;
     if (_hubConnection != null &&
         (_hubConnection!.state == HubConnectionState.Connected ||
             _hubConnection!.state == HubConnectionState.Connecting ||
@@ -30,21 +32,21 @@ class SignalRService {
       return;
     }
 
-    final token = await _storage.getAccessToken();
-    if (token == null || token.isEmpty) return;
-
     _isConnecting = true;
-
+    final epoch = _connectionEpoch;
     try {
-      // Disconnect previous connection if in a weird state
-      if (_hubConnection != null) {
+      final token = await _storage.getAccessToken();
+      if (epoch != _connectionEpoch || token == null || token.isEmpty) return;
+      final previous = _hubConnection;
+      _hubConnection = null;
+      if (previous != null) {
         try {
-          await _hubConnection!.stop();
+          await previous.stop();
         } catch (_) {}
-        _hubConnection = null;
+        if (epoch != _connectionEpoch) return;
       }
 
-      _hubConnection = HubConnectionBuilder()
+      final connection = HubConnectionBuilder()
           .withUrl(
             AppEnv.notificationHubUrl,
             options: HttpConnectionOptions(
@@ -54,37 +56,46 @@ class SignalRService {
           )
           .withAutomaticReconnect(retryDelays: [0, 2000, 5000, 10000, 30000])
           .build();
+      _hubConnection = connection;
 
-      // Event name must match exact server contract name (including Async suffix per Rule 06)
-      _hubConnection!.on('ReceiveNotificationAsync', (arguments) {
-        if (arguments != null && arguments.isNotEmpty) {
-          final data = arguments.first;
-          if (data is Map<String, dynamic>) {
-            _notificationStreamController.add(data);
-          }
+      // Ignore callbacks from connections that belonged to an earlier session.
+      bool isCurrent() =>
+          epoch == _connectionEpoch &&
+          identical(_hubConnection, connection) &&
+          !_notificationStreamController.isClosed;
+
+      connection.on('ReceiveNotificationAsync', (arguments) {
+        if (!isCurrent() || arguments == null || arguments.isEmpty) return;
+        final data = arguments.first;
+        if (data is Map<String, dynamic>) {
+          _notificationStreamController.add(data);
         }
       });
-
-      await _hubConnection!.start();
+      connection.onreconnected(({connectionId}) {
+        if (isCurrent()) _connectedStreamController.add(null);
+      });
+      await connection.start();
+      if (isCurrent() && isConnected) _connectedStreamController.add(null);
     } catch (_) {
-      // Handled gracefully: Automatic reconnect or reconnect on next session action
+      // Reconnect automatically, or retry when the app returns to the foreground.
     } finally {
-      _isConnecting = false;
+      if (epoch == _connectionEpoch) _isConnecting = false;
     }
   }
 
   Future<void> stop() async {
+    _connectionEpoch++;
     _isConnecting = false;
-    if (_hubConnection != null) {
-      try {
-        await _hubConnection!.stop();
-      } catch (_) {}
-      _hubConnection = null;
-    }
+    final connection = _hubConnection;
+    _hubConnection = null;
+    try {
+      await connection?.stop();
+    } catch (_) {}
   }
 
   void dispose() {
-    stop();
+    unawaited(stop());
     _notificationStreamController.close();
+    _connectedStreamController.close();
   }
 }

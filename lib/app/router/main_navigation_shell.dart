@@ -3,9 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/notifications/presentation/notification_notifier.dart';
-import '../app_env.dart';
 import '../theme/app_colors.dart';
-import '../theme/app_typography.dart';
 
 class MainNavigationShell extends ConsumerWidget {
   final StatefulNavigationShell navigationShell;
@@ -24,41 +22,7 @@ class MainNavigationShell extends ConsumerWidget {
     final notificationState = ref.watch(notificationNotifierProvider);
 
     return Scaffold(
-      body: Column(
-        children: [
-          if (AppEnv.useMock)
-            SafeArea(
-              bottom: false,
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  vertical: 4,
-                  horizontal: 12,
-                ),
-                color: AppColors.secondary.withValues(alpha: 0.15),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.science_outlined,
-                      size: 14,
-                      color: AppColors.secondary,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Chế độ Demo (Dữ liệu mẫu)',
-                      style: AppTypography.labelSmall.copyWith(
-                        color: AppColors.secondary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          Expanded(child: navigationShell),
-        ],
-      ),
+      body: navigationShell,
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,
         onDestinationSelected: _onTap,

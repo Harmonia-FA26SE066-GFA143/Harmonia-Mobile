@@ -615,16 +615,25 @@ class _StatusBadge extends StatelessWidget {
 
 Color _seasonColor(String name) {
   final season = name.toLowerCase();
-  if (season.contains('vọng') || season.contains('chay')) {
+  if (season.contains('vọng') ||
+      season.contains('chay') ||
+      season.contains('advent') ||
+      season.contains('lent')) {
     return AppColors.seasonAdventLent;
   }
-  if (season.contains('phục sinh') || season.contains('giáng sinh')) {
+  if (season.contains('phục sinh') ||
+      season.contains('giáng sinh') ||
+      season.contains('easter') ||
+      season.contains('christmas')) {
     return AppColors.seasonEasterChristmas;
   }
-  if (season.contains('tử đạo') || season.contains('hiện xuống')) {
+  if (season.contains('tử đạo') ||
+      season.contains('hiện xuống') ||
+      season.contains('pentecost') ||
+      season.contains('martyr')) {
     return AppColors.seasonPentecostMartyrs;
   }
-  return season.contains('thường niên')
+  return (season.contains('thường niên') || season.contains('ordinary'))
       ? AppColors.seasonOrdinary
       : AppColors.muted;
 }

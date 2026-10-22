@@ -57,7 +57,7 @@ Với công việc cần chốt thiết kế kỹ thuật, trình bày ngắn:
 - Mục tiêu và hành vi người dùng nhận được.
 - Màn hình hoặc luồng bị ảnh hưởng.
 - File/thư mục dự kiến tạo hoặc sửa.
-- API thật và phần dùng mock.
+- API thật sẽ gọi và test doubles dùng riêng trong unit/widget test.
 - Package mới nếu thực sự cần.
 - Cách kiểm tra.
 - Điểm cần người dùng quyết định.
@@ -93,15 +93,19 @@ nếu nhiệm vụ chỉ thuộc frontend.
 Nếu môi trường thiếu SDK, dependency hoặc cấu hình, báo rõ.
 Không giả định lỗi môi trường là lỗi của tính năng vừa sửa.
 
-## API chưa có và mock
+## API thật và dữ liệu kiểm thử
 
 - Không suy ra endpoint từ tên màn hình hoặc entity.
 - Không tự tạo request contract để khớp giao diện.
-- Khi được giao dựng UI trước, đặt fixture/mock trong tầng data riêng.
+- App chỉ dùng repository kết nối API thật; không thêm lại `USE_MOCK`, UI demo
+  hoặc đường vào bỏ qua đăng nhập. Mặc định dùng Harmonia Azure trong `AppEnv`.
+- Fixture/test doubles chỉ đặt trong `test/`, không để trong `lib/` hoặc chọn
+  qua cấu hình build của ứng dụng.
 - Không hardcode danh sách mẫu trong widget.
-- Phân biệt chế độ mock và môi trường API thật.
-- Không âm thầm chuyển sang mock khi API thật lỗi.
-- Không báo hoàn tất tích hợp khi chỉ chạy bằng mock.
+- Khi API lỗi hoặc trả rỗng, hiển thị đúng trạng thái; không thay bằng dữ liệu giả.
+- Mỗi phiên sửa lỗi cần tái hiện trên bản kết nối backend thật. Test HTTP adapter
+  và unit/widget test chỉ xác minh hành vi client, không chứng minh API live đã chạy.
+- Không báo hoàn tất tích hợp khi chỉ kiểm tra bằng test doubles.
 - Ghi rõ chức năng nào còn chờ API trong tài liệu bàn giao.
 
 ## Kiểm tra tự động
@@ -214,7 +218,7 @@ Khi hoàn tất, nêu rõ:
 
 - Màn hình/hành vi đã triển khai hoặc thay đổi.
 - File chính đã tạo/sửa.
-- Phần dùng API thật và phần dùng mock.
+- Phần đã kiểm tra API thật và phần mới xác minh bằng unit/widget test.
 - Kiểm tra đã chạy và kết quả.
 - Phần chưa kiểm chứng hoặc bị chặn.
 - Công việc còn cần API, cấu hình hoặc quyết định của người dùng.

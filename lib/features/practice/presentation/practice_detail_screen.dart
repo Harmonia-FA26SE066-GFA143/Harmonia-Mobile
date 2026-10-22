@@ -41,6 +41,11 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
   bool _isAppActive = true;
   bool _confirmingExit = false;
 
+  double _currentAmplitudeDb = -160.0;
+  double _maxRecordedAmplitudeDb = -160.0;
+  bool _amplitudeQueried = false;
+  bool _isDraftSilent = false;
+
   String? _recordedFilePath;
   PracticeAssignment? _draftAssignment;
   int _recordingSeconds = 0;
@@ -165,7 +170,17 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
           '${tempDir.path}/harmonia_practice_${widget.assignmentId}_${DateTime.now().millisecondsSinceEpoch}.m4a';
 
       await _audioRecorder.start(
-        const RecordConfig(encoder: AudioEncoder.aacLc),
+        const RecordConfig(
+          encoder: AudioEncoder.aacLc,
+          bitRate: 128000,
+          sampleRate: 44100,
+          numChannels: 1,
+          androidConfig: AndroidRecordConfig(
+            useLegacy: false,
+            audioSource: AndroidAudioSource.mic,
+          ),
+          iosConfig: IosRecordConfig(),
+        ),
         path: filePath,
       );
 
@@ -182,16 +197,39 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
         _isPlayingDraft = false;
         _recordedFilePath = filePath;
         _draftAssignment = assignment;
+        _currentAmplitudeDb = -160.0;
+        _maxRecordedAmplitudeDb = -160.0;
+        _amplitudeQueried = false;
+        _isDraftSilent = false;
       });
 
       _recordTimer?.cancel();
-      _recordTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
+      _recordTimer = Timer.periodic(const Duration(milliseconds: 250), (
+        timer,
+      ) async {
         if (mounted && _recordingStartTime != null) {
-          setState(() {
-            _recordingSeconds = DateTime.now()
-                .difference(_recordingStartTime!)
-                .inSeconds;
-          });
+          final seconds = DateTime.now()
+              .difference(_recordingStartTime!)
+              .inSeconds;
+          try {
+            final amp = await _audioRecorder.getAmplitude();
+            if (mounted) {
+              setState(() {
+                _recordingSeconds = seconds;
+                _currentAmplitudeDb = amp.current;
+                _amplitudeQueried = true;
+                if (amp.max > _maxRecordedAmplitudeDb) {
+                  _maxRecordedAmplitudeDb = amp.max;
+                }
+              });
+            }
+          } catch (_) {
+            if (mounted) {
+              setState(() {
+                _recordingSeconds = seconds;
+              });
+            }
+          }
         }
       });
     } catch (_) {
@@ -224,12 +262,15 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
           ? DateTime.now().difference(_recordingStartTime!).inSeconds
           : _recordingSeconds;
 
+      final isSilent = _amplitudeQueried && _maxRecordedAmplitudeDb < -50.0;
+
       if (!mounted) return;
       setState(() {
         _isRecording = false;
         _recordingSeconds = actualSeconds;
         _recordedFilePath = finalPath;
         _hasDraftRecording = fileExists;
+        _isDraftSilent = isSilent;
       });
     } catch (_) {
       if (mounted) {
@@ -300,6 +341,10 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
         _draftAssignment = null;
         _recordingSeconds = 0;
         _isPlayingDraft = false;
+        _isDraftSilent = false;
+        _currentAmplitudeDb = -160.0;
+        _maxRecordedAmplitudeDb = -160.0;
+        _amplitudeQueried = false;
       });
     } catch (_) {
     } finally {
@@ -475,6 +520,10 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
           _recordedFilePath = null;
           _draftAssignment = null;
           _recordingSeconds = 0;
+          _isDraftSilent = false;
+          _currentAmplitudeDb = -160.0;
+          _maxRecordedAmplitudeDb = -160.0;
+          _amplitudeQueried = false;
         }
       });
       ScaffoldMessenger.of(context).showSnackBar(
@@ -859,14 +908,21 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                                     14.0,
                                   ];
                                   final h = heights[index % heights.length];
+                                  final ampFactor =
+                                      _amplitudeQueried &&
+                                          _currentAmplitudeDb > -60.0
+                                      ? ((_currentAmplitudeDb + 60.0) / 60.0)
+                                            .clamp(0.2, 1.0)
+                                      : 0.2;
+                                  final barHeight = (_recordingSeconds % 2 == 0)
+                                      ? (h * ampFactor).clamp(6.0, 48.0)
+                                      : (h * 0.6 * ampFactor).clamp(4.0, 48.0);
                                   return Container(
                                     margin: const EdgeInsets.symmetric(
                                       horizontal: 2,
                                     ),
                                     width: 3.5,
-                                    height: (_recordingSeconds % 2 == 0)
-                                        ? h
-                                        : (h * 0.6).clamp(8.0, 48.0),
+                                    height: barHeight,
                                     decoration: BoxDecoration(
                                       color: AppColors.error.withValues(
                                         alpha: 0.8,
@@ -876,6 +932,28 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                                   );
                                 }),
                               ),
+                              if (_amplitudeQueried &&
+                                  _currentAmplitudeDb <= -50.0 &&
+                                  _recordingSeconds >= 2) ...[
+                                const SizedBox(height: 10),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.statusWarningSoft,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    'Micro đang không nhận âm thanh. Hãy kiểm tra lại micro!',
+                                    style: AppTypography.bodySmall.copyWith(
+                                      color: AppColors.statusWarning,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ),
+                              ],
                               const SizedBox(height: 20),
                             ],
 
@@ -959,6 +1037,41 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                               const SizedBox(height: 24),
                               const Divider(),
                               const SizedBox(height: 16),
+                              if (_isDraftSilent) ...[
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.statusWarningSoft,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: AppColors.statusWarning,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Icon(
+                                        Icons.mic_off_rounded,
+                                        color: AppColors.statusWarning,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          'Bản thu nháp không có tiếng hoặc âm lượng quá nhỏ. Hãy kiểm tra lại micro của máy (trên máy ảo: bật "Virtual microphone uses host audio input") và thu lại để Ca trưởng nghe được rõ.',
+                                          style: AppTypography.bodySmall
+                                              .copyWith(
+                                                color: AppColors.onSurface,
+                                                height: 1.4,
+                                              ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                              ],
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 16,

@@ -27,8 +27,8 @@ Có kiểm thử HTTP Azure ở vòng cập nhật này; bảng vẫn phân bi�
 | Hồ sơ | GET /api/member-profiles/me | Có nơi gọi Trang chủ/Hồ sơ |
 | Hồ sơ | PUT /api/member-profiles/me | Có UI chỉnh hồ sơ |
 | Hồ sơ | GET /api/member-profiles/me/history | Có màn hình lịch sử |
-| Kỹ năng | GET /api/member-skills/mine | Có danh sách/phân trang trong source; kiểm tra hồi quy toàn bộ |
-| Kỹ năng | GET /api/member-skills/{id} | Có modal chi tiết |
+| Kỹ năng | GET /api/member-skills/mine | Có phân trang; tự đồng bộ khi SkillReview, reconnect và foreground. Xem báo cáo kỹ năng 17/10; live test rỗng |
+| Kỹ năng | GET /api/member-skills/{id} | Modal chi tiết đang mở tự cập nhật theo kết quả duyệt, có widget test |
 | Kỹ năng | POST /api/member-skills | Có khai báo; wire enum tiếng Anh, nhãn tiếng Việt |
 | Lịch | GET /api/schedule/events | Ghép lời mời và phân công cá nhân cho Trang chủ/Lịch |
 | Lời mời | GET /api/event-participations/mine | Khôi phục từ server, dùng canRespond/cannotRespondReason và kiểm tra lại trước PUT |
@@ -51,16 +51,16 @@ Có kiểm thử HTTP Azure ở vòng cập nhật này; bảng vẫn phân bi�
 | Luyện tập | GET /api/practice-assignments/mine | Có danh sách và bộ lọc |
 | Luyện tập | GET /api/practice-assignments/mine/counts | Có bộ đếm |
 | Luyện tập | GET /api/practice-assignments/mine/{id} | Có chi tiết bài tập |
-| Luyện tập | POST /api/practice-assignments/{id}/submissions | Có luồng bản thu/upload multipart; cần kiểm tra live |
+| Luyện tập | POST /api/practice-assignments/{id}/submissions | Azure 200 với hai lượt nộp WAV ngày 17/10 lúc 21:37–21:44; sau Passed trả 409 và không tạo attempt thừa. Chưa kiểm thử toàn luồng thu/nộp qua UI Android |
 | Luyện tập | GET /api/practice-submissions/mine | Có danh sách/phân trang trong source; kiểm tra hồi quy toàn bộ |
-| Luyện tập | GET /api/practice-submissions/mine/{id} | Có chi tiết và nghe bản thu; cần kiểm tra native/live |
+| Luyện tập | GET /api/practice-submissions/mine/{id} | Azure 200, đọc Submitted/NeedsRevision/Passed; URL ký tải WAV thành công, checksum và tín hiệu PCM đúng. Chưa xác nhận phát qua loa trên UI Android |
 | Danh mục | GET /api/lookups/skills | Có nơi gọi khai báo kỹ năng |
 | Danh mục | GET /api/lookups/liturgical-seasons | Có nơi gọi hiện hữu |
 | Thông báo | GET /api/notifications | Có danh sách |
 | Thông báo | GET /api/notifications/unread-count | Có badge; tổng độc lập số item đã tải |
 | Thông báo | PUT /api/notifications/{id}/read | Có đánh dấu đọc từng mục |
 | Thông báo | PUT /api/notifications/read-all | Có đọc tất cả và xử lý lỗi |
-| Realtime | /hubs/notifications | Có kết nối theo phiên; cần kiểm tra live reconnect/background |
+| Realtime | /hubs/notifications | Azure negotiate/redirect và SignalR JSON handshake đã pass 17/10. UI Android qua background/foreground không lỗi; chưa xác nhận SkillReview live |
 
 Các lookup khác có method/constant trong code không được mặc nhiên đánh dấu đã có UI.
 Thư viện hiện chưa cung cấp toàn bộ selector phân loại của SearchSongsRequest.
@@ -136,3 +136,21 @@ và toàn bộ luồng trên thiết bị. Lỗi đăng nhập 500 trong báo c�
 cũ, không còn tái hiện trong lượt này. Không coi lỗi storage đã được khắc phục.
 Xem [báo cáo live](mobile-practice-azure-live-verification-2026-10-17.md) và
 [hai vấn đề gửi BE](mobile-backend-practice-blockers-2026-10-17.md).
+
+## Kiểm thử lại Azure — 17/10/2026, 21:37–21:44 UTC+7
+
+Đã gỡ hai vấn đề chặn của lượt 14:40: list/detail có đủ cờ quyền, multipart WAV
+trả 200 và tạo bản nộp đọc lại được. Luồng NeedsRevision → nộp lại → Passed qua;
+server trả 409 khi cố nộp tiếp, không tăng số attempt. Hai URL audio ký tải được,
+file đúng checksum và có tín hiệu PCM. Các phiên kiểm thử đã logout 204.
+
+App Android bản chỉ dùng API thật đã build/install và mở Trang chủ, giữ phiên
+hiện tại; đã mở Hồ sơ và Luyện tập. Thu/nộp/phát qua loa trên UI Android chưa
+được kiểm thử end-to-end ở lượt này. Xem [báo cáo mới](mobile-practice-azure-retest-2026-10-17.md)
+và [kết quả HTTP đã lọc](mobile-practice-azure-retest-2026-10-17.json).
+
+## Đồng bộ kỹ năng — 17/10/2026
+
+Xem [báo cáo kiểm chứng kỹ năng](mobile-skills-realtime-verification-2026-10-17.md):
+218 test pass, trong đó 9 test cho kỹ năng; Azure hub bắt tay thành công. Chưa kiểm
+thử lượt duyệt thật vì tài khoản test/danh mục không có dữ liệu khả dụng trong lần kiểm tra.

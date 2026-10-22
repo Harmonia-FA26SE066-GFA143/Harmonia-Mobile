@@ -1,3 +1,5 @@
+import 'support/fake_calendar_repository.dart';
+
 import 'dart:convert';
 import 'dart:async';
 import 'dart:typed_data';
@@ -10,8 +12,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:harmonia_mobile/core/network/api_client.dart';
 import 'package:harmonia_mobile/core/di/core_providers.dart';
 import 'package:harmonia_mobile/core/session/session_manager.dart';
+import 'package:harmonia_mobile/core/errors/error_messages.dart';
 import 'package:harmonia_mobile/core/storage/secure_storage_service.dart';
 import 'package:harmonia_mobile/features/calendar/data/calendar_api_service.dart';
+import 'package:harmonia_mobile/features/calendar/data/calendar_dto.dart';
 import 'package:harmonia_mobile/features/calendar/data/calendar_repository.dart';
 import 'package:harmonia_mobile/features/calendar/data/liturgical_models.dart';
 import 'package:harmonia_mobile/features/calendar/presentation/participation_prompt.dart';
@@ -292,6 +296,97 @@ void main() {
     );
     expect(adapter.requests, isEmpty);
   });
+
+  test('LiturgicalDay parses John Romano D\'Orazio API fields with English celebration name and labels', () {
+    final solemnity = LiturgicalDay.fromJson({
+      'date': '2026-12-25',
+      'celebrationName': 'The Nativity of the Lord (Christmas)',
+      'rank': 'Solemnity',
+      'seasonName': 'Christmas',
+    });
+    expect(solemnity.date, DateTime(2026, 12, 25));
+    expect(solemnity.celebrationName, 'The Nativity of the Lord (Christmas)');
+    expect(solemnity.rank, 'Solemnity');
+    expect(solemnity.rankLabel, 'Lễ Trọng');
+    expect(solemnity.seasonName, 'Christmas');
+    expect(solemnity.seasonLabel, 'Mùa Giáng Sinh');
+    expect(solemnity.toJson()['date'], '2026-12-25');
+
+    final feast = LiturgicalDay.fromJson({
+      'date': '2026-04-25',
+      'celebrationName': 'Saint Mark, Evangelist',
+      'rank': 'Feast',
+      'seasonName': 'Easter',
+    });
+    expect(feast.rankLabel, 'Lễ Kính');
+    expect(feast.seasonLabel, 'Mùa Phục Sinh');
+
+    final memorial = LiturgicalDay.fromJson({
+      'date': '2026-10-17',
+      'celebrationName': 'Saint Ignatius of Antioch, Bishop and Martyr',
+      'rank': 'Obligatory Memorial',
+      'seasonName': 'OrdinaryTime',
+    });
+    expect(memorial.rankLabel, 'Lễ Nhớ');
+    expect(memorial.seasonLabel, 'Mùa Thường Niên');
+
+    final optionalMemorial = LiturgicalDay.fromJson({
+      'date': '2026-10-14',
+      'celebrationName': 'Saint Callistus I, Pope and Martyr',
+      'rank': 'Optional Memorial',
+      'seasonName': 'OrdinaryTime',
+    });
+    expect(optionalMemorial.rankLabel, 'Lễ Nhớ Tùy Chọn');
+
+    final weekday = LiturgicalDay.fromJson({
+      'date': '2026-10-21',
+      'celebrationName': 'Wednesday of the Twenty-ninth Week in Ordinary Time',
+      'rank': null,
+      'seasonName': 'OrdinaryTime',
+    });
+    expect(weekday.rank, isNull);
+    expect(weekday.rankLabel, isNull);
+    expect(weekday.seasonLabel, 'Mùa Thường Niên');
+
+    final advent = LiturgicalDay.fromJson({
+      'date': '2026-12-01',
+      'celebrationName': 'Tuesday of the First Week of Advent',
+      'rank': null,
+      'seasonName': 'Advent',
+    });
+    expect(advent.seasonLabel, 'Mùa Vọng');
+
+    final lent = LiturgicalDay.fromJson({
+      'date': '2026-03-01',
+      'celebrationName': 'Second Sunday of Lent',
+      'rank': 'Solemnity',
+      'seasonName': 'Lent',
+    });
+    expect(lent.seasonLabel, 'Mùa Chay');
+  });
+
+  test(
+    'syncLiturgicalDays calls POST /api/liturgical-days/sync with year',
+    () async {
+      adapter.responseBody = (_) => 365;
+      final count = await CalendarApiService(client).syncLiturgicalDays(2026);
+      expect(adapter.requests.single.path, '/api/liturgical-days/sync');
+      expect(adapter.requests.single.method, 'POST');
+      expect(adapter.requests.single.data, {'year': 2026});
+      expect(count, 365);
+    },
+  );
+
+  test(
+    'EXTERNAL_CALENDAR_FAILED error maps to friendly Vietnamese message',
+    () {
+      final message = ErrorMessages.getMessage('EXTERNAL_CALENDAR_FAILED');
+      expect(
+        message,
+        'Dịch vụ lịch phụng vụ đang gặp sự cố. Vui lòng thử lại sau.',
+      );
+    },
+  );
 
   test(
     'concurrent replies share one request and update the accepted status',

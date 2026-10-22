@@ -1,17 +1,16 @@
 class AppEnv {
   AppEnv._();
 
-  /// Flag toggling demo/mock mode vs real backend API.
-  /// Default: false (real API mode).
-  static const bool useMock = bool.fromEnvironment(
-    'USE_MOCK',
-    defaultValue: false,
-  );
-
-  /// Base URL of backend API. Default points to local backend HTTP profile (port 5259).
+  /// Backend API URL. The application always uses real backend repositories.
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:5259',
+    defaultValue: 'https://harmonia-be-a7hneqh4aacsd2e6.southeastasia-01.azurewebsites.net',
+  );
+
+  /// Optional API Key for external services or backend authentication if required.
+  static const String apiKey = String.fromEnvironment(
+    'API_KEY',
+    defaultValue: '',
   );
 
   static const String _overrideNotificationHubUrl = String.fromEnvironment(

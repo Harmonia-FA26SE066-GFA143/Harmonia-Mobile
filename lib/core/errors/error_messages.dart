@@ -6,6 +6,8 @@ class ErrorMessages {
   static const Map<String, String> _codeMap = {
     'EXTERNAL_STORAGE_FAILED':
         'Dịch vụ lưu trữ đang gặp sự cố. Vui lòng thử lại sau.',
+    'EXTERNAL_CALENDAR_FAILED':
+        'Dịch vụ lịch phụng vụ đang gặp sự cố. Vui lòng thử lại sau.',
     'EVENT_PARTICIPATION_NOT_INVITED':
         'Bạn chưa được mời tham gia sự kiện này.',
     'EVENT_PARTICIPATION_ALREADY_RESPONDED':

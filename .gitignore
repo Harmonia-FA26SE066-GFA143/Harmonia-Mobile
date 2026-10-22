@@ -53,3 +53,8 @@ app.*.map.json
 powershell.cmd
 stitch_harmonia_choir_app_ui/
 
+# Environment files
+.env
+.env.*
+!.env.example
+

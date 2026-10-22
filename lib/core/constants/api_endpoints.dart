@@ -31,6 +31,7 @@ class ApiEndpoints {
       '/api/event-participations/mine/$eventId';
   static const String liturgicalDays = '/api/liturgical-days';
   static String liturgicalDay(String date) => '/api/liturgical-days/$date';
+  static const String syncLiturgicalDays = '/api/liturgical-days/sync';
   static const String publicSystemSettings = '/api/system-settings/public';
   static String rehearsalSongs(String id) => '/api/rehearsals/$id/songs';
   static const String scheduleRehearsals = '/api/schedule/rehearsals';

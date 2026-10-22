@@ -20,7 +20,6 @@ import '../../features/practice/presentation/practice_list_screen.dart';
 import '../../features/practice/presentation/practice_submission_detail_screen.dart';
 import '../../features/profile/presentation/participation_history_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
-import '../app_env.dart';
 import 'main_navigation_shell.dart';
 import 'splash_screen.dart';
 
@@ -59,13 +58,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   final router = GoRouter(
     navigatorKey: _rootNavigatorKey,
     refreshListenable: sessionManager,
-    initialLocation: AppEnv.useMock ? '/home' : '/splash',
+    initialLocation: '/splash',
     redirect: (context, state) {
-      if (AppEnv.useMock) {
-        // In demo mode, bypass login and allow exploring all screens
-        return null;
-      }
-
       // Allow /reset-password across all session statuses (initial, unauth, auth)
       if (state.matchedLocation == '/reset-password' ||
           state.uri.path == '/reset-password') {

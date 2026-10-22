@@ -1,14 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../../app/app_env.dart';
 import '../../../core/di/core_providers.dart';
 import '../../../core/errors/app_exceptions.dart';
 import 'calendar_api_service.dart';
 import 'calendar_dto.dart';
 import 'calendar_member_dto.dart';
 import 'liturgical_models.dart';
-import 'mock_calendar_data.dart';
 
 abstract class CalendarRepository {
   Future<MemberEventDetail> getEventDetail(String id);
@@ -21,6 +19,7 @@ abstract class CalendarRepository {
   Future<List<LiturgicalEvent>> getEvents();
   Future<List<RehearsalSession>> getRehearsals();
   Future<void> updateParticipation(String eventId, ParticipationStatus status);
+  Future<int> syncLiturgicalDays(int year);
 }
 
 class CalendarRepositoryImpl implements CalendarRepository {
@@ -197,88 +196,9 @@ class CalendarRepositoryImpl implements CalendarRepository {
   @override
   Future<List<RehearsalSong>> getRehearsalSongs(String id) =>
       apiService.getRehearsalSongs(id);
-}
-
-class MockCalendarRepositoryImpl implements CalendarRepository {
   @override
-  Future<MemberEventDetail> getEventDetail(String id) async {
-    final event = (await getEvents()).where((e) => e.id == id).firstOrNull;
-    if (event == null) {
-      throw const NotFoundException(code: 'LITURGICAL_EVENT_NOT_FOUND');
-    }
-    return MemberEventDetail(
-      event: event,
-      assignments: const [],
-      rehearsals: const [],
-    );
-  }
-
-  @override
-  Future<MemberRehearsalDetail> getRehearsalDetail(String id) async {
-    final rehearsal = (await getRehearsals())
-        .where((e) => e.id == id)
-        .firstOrNull;
-    if (rehearsal == null) {
-      throw const NotFoundException(code: 'REHEARSAL_NOT_FOUND');
-    }
-    return MemberRehearsalDetail(rehearsal: rehearsal, songs: const []);
-  }
-
-  @override
-  Future<List<LiturgicalDay>> getLiturgicalDays(
-    String fromDate,
-    String toDate,
-  ) async => [];
-  @override
-  Future<LiturgicalDay?> getLiturgicalDay(String date) async => null;
-  @override
-  Future<PublicAppSettings> getPublicSettings() async =>
-      const PublicAppSettings(choirName: 'Harmonia');
-  @override
-  Future<List<RehearsalSong>> getRehearsalSongs(String id) async => const [];
-
-  List<LiturgicalEvent> _events = List.from(MockCalendarData.events);
-  final List<RehearsalSession> _rehearsals = List.from(
-    MockCalendarData.rehearsals,
-  );
-
-  @override
-  Future<LiturgicalEvent> getUpcomingEvent() async {
-    await Future.delayed(const Duration(milliseconds: 150));
-    return _events.first;
-  }
-
-  @override
-  Future<List<LiturgicalEvent>> getEvents() async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    return _events
-        .map(
-          (e) => e.copyWith(
-            canRespond: e.participationStatus == ParticipationStatus.invited,
-          ),
-        )
-        .toList();
-  }
-
-  @override
-  Future<List<RehearsalSession>> getRehearsals() async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    return _rehearsals;
-  }
-
-  @override
-  Future<void> updateParticipation(
-    String eventId,
-    ParticipationStatus status,
-  ) async {
-    await Future.delayed(const Duration(milliseconds: 250));
-    _events = _events.map((e) {
-      if (e.id == eventId) {
-        return e.copyWith(participationStatus: status);
-      }
-      return e;
-    }).toList();
-  }
+  Future<int> syncLiturgicalDays(int year) =>
+      apiService.syncLiturgicalDays(year);
 }
 
 final calendarApiServiceProvider = Provider<CalendarApiService>((ref) {
@@ -288,9 +208,6 @@ final calendarApiServiceProvider = Provider<CalendarApiService>((ref) {
 
 final calendarRepositoryProvider = Provider<CalendarRepository>((ref) {
   ref.watch(sessionManagerProvider.select((s) => s.sessionEpoch));
-  if (AppEnv.useMock) {
-    return MockCalendarRepositoryImpl();
-  }
   final apiService = ref.watch(calendarApiServiceProvider);
   return CalendarRepositoryImpl(apiService: apiService);
 });
