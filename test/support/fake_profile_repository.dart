@@ -68,6 +68,12 @@ class MockProfileRepositoryImpl implements ProfileRepository {
   }
 
   @override
+  Future<void> updateAvatar(String filePath) async {}
+
+  @override
+  Future<void> deleteAvatar() async {}
+
+  @override
   Future<List<MemberSkill>> getSkills({
     String? status,
     int pageNumber = 1,
@@ -126,7 +132,7 @@ class MockProfileRepositoryImpl implements ProfileRepository {
   }
 
   @override
-  Future<void> declareNewSkill({
+  Future<MemberSkill> declareNewSkill({
     required String skillId,
     String? level,
     String? name,
@@ -145,7 +151,15 @@ class MockProfileRepositoryImpl implements ProfileRepository {
       declaredAt: DateTime.now(),
     );
     _skills = [..._skills, newSkill];
+    return newSkill;
   }
+
+  @override
+  Future<MemberSkill> uploadSkillEvidence({
+    required String id,
+    required String filePath,
+    void Function(int sent, int total)? onSendProgress,
+  }) async => _skills.firstWhere((skill) => skill.id == id);
 
   @override
   Future<PagedList<ParticipationHistoryDto>> getParticipationHistory({

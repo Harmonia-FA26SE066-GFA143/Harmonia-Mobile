@@ -41,7 +41,7 @@ class HarmoniaApp extends ConsumerWidget {
     });
 
     return MaterialApp.router(
-      title: 'Harmonia Choir',
+      title: 'Harmonia',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       routerConfig: router,

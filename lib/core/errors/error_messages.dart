@@ -11,15 +11,24 @@ class ErrorMessages {
     'EVENT_PARTICIPATION_NOT_INVITED':
         'Bạn chưa được mời tham gia sự kiện này.',
     'EVENT_PARTICIPATION_ALREADY_RESPONDED':
-        'Bạn đã gửi phản hồi. Hệ thống chỉ cho phản hồi một lần.',
+        'Bạn đã chọn trạng thái phản hồi cho sự kiện này.',
     'EVENT_PARTICIPATION_CLOSED': 'Đã hết thời gian phản hồi tham gia.',
     'LITURGICAL_EVENT_CANCELLED': 'Sự kiện đã bị hủy.',
     'LITURGICAL_EVENT_NOT_FOUND': 'Không tìm thấy sự kiện.',
     'REHEARSAL_NOT_FOUND':
         'Không tìm thấy buổi tập hoặc bạn không còn quyền truy cập.',
     'MEMBER_NOT_ACTIVE': 'Hồ sơ ca viên chưa ở trạng thái hoạt động.',
+    'MEMBER_SKILL_EVIDENCE_REQUIRED': 'Vui lòng chọn tệp minh chứng.',
+    'MEMBER_SKILL_EVIDENCE_TYPE_NOT_ALLOWED':
+        'Chỉ hỗ trợ ghi âm MP3, M4A, WAV hoặc video MP4, MOV.',
+    'MEMBER_SKILL_EVIDENCE_TOO_LARGE':
+        'Ghi âm tối đa 20 MB, video tối đa 100 MB.',
+    'MEMBER_SKILL_ALREADY_REVIEWED':
+        'Kỹ năng đã được ca trưởng xem xét nên không thể cập nhật minh chứng.',
+    'MEMBER_SKILL_ALREADY_DECLARED': 'Bạn đã khai báo kỹ năng này trước đó.',
     'MATERIAL_LEARNING_STATUS_INVALID':
         'Chỉ có thể chọn Đã thuộc hoặc Cần tập thêm.',
+    'MATERIAL_PLAYBACK_UNAVAILABLE': 'Tài liệu MIDI chưa có dữ liệu phát. Vui lòng nhờ Ca trưởng tải lại tệp MIDI.',
     'CALENDAR_DAY_NOT_FOUND': 'Chưa có dữ liệu lịch lễ cho ngày này.',
     'REPORT_DATE_RANGE_INVALID': 'Khoảng ngày không hợp lệ.',
     'REPORT_DATE_RANGE_TOO_LARGE': 'Vui lòng chọn khoảng thời gian ngắn hơn.',

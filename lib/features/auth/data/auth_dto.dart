@@ -106,6 +106,7 @@ class UserDto {
   final String fullName;
   final String roleName;
   final String? phone;
+  final String? avatarUrl;
   final bool isActive;
   final bool isPasswordChangeRequired;
 
@@ -115,6 +116,7 @@ class UserDto {
     required this.fullName,
     required this.roleName,
     this.phone,
+    this.avatarUrl,
     this.isActive = true,
     this.isPasswordChangeRequired = false,
   });
@@ -126,6 +128,7 @@ class UserDto {
       fullName: json['fullName']?.toString() ?? '',
       roleName: json['roleName']?.toString() ?? '',
       phone: json['phone']?.toString(),
+      avatarUrl: json['avatarUrl']?.toString(),
       isActive: json['isActive'] as bool? ?? true,
       isPasswordChangeRequired:
           json['isPasswordChangeRequired'] as bool? ?? false,
@@ -138,6 +141,7 @@ class UserDto {
     'fullName': fullName,
     'roleName': roleName,
     if (phone != null) 'phone': phone,
+    if (avatarUrl != null) 'avatarUrl': avatarUrl,
     'isActive': isActive,
     'isPasswordChangeRequired': isPasswordChangeRequired,
   };

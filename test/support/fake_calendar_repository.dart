@@ -96,20 +96,13 @@ class MockCalendarRepositoryImpl implements CalendarRepository {
   }
 
   @override
-  Future<List<LiturgicalDay>> getLiturgicalDays(
-    String fromDate,
-    String toDate,
-  ) async => [];
-  @override
-  Future<LiturgicalDay?> getLiturgicalDay(String date) async => null;
-  @override
   Future<PublicAppSettings> getPublicSettings() async =>
       const PublicAppSettings(choirName: 'Harmonia');
   @override
   Future<List<RehearsalSong>> getRehearsalSongs(String id) async => const [];
   @override
-  Future<int> syncLiturgicalDays(int year) async => 365;
-
+  Future<List<RehearsalRecording>> getRehearsalRecordings(String id) async =>
+      const [];
   List<LiturgicalEvent> _events = List.from(MockCalendarData.events);
   final List<RehearsalSession> _rehearsals = List.from(
     MockCalendarData.rehearsals,
@@ -134,7 +127,10 @@ class MockCalendarRepositoryImpl implements CalendarRepository {
   }
 
   @override
-  Future<List<RehearsalSession>> getRehearsals() async {
+  Future<List<RehearsalSession>> getRehearsals({
+    String? fromDate,
+    String? toDate,
+  }) async {
     await Future.delayed(const Duration(milliseconds: 200));
     return _rehearsals;
   }

@@ -15,6 +15,7 @@ abstract class MusicRepository {
     String materialId,
     String songId,
   );
+  Future<MusicMaterialPlaybackDto> getMaterialPlayback(String materialId);
   Future<List<SongListItem>> getSongListForEvent(String eventId);
   Future<SongListDto?> getApprovedSongList(String eventId);
   Future<SongListItem?> getSongDetail(String songId);
@@ -91,6 +92,10 @@ class MusicRepositoryImpl implements MusicRepository {
       page = result.pageNumber + 1;
     }
   }
+
+  @override
+  Future<MusicMaterialPlaybackDto> getMaterialPlayback(String materialId) =>
+      apiService.getMaterialPlayback(materialId);
 
   @override
   Future<SongListItem?> getSongDetail(String songId) async {

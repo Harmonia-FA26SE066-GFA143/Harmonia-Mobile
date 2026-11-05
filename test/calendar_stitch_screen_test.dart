@@ -8,6 +8,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:harmonia_mobile/app/theme/app_theme.dart';
 import 'package:harmonia_mobile/core/di/core_providers.dart';
 import 'package:harmonia_mobile/core/errors/app_exceptions.dart';
 import 'package:harmonia_mobile/core/session/session_manager.dart';
@@ -28,18 +29,19 @@ class StitchCalendarRepository extends MockCalendarRepositoryImpl {
   );
   String eventTime = '19:00:00';
   String rehearsalTimeRange = '18:00 – 18:45';
+  int eventOffsetDays = 0;
   DateTime? rehearsalInstant;
   bool failEvents = false;
   bool failAttendance = false;
   int eventCalls = 0;
   int detailCalls = 0;
-  final ranges = <LiturgicalDateRange>[];
+  final rehearsalRanges = <RehearsalDateRange>[];
   late final event = LiturgicalEvent(
     id: 'event-api',
     title: 'Thánh lễ từ API',
     categoryName: 'Thánh lễ',
     seasonName: 'Mùa Thường Niên',
-    date: day,
+    date: DateTime(day.year, day.month, day.day + eventOffsetDays),
     timeRange: eventTime,
     location: 'Nhà thờ API',
     assignedVocalPart: 'Soprano',
@@ -62,28 +64,19 @@ class StitchCalendarRepository extends MockCalendarRepositoryImpl {
   }
 
   @override
-  Future<List<RehearsalSession>> getRehearsals() async => [rehearsal];
+  Future<List<RehearsalSession>> getRehearsals({
+    String? fromDate,
+    String? toDate,
+  }) async {
+    if (fromDate != null && toDate != null) {
+      rehearsalRanges.add((fromDate: fromDate, toDate: toDate));
+    }
+    return [rehearsal];
+  }
+
   @override
   Future<PublicAppSettings> getPublicSettings() async =>
       const PublicAppSettings(choirName: 'Ca đoàn API');
-  @override
-  Future<List<LiturgicalDay>> getLiturgicalDays(
-    String fromDate,
-    String toDate,
-  ) async {
-    ranges.add((fromDate: fromDate, toDate: toDate));
-    final start = DateTime.parse(fromDate);
-    final end = DateTime.parse(toDate);
-    final count = end.difference(start).inDays + 1;
-    return List.generate(count, (i) {
-      final date = DateTime(start.year, start.month, start.day + i);
-      return LiturgicalDay(
-        date: date,
-        celebrationName: 'Lễ ngày ${dateKey(date)}',
-      );
-    });
-  }
-
   @override
   Future<MemberEventDetail> getEventDetail(String id) async =>
       MemberEventDetail(
@@ -197,9 +190,10 @@ void main() {
   Future<void> open(
     WidgetTester tester, {
     double width = 390,
+    double height = 1800,
     double scale = 1,
   }) async {
-    tester.view.physicalSize = Size(width, 1800);
+    tester.view.physicalSize = Size(width, height);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -237,6 +231,7 @@ void main() {
         container: container,
         child: MaterialApp.router(
           routerConfig: router,
+          theme: AppTheme.lightTheme,
           builder: (_, child) => MediaQuery(
             data: MediaQueryData(
               size: Size(width, 1800),
@@ -257,37 +252,79 @@ void main() {
     expect(find.text('Lịch của tôi'), findsOneWidget);
     expect(find.text('Ca đoàn API'), findsOneWidget);
     expect(find.text('Lịch tuần'), findsOneWidget);
-    expect(find.text('Lịch phụng vụ'), findsOneWidget);
+    expect(find.text('Lịch tháng'), findsOneWidget);
     expect(find.text('Điểm danh'), findsNothing);
     expect(find.byTooltip('Tuần sau'), findsOneWidget);
     expect(find.text('Hôm nay'), findsOneWidget);
-    expect(find.textContaining('buổi tập trong ngày'), findsOneWidget);
+    expect(find.textContaining('hoạt động trong ngày'), findsNothing);
     expect(find.text('Lịch lễ 7 ngày tới'), findsNothing);
     // Reload and notification icons are removed
     expect(find.byIcon(Icons.refresh_rounded), findsNothing);
     expect(find.byIcon(Icons.notifications_none_rounded), findsNothing);
   });
 
+  testWidgets('week view requests the selected week date range', (
+    tester,
+  ) async {
+    await open(tester);
+    final weekStart = DateTime(
+      repo.day.year,
+      repo.day.month,
+      repo.day.day - repo.day.weekday + 1,
+    );
+    expect(
+      repo.rehearsalRanges,
+      contains((
+        fromDate: dateKey(weekStart),
+        toDate: dateKey(weekStart.add(const Duration(days: 6))),
+      )),
+    );
+  });
+
   testWidgets(
-    'week timeline displays rehearsal sessions and hides BE liturgical events',
+    'week timeline displays service and rehearsal activities from the API',
     (tester) async {
       await open(tester);
       expect(
         find.byKey(const ValueKey('timeline-rehearsal-rehearsal-api')),
         findsOneWidget,
       );
-      // Liturgical events from BE are NOT displayed in the week timeline
       expect(
         find.byKey(const ValueKey('timeline-event-event-api')),
-        findsNothing,
+        findsOneWidget,
       );
       expect(find.text('Buổi tập từ API'), findsOneWidget);
-      expect(find.text('Thánh lễ từ API'), findsNothing);
+      expect(find.text('Thánh lễ từ API'), findsOneWidget);
       expect(find.textContaining('Có mặt'), findsOneWidget);
       expect(repo.detailCalls, 1);
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('tapping a date displays service scheduled for that date', (
+    tester,
+  ) async {
+    repo.eventOffsetDays = 2;
+    await open(tester);
+    expect(find.text('Thánh lễ từ API'), findsNothing);
+
+    final eventDay = DateTime(
+      repo.day.year,
+      repo.day.month,
+      repo.day.day + repo.eventOffsetDays,
+    );
+    await tester.tap(find.byKey(ValueKey('calendar-day-${dateKey(eventDay)}')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('timeline-event-event-api')),
+      findsOneWidget,
+    );
+    expect(find.text('Thánh lễ từ API'), findsOneWidget);
+    expect(find.text('Buổi tập từ API'), findsNothing);
+    expect(find.text('Soprano'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'UTC rehearsal instant formats with parish clock on the week timeline',
@@ -316,6 +353,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Buổi tập từ API'), findsNothing);
       expect(find.textContaining('Chưa có lịch'), findsOneWidget);
+      expect(find.textContaining('0 hoạt động trong ngày'), findsNothing);
+      expect(find.textContaining('Giờ Việt Nam'), findsNothing);
       await tester.tap(find.text('Hôm nay'));
       await tester.pumpAndSettle();
       expect(find.text('Buổi tập từ API'), findsOneWidget);
@@ -329,65 +368,85 @@ void main() {
   );
 
   testWidgets(
-    'liturgical tab renders month calendar and date detail dialog when day tapped',
+    'month calendar shows only published event and rehearsal details',
     (tester) async {
       await open(tester);
-      await tester.tap(find.text('Lịch phụng vụ'));
+      await tester.tap(find.text('Lịch tháng'));
       await tester.pumpAndSettle();
 
-      // Month selector title is present
-      expect(find.textContaining('Tháng'), findsWidgets);
-      // Weekday column headers matching Image 1
+      expect(
+        repo.rehearsalRanges,
+        contains((
+          fromDate: dateKey(DateTime(repo.day.year, repo.day.month, 1)),
+          toDate: dateKey(DateTime(repo.day.year, repo.day.month + 1, 0)),
+        )),
+      );
       for (final col in ['CN', 'Th2', 'Th3', 'Th4', 'Th5', 'Th6', 'Th7']) {
         expect(find.text(col), findsOneWidget);
       }
 
-      // Tap on day in month grid
-      final dayFinder =
-          find.byKey(ValueKey('calendar-month-day-${repo.day.day}'));
+      final dayFinder = find.byKey(
+        ValueKey('calendar-month-day-${repo.day.day}'),
+      );
       expect(dayFinder, findsOneWidget);
       await tester.tap(dayFinder);
       await tester.pumpAndSettle();
 
-      // Dialog shows formatted date dd/MM/yyyy and liturgical celebration name
       expect(
         find.text(DateFormat('dd/MM/yyyy').format(repo.day)),
         findsOneWidget,
       );
-      expect(
-        find.textContaining('Lễ ngày ${dateKey(repo.day)}'),
-        findsOneWidget,
-      );
-
-      // Close dialog
-      await tester.tap(find.text('Đóng'));
-      await tester.pumpAndSettle();
+      expect(find.text('Thánh lễ từ API'), findsOneWidget);
+      expect(find.text('Buổi tập từ API'), findsOneWidget);
+      expect(find.text('SỰ KIỆN SẮP TỚI'), findsOneWidget);
+      expect(find.text('BUỔI TẬP ĐƯỢC GIAO'), findsOneWidget);
+      expect(find.textContaining('Mùa phụng vụ'), findsNothing);
       expect(find.text('Đóng'), findsNothing);
+      expect(tester.takeException(), isNull);
     },
   );
 
-  testWidgets(
-    'month selector opens dialog to choose month and year',
-    (tester) async {
-      await open(tester);
-      await tester.tap(find.text('Lịch phụng vụ'));
-      await tester.pumpAndSettle();
+  testWidgets('day detail dialog is visible on a phone-sized viewport', (
+    tester,
+  ) async {
+    await open(tester, width: 360, height: 800);
+    await tester.tap(find.text('Lịch tháng'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(ValueKey('calendar-month-day-${repo.day.day}')),
+    );
+    await tester.pumpAndSettle();
 
-      // Tap on month title to open picker
-      final monthTitle = find.textContaining('Tháng ${repo.day.month}');
-      await tester.tap(monthTitle.first);
-      await tester.pumpAndSettle();
+    expect(
+      find.text(DateFormat('dd/MM/yyyy').format(repo.day)),
+      findsOneWidget,
+    );
+    expect(find.text('Lịch tháng'), findsWidgets);
+    expect(find.text('Đóng'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 
-      expect(find.text('Chọn tháng và năm'), findsOneWidget);
-      expect(find.text('Tháng 12'), findsOneWidget);
+  testWidgets('month selector opens dialog to choose month and year', (
+    tester,
+  ) async {
+    await open(tester);
+    await tester.tap(find.text('Lịch tháng'));
+    await tester.pumpAndSettle();
 
-      // Tap Tháng 12
-      await tester.tap(find.text('Tháng 12'));
-      await tester.pumpAndSettle();
+    // Tap on month title to open picker
+    final monthTitle = find.textContaining('Tháng ${repo.day.month}');
+    await tester.tap(monthTitle.first);
+    await tester.pumpAndSettle();
 
-      expect(find.textContaining('Tháng 12'), findsWidgets);
-    },
-  );
+    expect(find.text('Chọn tháng và năm'), findsOneWidget);
+    expect(find.text('Tháng 12'), findsOneWidget);
+
+    // Tap Tháng 12
+    await tester.tap(find.text('Tháng 12'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Tháng 12'), findsWidgets);
+  });
 
   testWidgets('attendance failure is retryable without inventing an absence', (
     tester,

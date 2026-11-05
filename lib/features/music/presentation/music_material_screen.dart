@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:dio/dio.dart';
@@ -8,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../core/di/core_providers.dart';
+import '../../../core/errors/app_exceptions.dart';
 import '../../../core/errors/error_messages.dart';
 import '../data/music_dto.dart';
 import '../data/music_file_loader.dart';
@@ -36,6 +38,8 @@ class _MusicMaterialScreenState extends ConsumerState<MusicMaterialScreen> {
   bool _busy = false;
   bool _saving = false;
   bool _playing = false;
+  bool _activeIsMidi = false;
+  PlaybackInstrument? _midiInstrument;
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
   String? _fileError;
@@ -79,6 +83,8 @@ class _MusicMaterialScreenState extends ConsumerState<MusicMaterialScreen> {
     _busy = false;
     _saving = false;
     _playing = false;
+    _activeIsMidi = false;
+    _midiInstrument = null;
     _fileError = null;
     _position = Duration.zero;
     _duration = Duration.zero;
@@ -118,12 +124,14 @@ class _MusicMaterialScreenState extends ConsumerState<MusicMaterialScreen> {
       var resumePosition = Duration.zero;
       if (player?.state == PlayerState.paused) {
         resumePosition = _position;
-        try {
-          await player!.resume();
-          if (!_current(epoch, operation)) await player.stop();
-          return;
-        } catch (_) {
-          // Fetch a fresh URL once if the buffered source can no longer resume.
+        if (!_activeIsMidi) {
+          try {
+            await player!.resume();
+            if (!_current(epoch, operation)) await player.stop();
+            return;
+          } catch (_) {
+            // Fetch a fresh URL once if the buffered source can no longer resume.
+          }
         }
       }
       final fresh = await ref
@@ -137,9 +145,11 @@ class _MusicMaterialScreenState extends ConsumerState<MusicMaterialScreen> {
         );
         return;
       }
-      final uri = MusicFileLoader.validatedUrl(fresh.fileUrl);
       final extension = fresh.fileName.split('.').last.toLowerCase();
       if (extension == 'pdf') {
+        _activeIsMidi = false;
+        _midiInstrument = null;
+        final uri = MusicFileLoader.validatedUrl(fresh.fileUrl);
         final pdf = await MusicFileLoader().downloadPdf(uri.toString(), token);
         if (!_current(epoch, operation)) {
           await pdf.dispose();
@@ -155,8 +165,38 @@ class _MusicMaterialScreenState extends ConsumerState<MusicMaterialScreen> {
         'aac',
         'ogg',
       ].contains(extension)) {
+        _activeIsMidi = false;
+        _midiInstrument = null;
+        final uri = MusicFileLoader.validatedUrl(fresh.fileUrl);
         final audio = _audioPlayer();
         await audio.play(UrlSource(uri.toString()), position: resumePosition);
+        if (!_current(epoch, operation)) await audio.stop();
+      } else if (extension == 'mid' || extension == 'midi') {
+        final playback = await ref
+            .read(musicRepositoryProvider)
+            .getMaterialPlayback(widget.materialId);
+        if (!_current(epoch, operation)) return;
+        if (playback.status != 'Ready' || playback.audioUrl.isEmpty) {
+          throw const AppException(
+            code: 'MATERIAL_PLAYBACK_UNAVAILABLE',
+            message: 'MIDI playback is unavailable.',
+            statusCode: 409,
+          );
+        }
+        final playbackUri = MusicFileLoader.validatedUrl(playback.audioUrl);
+        final duration = Duration(
+          milliseconds: (playback.durationSeconds * 1000).round(),
+        );
+        setState(() {
+          _activeIsMidi = true;
+          _midiInstrument = playback.instrument;
+          if (duration > Duration.zero) _duration = duration;
+        });
+        final audio = _audioPlayer();
+        await audio.play(
+          UrlSource(playbackUri.toString()),
+          position: resumePosition,
+        );
         if (!_current(epoch, operation)) await audio.stop();
       } else {
         setState(
@@ -209,8 +249,31 @@ class _MusicMaterialScreenState extends ConsumerState<MusicMaterialScreen> {
     }
   }
 
-  String _time(Duration value) =>
-      '${value.inMinutes.toString().padLeft(2, '0')}:${(value.inSeconds % 60).toString().padLeft(2, '0')}';
+  String _time(Duration value) {
+    final minutes = value.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = value.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return value.inHours > 0
+        ? '${value.inHours}:$minutes:$seconds'
+        : '${value.inMinutes}:$seconds';
+  }
+
+  String _durationLabel(Duration value) => _time(value);
+
+  Future<void> _seekAudio(Duration position) async {
+    final player = _player;
+    if (player == null || _busy) return;
+
+    try {
+      await player.seek(position);
+      if (player.state != PlayerState.playing) await player.resume();
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _fileError = 'Không thể tua âm thanh. Vui lòng thử lại.',
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -252,6 +315,15 @@ class _MusicMaterialScreenState extends ConsumerState<MusicMaterialScreen> {
                 ),
               );
             }
+            final extension = material.fileName.split('.').last.toLowerCase();
+            final isMidiMaterial = extension == 'mid' || extension == 'midi';
+            final isAudioMaterial = const [
+              'mp3',
+              'm4a',
+              'wav',
+              'aac',
+              'ogg',
+            ].contains(extension);
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -298,18 +370,46 @@ class _MusicMaterialScreenState extends ConsumerState<MusicMaterialScreen> {
                       ),
                       if (_saving) const LinearProgressIndicator(),
                       const SizedBox(height: 12),
-                      FilledButton.icon(
-                        onPressed: _busy ? null : () => _open(material),
-                        icon: _busy
-                            ? const SizedBox.square(
-                                dimension: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
+                      if (!isAudioMaterial || _player == null)
+                        FilledButton.icon(
+                          onPressed: _busy ? null : () => _open(material),
+                          icon: _busy
+                              ? const SizedBox.square(
+                                  dimension: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Icon(
+                                  _playing
+                                      ? Icons.pause
+                                      : isMidiMaterial
+                                      ? Icons.music_note_rounded
+                                      : Icons.open_in_new,
                                 ),
-                              )
-                            : Icon(_playing ? Icons.pause : Icons.open_in_new),
-                        label: Text(_playing ? 'Tạm dừng' : 'Mở tài liệu'),
-                      ),
+                          label: Text(
+                            _playing
+                                ? 'Tạm dừng'
+                                : isMidiMaterial
+                                ? 'Phát MIDI'
+                                : 'Mở tài liệu',
+                          ),
+                        ),
+                      if (_midiInstrument != null) ...[
+                        const SizedBox(height: 8),
+                        Card(
+                          child: ListTile(
+                            leading: const Icon(
+                              Icons.piano_rounded,
+                              color: AppColors.primary,
+                            ),
+                            title: Text(_midiInstrument!.label),
+                            subtitle: Text(
+                              'Thời lượng: ${_durationLabel(_duration)}',
+                            ),
+                          ),
+                        ),
+                      ],
                       if (_fileError != null)
                         Padding(
                           padding: const EdgeInsets.only(top: 8),
@@ -321,26 +421,40 @@ class _MusicMaterialScreenState extends ConsumerState<MusicMaterialScreen> {
                     ],
                   ),
                 ),
-                if (_player != null && _pdf == null) ...[
-                  Slider(
-                    value: _position.inMilliseconds.toDouble().clamp(
-                      0,
-                      _duration.inMilliseconds.toDouble(),
+                if (_player != null && _pdf == null)
+                  if (isAudioMaterial)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      child: _AudioWaveformPlayer(
+                        position: _position,
+                        duration: _duration,
+                        isPlaying: _playing,
+                        isBusy: _busy,
+                        formatTime: _time,
+                        onTogglePlayback: () => _open(material),
+                        onSeek: _seekAudio,
+                      ),
+                    )
+                  else ...[
+                    Slider(
+                      value: _position.inMilliseconds.toDouble().clamp(
+                        0,
+                        _duration.inMilliseconds.toDouble(),
+                      ),
+                      max: _duration.inMilliseconds > 0
+                          ? _duration.inMilliseconds.toDouble()
+                          : 1,
+                      onChanged: _busy || _duration == Duration.zero
+                          ? null
+                          : (value) => _player?.seek(
+                              Duration(milliseconds: value.round()),
+                            ),
                     ),
-                    max: _duration.inMilliseconds > 0
-                        ? _duration.inMilliseconds.toDouble()
-                        : 1,
-                    onChanged: _busy || _duration == Duration.zero
-                        ? null
-                        : (value) => _player?.seek(
-                            Duration(milliseconds: value.round()),
-                          ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Text('${_time(_position)} / ${_time(_duration)}'),
-                  ),
-                ],
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Text('${_time(_position)} / ${_time(_duration)}'),
+                    ),
+                  ],
                 if (_pdf != null)
                   Expanded(
                     child: PDFView(
@@ -370,4 +484,168 @@ class _MusicMaterialScreenState extends ConsumerState<MusicMaterialScreen> {
       ),
     );
   }
+}
+
+class _AudioWaveformPlayer extends StatelessWidget {
+  const _AudioWaveformPlayer({
+    required this.position,
+    required this.duration,
+    required this.isPlaying,
+    required this.isBusy,
+    required this.formatTime,
+    required this.onTogglePlayback,
+    required this.onSeek,
+  });
+
+  final Duration position;
+  final Duration duration;
+  final bool isPlaying;
+  final bool isBusy;
+  final String Function(Duration) formatTime;
+  final VoidCallback onTogglePlayback;
+  final ValueChanged<Duration> onSeek;
+
+  double get _progress => duration.inMilliseconds <= 0
+      ? 0
+      : (position.inMilliseconds / duration.inMilliseconds).clamp(0.0, 1.0);
+
+  void _seekAt(double localX, double width) {
+    if (duration <= Duration.zero || width <= 0) return;
+    final progress = (localX / width).clamp(0.0, 1.0);
+    onSeek(
+      Duration(milliseconds: (duration.inMilliseconds * progress).round()),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final canSeek = duration > Duration.zero && !isBusy;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          SizedBox.square(
+            dimension: 44,
+            child: IconButton.filled(
+              tooltip: isPlaying ? 'Tạm dừng' : 'Phát',
+              onPressed: isBusy ? null : onTogglePlayback,
+              style: IconButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.onPrimary,
+                disabledBackgroundColor: AppColors.primary.withValues(
+                  alpha: 0.55,
+                ),
+              ),
+              icon: isBusy
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.onPrimary,
+                      ),
+                    )
+                  : Icon(
+                      isPlaying
+                          ? Icons.pause_rounded
+                          : Icons.play_arrow_rounded,
+                    ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Semantics(
+                  label: 'Tiến trình phát âm thanh',
+                  value: '${formatTime(position)} / ${formatTime(duration)}',
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      return GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTapDown: canSeek
+                            ? (details) => _seekAt(
+                                details.localPosition.dx,
+                                constraints.maxWidth,
+                              )
+                            : null,
+                        onHorizontalDragUpdate: canSeek
+                            ? (details) => _seekAt(
+                                details.localPosition.dx,
+                                constraints.maxWidth,
+                              )
+                            : null,
+                        child: SizedBox(
+                          height: 42,
+                          width: double.infinity,
+                          child: CustomPaint(
+                            painter: _WaveformPainter(progress: _progress),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    '${formatTime(position)} / ${formatTime(duration)}',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: AppColors.muted,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WaveformPainter extends CustomPainter {
+  const _WaveformPainter({required this.progress});
+
+  final double progress;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const barWidth = 3.0;
+    const gap = 3.0;
+    final step = barWidth + gap;
+    final count = (size.width / step).floor();
+    final centerY = size.height / 2;
+    final activeBars = (count * progress).round();
+    final activePaint = Paint()
+      ..color = AppColors.primaryLight.withValues(alpha: 0.82);
+    final inactivePaint = Paint()
+      ..color = AppColors.primaryLight.withValues(alpha: 0.28);
+
+    for (var index = 0; index < count; index++) {
+      final wave = 0.18 + 0.82 * (0.5 + 0.5 * math.sin(index * 1.73));
+      final height = 7 + wave * (size.height * 0.72);
+      final rect = RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(index * step + barWidth / 2, centerY),
+          width: barWidth,
+          height: height,
+        ),
+        const Radius.circular(2),
+      );
+      canvas.drawRRect(rect, index < activeBars ? activePaint : inactivePaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _WaveformPainter oldDelegate) =>
+      oldDelegate.progress != progress;
 }

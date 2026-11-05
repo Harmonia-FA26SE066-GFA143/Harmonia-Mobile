@@ -11,15 +11,16 @@ import 'liturgical_models.dart';
 abstract class CalendarRepository {
   Future<MemberEventDetail> getEventDetail(String id);
   Future<MemberRehearsalDetail> getRehearsalDetail(String id);
-  Future<List<LiturgicalDay>> getLiturgicalDays(String fromDate, String toDate);
-  Future<LiturgicalDay?> getLiturgicalDay(String date);
   Future<PublicAppSettings> getPublicSettings();
   Future<List<RehearsalSong>> getRehearsalSongs(String id);
+  Future<List<RehearsalRecording>> getRehearsalRecordings(String id);
   Future<LiturgicalEvent> getUpcomingEvent();
   Future<List<LiturgicalEvent>> getEvents();
-  Future<List<RehearsalSession>> getRehearsals();
+  Future<List<RehearsalSession>> getRehearsals({
+    String? fromDate,
+    String? toDate,
+  });
   Future<void> updateParticipation(String eventId, ParticipationStatus status);
-  Future<int> syncLiturgicalDays(int year);
 }
 
 class CalendarRepositoryImpl implements CalendarRepository {
@@ -91,8 +92,14 @@ class CalendarRepositoryImpl implements CalendarRepository {
   }
 
   @override
-  Future<List<RehearsalSession>> getRehearsals() async {
-    final rawList = await apiService.getUpcomingRehearsals();
+  Future<List<RehearsalSession>> getRehearsals({
+    String? fromDate,
+    String? toDate,
+  }) async {
+    final rawList = await apiService.getUpcomingRehearsals(
+      fromDate: fromDate,
+      toDate: toDate,
+    );
     return rawList.map((map) {
       final id = map['id']?.toString() ?? '';
       final location = map['locationName']?.toString() ?? 'Nhà thờ';
@@ -172,33 +179,14 @@ class CalendarRepositoryImpl implements CalendarRepository {
       apiService.getRehearsalDetail(id);
 
   @override
-  Future<List<LiturgicalDay>> getLiturgicalDays(
-    String fromDate,
-    String toDate,
-  ) async {
-    final from = DateTime.parse(fromDate);
-    final to = DateTime.parse(toDate);
-    if (to.isBefore(from) || to.difference(from).inDays >= 366) {
-      throw const ValidationException(
-        code: 'REPORT_DATE_RANGE_INVALID',
-        message: 'Invalid date range.',
-      );
-    }
-    return apiService.getLiturgicalDays(fromDate, toDate);
-  }
-
-  @override
-  Future<LiturgicalDay?> getLiturgicalDay(String date) =>
-      apiService.getLiturgicalDay(date);
-  @override
   Future<PublicAppSettings> getPublicSettings() =>
       apiService.getPublicSettings();
   @override
   Future<List<RehearsalSong>> getRehearsalSongs(String id) =>
       apiService.getRehearsalSongs(id);
   @override
-  Future<int> syncLiturgicalDays(int year) =>
-      apiService.syncLiturgicalDays(year);
+  Future<List<RehearsalRecording>> getRehearsalRecordings(String id) =>
+      apiService.getRehearsalRecordings(id);
 }
 
 final calendarApiServiceProvider = Provider<CalendarApiService>((ref) {
@@ -296,6 +284,15 @@ final calendarNotifierProvider =
 final rehearsalsProvider = FutureProvider<List<RehearsalSession>>((ref) {
   return ref.watch(calendarRepositoryProvider).getRehearsals();
 });
+
+typedef RehearsalDateRange = ({String fromDate, String toDate});
+
+final rehearsalsForRangeProvider = FutureProvider.autoDispose
+    .family<List<RehearsalSession>, RehearsalDateRange>((ref, range) {
+      return ref
+          .watch(calendarRepositoryProvider)
+          .getRehearsals(fromDate: range.fromDate, toDate: range.toDate);
+    });
 final eventDetailProvider = FutureProvider.autoDispose
     .family<MemberEventDetail, String>((ref, id) {
       return ref.watch(calendarRepositoryProvider).getEventDetail(id);
@@ -307,18 +304,11 @@ final rehearsalDetailProvider = FutureProvider.autoDispose
 final publicAppSettingsProvider = FutureProvider<PublicAppSettings>((ref) {
   return ref.watch(calendarRepositoryProvider).getPublicSettings();
 });
-final liturgicalDayProvider = FutureProvider.autoDispose
-    .family<LiturgicalDay?, String>((ref, date) {
-      return ref.watch(calendarRepositoryProvider).getLiturgicalDay(date);
-    });
-typedef LiturgicalDateRange = ({String fromDate, String toDate});
-final liturgicalDaysProvider = FutureProvider.autoDispose
-    .family<List<LiturgicalDay>, LiturgicalDateRange>((ref, range) {
-      return ref
-          .watch(calendarRepositoryProvider)
-          .getLiturgicalDays(range.fromDate, range.toDate);
-    });
 final rehearsalSongsProvider = FutureProvider.autoDispose
     .family<List<RehearsalSong>, String>((ref, id) {
       return ref.watch(calendarRepositoryProvider).getRehearsalSongs(id);
+    });
+final rehearsalRecordingsProvider = FutureProvider.autoDispose
+    .family<List<RehearsalRecording>, String>((ref, id) {
+      return ref.watch(calendarRepositoryProvider).getRehearsalRecordings(id);
     });

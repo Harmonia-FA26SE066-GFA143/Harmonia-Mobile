@@ -9,6 +9,7 @@ class ApiEndpoints {
   static const String logoutAll = '/api/auth/logout-all';
   static const String changePassword = '/api/auth/change-password';
   static const String authMe = '/api/auth/me';
+  static const String authMeAvatar = '/api/auth/me/avatar';
   static const String forgotPassword = '/api/auth/forgot-password';
   static const String resetPassword = '/api/auth/reset-password';
 
@@ -20,6 +21,8 @@ class ApiEndpoints {
   static const String memberSkills = '/api/member-skills';
   static const String memberSkillsMine = '/api/member-skills/mine';
   static String memberSkillById(String id) => '/api/member-skills/$id';
+  static String memberSkillEvidence(String id) =>
+      '/api/member-skills/$id/evidence';
 
   // Schedule endpoints (Upcoming events & rehearsals)
   static const String scheduleEvents = '/api/schedule/events';
@@ -29,11 +32,10 @@ class ApiEndpoints {
   static String scheduleRehearsal(String id) => '/api/schedule/rehearsals/$id';
   static String respondParticipation(String eventId) =>
       '/api/event-participations/mine/$eventId';
-  static const String liturgicalDays = '/api/liturgical-days';
-  static String liturgicalDay(String date) => '/api/liturgical-days/$date';
-  static const String syncLiturgicalDays = '/api/liturgical-days/sync';
   static const String publicSystemSettings = '/api/system-settings/public';
   static String rehearsalSongs(String id) => '/api/rehearsals/$id/songs';
+  static String rehearsalRecordings(String id) =>
+      '/api/rehearsals/$id/recordings';
   static const String scheduleRehearsals = '/api/schedule/rehearsals';
 
   // Song library endpoints
@@ -47,6 +49,8 @@ class ApiEndpoints {
   // Music materials endpoints
   static const String musicMaterials = '/api/music-materials';
   static const String musicMaterialsMine = '/api/music-materials/mine';
+  static String musicMaterialPlayback(String id) =>
+      '/api/music-materials/$id/playback';
   static String materialLearningProgress(String id) =>
       '/api/music-materials/$id/learning-progress';
 

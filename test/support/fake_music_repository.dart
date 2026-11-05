@@ -131,6 +131,10 @@ class MockMusicRepositoryImpl implements MusicRepository {
     String songId,
   ) async => null;
 
+  @override
+  Future<MusicMaterialPlaybackDto> getMaterialPlayback(String materialId) =>
+      throw UnsupportedError('MIDI playback is unavailable in mock data.');
+
   List<SongListItem> _songs = List.from(MockMusicData.songs);
 
   @override

@@ -47,7 +47,10 @@ class FakeCalendarApiService extends CalendarApiService {
   ];
 
   @override
-  Future<List<Map<String, dynamic>>> getUpcomingRehearsals() async => [
+  Future<List<Map<String, dynamic>>> getUpcomingRehearsals({
+    String? fromDate,
+    String? toDate,
+  }) async => [
     {
       'id': 'reh-202',
       'startTime': '2026-10-14T19:00:00Z',

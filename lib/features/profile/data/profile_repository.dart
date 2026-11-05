@@ -22,6 +22,8 @@ final memberProfileApiServiceProvider = Provider<MemberProfileApiService>((
 abstract class ProfileRepository {
   Future<MemberProfileDto> getProfile();
   Future<MemberProfileDto> updateProfile(UpdateMyMemberProfileRequest request);
+  Future<void> updateAvatar(String filePath);
+  Future<void> deleteAvatar();
   Future<List<MemberSkill>> getSkills({
     String? status,
     int pageNumber = 1,
@@ -33,12 +35,17 @@ abstract class ProfileRepository {
     int pageSize = 50,
   });
   Future<MemberSkill?> getSkillById(String id);
-  Future<void> declareNewSkill({
+  Future<MemberSkill> declareNewSkill({
     required String skillId,
     String? level,
     String? name,
     String? categoryName,
     String? note,
+  });
+  Future<MemberSkill> uploadSkillEvidence({
+    required String id,
+    required String filePath,
+    void Function(int sent, int total)? onSendProgress,
   });
   Future<PagedList<ParticipationHistoryDto>> getParticipationHistory({
     String? liturgicalSeasonId,
@@ -66,6 +73,13 @@ class ProfileRepositoryImpl implements ProfileRepository {
     return await apiService.updateMyProfile(request);
   }
 
+  @override
+  Future<void> updateAvatar(String filePath) =>
+      apiService.updateMyAvatar(filePath);
+
+  @override
+  Future<void> deleteAvatar() => apiService.deleteMyAvatar();
+
   MemberSkill _mapSkillDto(MemberSkillDto dto) {
     SkillApprovalStatus status;
     if (dto.status == 'Approved') {
@@ -88,6 +102,15 @@ class ProfileRepositoryImpl implements ProfileRepository {
       rejectReason: dto.rejectReason,
       declaredAt: dto.declaredAt,
       approvedAt: dto.approvedAt,
+      evidence: dto.evidence == null
+          ? null
+          : MemberSkillEvidence(
+              type: dto.evidence!.type,
+              fileName: dto.evidence!.fileName,
+              fileSizeBytes: dto.evidence!.fileSizeBytes,
+              uploadedAt: dto.evidence!.uploadedAt,
+              url: dto.evidence!.url,
+            ),
     );
   }
 
@@ -140,15 +163,28 @@ class ProfileRepositoryImpl implements ProfileRepository {
   }
 
   @override
-  Future<void> declareNewSkill({
+  Future<MemberSkill> declareNewSkill({
     required String skillId,
     String? level,
     String? name,
     String? categoryName,
     String? note,
-  }) async {
-    await apiService.declareSkill(skillId: skillId, level: level);
-  }
+  }) async => _mapSkillDto(
+    await apiService.declareSkill(skillId: skillId, level: level),
+  );
+
+  @override
+  Future<MemberSkill> uploadSkillEvidence({
+    required String id,
+    required String filePath,
+    void Function(int sent, int total)? onSendProgress,
+  }) async => _mapSkillDto(
+    await apiService.uploadSkillEvidence(
+      id,
+      filePath,
+      onSendProgress: onSendProgress,
+    ),
+  );
 
   @override
   Future<PagedList<ParticipationHistoryDto>> getParticipationHistory({

@@ -4,24 +4,21 @@ import 'package:intl/intl.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
-import '../data/calendar_dto.dart';
 import '../data/calendar_repository.dart';
 import '../data/liturgical_models.dart';
 import 'liturgical_day_dialog.dart';
 
 /// Month calendar view styled after Image 1 (Semester Schedule layout).
 /// Allows choosing month and year, displays Sunday-to-Saturday columns,
-/// highlights today/selected date, shows indicator dots on active liturgical days,
-/// and opens the [LiturgicalDayDialog] when tapping on any day.
+/// highlights today/selected date, shows indicator dots only on published events and rehearsals,
+/// and opens the [LiturgicalDayDialog] when tapping on a date.
 class LiturgicalMonthCalendar extends ConsumerStatefulWidget {
   final List<LiturgicalEvent> events;
-  final List<RehearsalSession> rehearsals;
   final DateTime initialDate;
 
   const LiturgicalMonthCalendar({
     super.key,
     this.events = const [],
-    this.rehearsals = const [],
     required this.initialDate,
   });
 
@@ -46,7 +43,7 @@ class _LiturgicalMonthCalendarState
     _selectedDate = widget.initialDate;
   }
 
-  LiturgicalDateRange get _monthRange {
+  RehearsalDateRange get _monthRange {
     final firstDay = DateTime(_currentMonth.year, _currentMonth.month, 1);
     final lastDay = DateTime(_currentMonth.year, _currentMonth.month + 1, 0);
     return (
@@ -57,24 +54,15 @@ class _LiturgicalMonthCalendarState
 
   void _previousMonth() {
     setState(() {
-      _currentMonth = DateTime(
-        _currentMonth.year,
-        _currentMonth.month - 1,
-        1,
-      );
+      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1, 1);
     });
   }
 
   void _nextMonth() {
     setState(() {
-      _currentMonth = DateTime(
-        _currentMonth.year,
-        _currentMonth.month + 1,
-        1,
-      );
+      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 1);
     });
   }
-
 
   Future<void> _pickMonthYear(BuildContext context) async {
     int tempYear = _currentMonth.year;
@@ -149,21 +137,23 @@ class _LiturgicalMonthCalendarState
                       physics: const NeverScrollableScrollPhysics(),
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        mainAxisSpacing: 8,
-                        crossAxisSpacing: 8,
-                        childAspectRatio: 2.2,
-                      ),
+                            crossAxisCount: 3,
+                            mainAxisSpacing: 8,
+                            crossAxisSpacing: 8,
+                            childAspectRatio: 2.2,
+                          ),
                       itemCount: 12,
                       itemBuilder: (context, index) {
                         final monthNum = index + 1;
                         final isSelected =
-                            monthNum == tempMonth && tempYear == _currentMonth.year;
+                            monthNum == tempMonth &&
+                            tempYear == _currentMonth.year;
                         return InkWell(
                           borderRadius: BorderRadius.circular(8),
                           onTap: () {
                             setDialogState(() => tempMonth = monthNum);
-                            Navigator.of(ctx).pop(DateTime(tempYear, monthNum, 1));
+                            Navigator.of(ctx)
+                                .pop(DateTime(tempYear, monthNum, 1));
                           },
                           child: Container(
                             alignment: Alignment.center,
@@ -212,78 +202,47 @@ class _LiturgicalMonthCalendarState
     }
   }
 
-  bool _hasIndicatorDot(
-    DateTime dayDate,
-    LiturgicalDay? liturgicalDay,
-  ) {
-    // Check if choir event or rehearsal exists on this day
-    if (widget.events.any((e) => DateUtils.isSameDay(e.date, dayDate))) {
-      return true;
-    }
-    if (widget.rehearsals.any((r) => DateUtils.isSameDay(r.date, dayDate))) {
-      return true;
-    }
-    if (liturgicalDay == null) return false;
+  bool _hasIndicatorDot(DateTime dayDate, List<RehearsalSession> rehearsals) =>
+      widget.events.any((event) => DateUtils.isSameDay(event.date, dayDate)) ||
+      rehearsals.any(
+        (rehearsal) => DateUtils.isSameDay(rehearsal.date, dayDate),
+      );
 
-    // Sundays always have mass/celebrations
-    if (dayDate.weekday == DateTime.sunday) return true;
-
-    // Check rank for feasts / memorials / solemnities
-    final rank = liturgicalDay.rank?.toLowerCase();
-    if (rank != null &&
-        rank.isNotEmpty &&
-        !rank.contains('weekday') &&
-        !rank.contains('feria')) {
-      return true;
-    }
-
-    // Check celebration name: special saints or solemnities
-    final name = liturgicalDay.celebrationName.toLowerCase();
-    if (!name.contains('weekday') &&
-        !name.contains('feria') &&
-        !name.startsWith('thứ ')) {
-      return true;
-    }
-
-    return false;
-  }
-
-  void _onDayTapped(
-    DateTime dayDate,
-    LiturgicalDay? liturgicalDay,
-    bool isLoading,
-  ) {
-    setState(() {
-      _selectedDate = dayDate;
-    });
-
-    final dayEvents = widget.events
-        .where((e) => DateUtils.isSameDay(e.date, dayDate))
-        .toList();
-    final dayRehearsals = widget.rehearsals
-        .where((r) => DateUtils.isSameDay(r.date, dayDate))
-        .toList();
+  void _onDayTapped(DateTime dayDate, List<RehearsalSession> rehearsals) {
+    setState(() => _selectedDate = dayDate);
 
     LiturgicalDayDialog.show(
       context,
       date: dayDate,
-      liturgicalDay: liturgicalDay,
-      events: dayEvents,
-      rehearsals: dayRehearsals,
-      isLoading: isLoading,
+      events: widget.events
+          .where((event) => DateUtils.isSameDay(event.date, dayDate))
+          .toList(),
+      rehearsals: rehearsals
+          .where((rehearsal) => DateUtils.isSameDay(rehearsal.date, dayDate))
+          .toList(),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final daysState = ref.watch(liturgicalDaysProvider(_monthRange));
-    final liturgicalDays = daysState.asData?.value ?? const <LiturgicalDay>[];
+    final rehearsalRange = _monthRange;
+    final rehearsalsState = ref.watch(
+      rehearsalsForRangeProvider(rehearsalRange),
+    );
+    final rehearsals =
+        rehearsalsState.asData?.value ?? const <RehearsalSession>[];
     final today = DateUtils.dateOnly(DateTime.now());
 
-    final daysInMonth =
-        DateTime(_currentMonth.year, _currentMonth.month + 1, 0).day;
-    final firstWeekday =
-        DateTime(_currentMonth.year, _currentMonth.month, 1).weekday;
+    final daysInMonth = DateTime(
+      _currentMonth.year,
+      _currentMonth.month + 1,
+      0,
+    ).day;
+    final firstWeekday = DateTime(
+      _currentMonth.year,
+      _currentMonth.month,
+      1,
+    ).weekday;
     // Sunday-first offset: Sunday (weekday 7) -> 0, Monday (1) -> 1, ..., Saturday (6) -> 6
     final startOffset = firstWeekday % 7;
     final totalCells = startOffset + daysInMonth;
@@ -305,7 +264,10 @@ class _LiturgicalMonthCalendarState
               IconButton(
                 visualDensity: VisualDensity.compact,
                 padding: EdgeInsets.zero,
-                constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+                constraints: const BoxConstraints.tightFor(
+                  width: 32,
+                  height: 32,
+                ),
                 tooltip: 'Tháng trước',
                 icon: const Icon(Icons.chevron_left_rounded, size: 20),
                 onPressed: _previousMonth,
@@ -315,8 +277,10 @@ class _LiturgicalMonthCalendarState
                   borderRadius: BorderRadius.circular(8),
                   onTap: () => _pickMonthYear(context),
                   child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 4,
+                    ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -345,7 +309,10 @@ class _LiturgicalMonthCalendarState
               IconButton(
                 visualDensity: VisualDensity.compact,
                 padding: EdgeInsets.zero,
-                constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+                constraints: const BoxConstraints.tightFor(
+                  width: 32,
+                  height: 32,
+                ),
                 tooltip: 'Tháng sau',
                 icon: const Icon(Icons.chevron_right_rounded, size: 20),
                 onPressed: _nextMonth,
@@ -368,11 +335,27 @@ class _LiturgicalMonthCalendarState
           ),
           const SizedBox(height: 8),
 
-          // Loading bar if fetching liturgical days from BE API
-          if (daysState.isLoading)
+          if (rehearsalsState.isLoading)
             const Padding(
-              padding: EdgeInsets.symmetric(vertical: 4),
+              padding: EdgeInsets.only(bottom: 8),
               child: LinearProgressIndicator(minHeight: 2),
+            ),
+          if (rehearsalsState.hasError)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text('Không tải được lịch tập tháng này.'),
+                  ),
+                  TextButton(
+                    onPressed: () => ref.invalidate(
+                      rehearsalsForRangeProvider(rehearsalRange),
+                    ),
+                    child: const Text('Thử lại'),
+                  ),
+                ],
+              ),
             ),
 
           // Month Days Grid
@@ -397,63 +380,21 @@ class _LiturgicalMonthCalendarState
                 dayNumber,
               );
               final isToday = DateUtils.isSameDay(dayDate, today);
-              final isSelected = _selectedDate != null &&
+              final isSelected =
+                  _selectedDate != null &&
                   DateUtils.isSameDay(dayDate, _selectedDate!);
 
-              final dayData = liturgicalDays
-                  .where((d) => DateUtils.isSameDay(d.date, dayDate))
-                  .firstOrNull;
-
-              final hasDot = _hasIndicatorDot(dayDate, dayData);
+              final hasDot = _hasIndicatorDot(dayDate, rehearsals);
 
               return _CalendarDayCell(
                 dayNumber: dayNumber,
                 isToday: isToday,
                 isSelected: isSelected,
                 hasDot: hasDot,
-                onTap: () =>
-                    _onDayTapped(dayDate, dayData, daysState.isLoading),
+                onTap: () => _onDayTapped(dayDate, rehearsals),
               );
             },
           ),
-
-          if (daysState.hasError) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppColors.statusDangerSoft,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.error_outline_rounded,
-                    size: 18,
-                    color: AppColors.statusDanger,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Chưa tải được lịch phụng vụ từ máy chủ.',
-                      style: AppTypography.bodySmall.copyWith(
-                        color: AppColors.statusDanger,
-                      ),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () =>
-                        ref.invalidate(liturgicalDaysProvider(_monthRange)),
-                    style: TextButton.styleFrom(
-                      minimumSize: const Size(60, 32),
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                    ),
-                    child: const Text('Thử lại', style: TextStyle(fontSize: 12)),
-                  ),
-                ],
-              ),
-            ),
-          ],
         ],
       ),
     );
@@ -519,9 +460,7 @@ class _CalendarDayCell extends StatelessWidget {
             border: isSelected
                 ? Border.all(color: const Color(0xFFE65100), width: 1.5)
                 : null,
-            color: isSelected
-                ? const Color(0xFFFFF7ED)
-                : Colors.transparent,
+            color: isSelected ? const Color(0xFFFFF7ED) : Colors.transparent,
           ),
           alignment: Alignment.center,
           child: Column(

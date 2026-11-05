@@ -45,15 +45,16 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                   ),
                 ],
               ),
-              child: const Icon(
-                Icons.music_note_rounded,
-                color: AppColors.onPrimary,
-                size: 46,
+              child: Image.asset(
+                'assets/images/harmonia_logo.png',
+                width: 80,
+                height: 80,
+                excludeFromSemantics: true,
               ),
             ),
             const SizedBox(height: 24),
             Text(
-              'Harmonia Choir',
+              'Harmonia',
               style: AppTypography.headlineMedium.copyWith(
                 color: AppColors.primary,
                 fontWeight: FontWeight.w800,

@@ -12,7 +12,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:harmonia_mobile/core/network/api_client.dart';
 import 'package:harmonia_mobile/core/di/core_providers.dart';
 import 'package:harmonia_mobile/core/session/session_manager.dart';
-import 'package:harmonia_mobile/core/errors/error_messages.dart';
 import 'package:harmonia_mobile/core/storage/secure_storage_service.dart';
 import 'package:harmonia_mobile/features/calendar/data/calendar_api_service.dart';
 import 'package:harmonia_mobile/features/calendar/data/calendar_dto.dart';
@@ -193,28 +192,23 @@ void main() {
     },
   );
 
-  test(
-    'liturgical range sends DateOnly query values and parses a bare array',
-    () async {
-      adapter.responseBody = (_) => [
-        {
-          'date': '2026-10-15',
-          'celebrationName': 'Test celebration',
-          'rank': null,
-          'seasonName': 'Test season',
-        },
-      ];
-      final days = await CalendarApiService(client)
-          .getLiturgicalDays('2026-10-15', '2026-10-21');
-      expect(adapter.requests.single.path, '/api/liturgical-days');
-      expect(adapter.requests.single.queryParameters, {
-        'fromDate': '2026-10-15',
-        'toDate': '2026-10-21',
-      });
-      expect(days.single.date, DateTime(2026, 10, 15));
-      expect(days.single.seasonName, 'Test season');
-    },
-  );
+  test('rehearsal schedule omits date filters by default and sends an inclusive range', () async {
+    final service = CalendarApiService(client);
+    await service.getUpcomingRehearsals();
+    expect(adapter.requests.single.path, '/api/schedule/rehearsals');
+    expect(adapter.requests.single.queryParameters, isEmpty);
+
+    adapter.requests.clear();
+    await service.getUpcomingRehearsals(
+      fromDate: '2026-10-01',
+      toDate: '2026-10-31',
+    );
+    expect(adapter.requests.single.path, '/api/schedule/rehearsals');
+    expect(adapter.requests.single.queryParameters, {
+      'fromDate': '2026-10-01',
+      'toDate': '2026-10-31',
+    });
+  });
 
   test('public settings map the three public string keys only', () async {
     adapter.responseBody = (_) => [
@@ -251,29 +245,6 @@ void main() {
   );
 
   test(
-    'calendar day missing is empty only for the documented not-found code',
-    () async {
-      adapter.statusCode = 404;
-      adapter.responseBody = (_) => {
-        'code': 'CALENDAR_DAY_NOT_FOUND',
-        'message': 'Not found',
-      };
-      expect(
-        await CalendarApiService(client).getLiturgicalDay('2026-10-15'),
-        isNull,
-      );
-      adapter.responseBody = (_) => {
-        'code': 'OTHER_NOT_FOUND',
-        'message': 'Not found',
-      };
-      await expectLater(
-        CalendarApiService(client).getLiturgicalDay('2026-10-15'),
-        throwsA(anything),
-      );
-    },
-  );
-
-  test(
     'malformed schedule payload is an error instead of an empty schedule',
     () async {
       adapter.responseBody = (_) => {'items': []};
@@ -283,19 +254,6 @@ void main() {
       );
     },
   );
-
-  test('a reversed or excessive date range is rejected before HTTP', () async {
-    final repo = CalendarRepositoryImpl(apiService: CalendarApiService(client));
-    await expectLater(
-      repo.getLiturgicalDays('2026-10-22', '2026-10-15'),
-      throwsA(anything),
-    );
-    await expectLater(
-      repo.getLiturgicalDays('2026-01-01', '2027-12-31'),
-      throwsA(anything),
-    );
-    expect(adapter.requests, isEmpty);
-  });
 
   test('LiturgicalDay parses John Romano D\'Orazio API fields with English celebration name and labels', () {
     final solemnity = LiturgicalDay.fromJson({
@@ -364,29 +322,6 @@ void main() {
     });
     expect(lent.seasonLabel, 'Mùa Chay');
   });
-
-  test(
-    'syncLiturgicalDays calls POST /api/liturgical-days/sync with year',
-    () async {
-      adapter.responseBody = (_) => 365;
-      final count = await CalendarApiService(client).syncLiturgicalDays(2026);
-      expect(adapter.requests.single.path, '/api/liturgical-days/sync');
-      expect(adapter.requests.single.method, 'POST');
-      expect(adapter.requests.single.data, {'year': 2026});
-      expect(count, 365);
-    },
-  );
-
-  test(
-    'EXTERNAL_CALENDAR_FAILED error maps to friendly Vietnamese message',
-    () {
-      final message = ErrorMessages.getMessage('EXTERNAL_CALENDAR_FAILED');
-      expect(
-        message,
-        'Dịch vụ lịch phụng vụ đang gặp sự cố. Vui lòng thử lại sau.',
-      );
-    },
-  );
 
   test(
     'concurrent replies share one request and update the accepted status',

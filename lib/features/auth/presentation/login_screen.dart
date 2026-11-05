@@ -106,147 +106,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
-  void _showForgotPasswordSheet() {
-    final emailController = TextEditingController(
-      text: _emailController.text.trim(),
+  void _openForgotPasswordScreen() {
+    final email = _emailController.text.trim();
+    final location = Uri(
+      path: '/forgot-password',
+      queryParameters: email.isEmpty ? null : {'email': email},
     );
-    bool isSubmitting = false;
-    String? feedbackMessage;
-    bool isSuccess = false;
-
-    bool isSheetMounted = true;
-    final authNotifier = ref.read(authNotifierProvider.notifier);
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (modalContext) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return SafeArea(
-              child: Padding(
-                padding: EdgeInsets.only(
-                  bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-                  left: 24,
-                  right: 24,
-                  top: 24,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text('Quên mật khẩu', style: AppTypography.titleLarge),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Nhập email tài khoản để nhận liên kết đặt lại mật khẩu từ máy chủ Harmonia.',
-                      style: AppTypography.bodySmall,
-                    ),
-                    const SizedBox(height: 18),
-                    TextField(
-                      controller: emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(
-                        hintText: 'cavien@example.com',
-                        prefixIcon: Icon(Icons.mail_outline_rounded),
-                      ),
-                    ),
-                    if (feedbackMessage != null) ...[
-                      const SizedBox(height: 10),
-                      Text(
-                        feedbackMessage!,
-                        style: AppTypography.bodySmall.copyWith(
-                          color: isSuccess
-                              ? AppColors.statusSuccess
-                              : AppColors.statusDanger,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: isSubmitting
-                          ? null
-                          : () async {
-                              final email = emailController.text.trim();
-                              if (email.isEmpty || !email.contains('@')) {
-                                if (isSheetMounted && modalContext.mounted) {
-                                  setModalState(() {
-                                    feedbackMessage =
-                                        'Vui lòng nhập email hợp lệ.';
-                                    isSuccess = false;
-                                  });
-                                }
-                                return;
-                              }
-
-                              if (isSheetMounted && modalContext.mounted) {
-                                setModalState(() {
-                                  isSubmitting = true;
-                                  feedbackMessage = null;
-                                });
-                              }
-
-                              DevicePlatform platform;
-                              try {
-                                if (Platform.isAndroid) {
-                                  platform = DevicePlatform.android;
-                                } else if (Platform.isIOS) {
-                                  platform = DevicePlatform.ios;
-                                } else {
-                                  platform = DevicePlatform.web;
-                                }
-                              } catch (_) {
-                                platform = DevicePlatform.android;
-                              }
-
-                              final ok = await authNotifier.forgotPassword(
-                                email: email,
-                                platform: platform,
-                              );
-
-                              if (!isSheetMounted || !modalContext.mounted) {
-                                return;
-                              }
-
-                              final currentError = mounted
-                                  ? ref.read(authNotifierProvider).errorMessage
-                                  : null;
-
-                              if (isSheetMounted && modalContext.mounted) {
-                                setModalState(() {
-                                  isSubmitting = false;
-                                  if (ok) {
-                                    isSuccess = true;
-                                    feedbackMessage = 'Yêu cầu đã được gửi. Vui lòng kiểm tra hòm thư của bạn.';
-                                  } else {
-                                    isSuccess = false;
-                                    feedbackMessage = currentError ?? 'Không thể gửi yêu cầu đặt lại mật khẩu.';
-                                  }
-                                });
-                              }
-                            },
-                      child: isSubmitting
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppColors.onPrimary,
-                              ),
-                            )
-                          : const Text('Gửi yêu cầu đặt lại mật khẩu'),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    ).whenComplete(() {
-      isSheetMounted = false;
-      emailController.dispose();
-    });
+    context.push(location.toString());
   }
 
   @override
@@ -282,10 +148,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
                           ],
                         ),
-                        child: const Icon(
-                          Icons.music_note_rounded,
-                          color: AppColors.onPrimary,
-                          size: 42,
+                        child: Image.asset(
+                          'assets/images/harmonia_logo.png',
+                          width: 76,
+                          height: 76,
+                          excludeFromSemantics: true,
                         ),
                       ),
                     ),
@@ -293,7 +160,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                     // Title & Description
                     Text(
-                      'Harmonia Choir',
+                      'Harmonia',
                       style: AppTypography.headlineLarge.copyWith(
                         color: AppColors.primary,
                         fontWeight: FontWeight.w800,
@@ -421,7 +288,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
-                        onPressed: _showForgotPasswordSheet,
+                        onPressed: _openForgotPasswordScreen,
                         style: TextButton.styleFrom(
                           visualDensity: VisualDensity.compact,
                           padding: EdgeInsets.zero,

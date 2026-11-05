@@ -28,13 +28,26 @@ class PracticeDetailScreen extends ConsumerStatefulWidget {
       _PracticeDetailScreenState();
 }
 
+class _PracticeRecordingDraft {
+  final String filePath;
+  final int durationSeconds;
+  final DateTime recordedAt;
+  final bool isSilent;
+
+  const _PracticeRecordingDraft({
+    required this.filePath,
+    required this.durationSeconds,
+    required this.recordedAt,
+    required this.isSilent,
+  });
+}
+
 class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
     with WidgetsBindingObserver {
   final AudioRecorder _audioRecorder = AudioRecorder();
   late final AudioPlayer _audioPlayer;
 
   bool _isRecording = false;
-  bool _hasDraftRecording = false;
   bool _isPlayingDraft = false;
   bool _isSubmitting = false;
   bool _isProcessingAction = false;
@@ -44,10 +57,11 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
   double _currentAmplitudeDb = -160.0;
   double _maxRecordedAmplitudeDb = -160.0;
   bool _amplitudeQueried = false;
-  bool _isDraftSilent = false;
 
   String? _recordedFilePath;
   PracticeAssignment? _draftAssignment;
+  final List<_PracticeRecordingDraft> _recordingDrafts = [];
+  String? _playingDraftPath;
   int _recordingSeconds = 0;
   DateTime? _recordingStartTime;
   Timer? _recordTimer;
@@ -61,7 +75,10 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
     WidgetsBinding.instance.addObserver(this);
     _playerCompleteSubscription = _audioPlayer.onPlayerComplete.listen((_) {
       if (mounted) {
-        setState(() => _isPlayingDraft = false);
+        setState(() {
+          _isPlayingDraft = false;
+          _playingDraftPath = null;
+        });
       }
     });
   }
@@ -81,7 +98,9 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
     _isAppActive = state == AppLifecycleState.resumed;
     if (!_isAppActive) {
       if (_isRecording) unawaited(_stopRecording());
-      if (_isPlayingDraft) unawaited(_togglePlayDraft());
+      if (_isPlayingDraft && _playingDraftPath != null) {
+        unawaited(_togglePlayDraft(_playingDraftPath!));
+      }
     }
   }
 
@@ -90,7 +109,7 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
     bool unavailable = false,
   }) {
     if (unavailable || assignment?.canSubmit == null) {
-      return 'Chưa xác minh được quyền nộp bản thu. Vui lòng tải lại.';
+      return 'Chưa xác minh được quyền nộp bản thu. Vui lòng thử lại sau.';
     }
     return ErrorMessages.getMessage(
       assignment?.cannotSubmitReason ?? '',
@@ -116,11 +135,7 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
   }
 
   Future<void> _startRecording() async {
-    if (_isSubmitting ||
-        _isRecording ||
-        _isProcessingAction ||
-        _hasDraftRecording ||
-        !_isAppActive) {
+    if (_isSubmitting || _isRecording || _isProcessingAction || !_isAppActive) {
       return;
     }
     if (!_ensureCanSubmit()) return;
@@ -193,14 +208,12 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
         _isRecording = true;
         _recordingStartTime = startTime;
         _recordingSeconds = 0;
-        _hasDraftRecording = false;
         _isPlayingDraft = false;
         _recordedFilePath = filePath;
         _draftAssignment = assignment;
         _currentAmplitudeDb = -160.0;
         _maxRecordedAmplitudeDb = -160.0;
         _amplitudeQueried = false;
-        _isDraftSilent = false;
       });
 
       _recordTimer?.cancel();
@@ -267,10 +280,20 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
       if (!mounted) return;
       setState(() {
         _isRecording = false;
-        _recordingSeconds = actualSeconds;
-        _recordedFilePath = finalPath;
-        _hasDraftRecording = fileExists;
-        _isDraftSilent = isSilent;
+        if (fileExists) {
+          _recordingDrafts.insert(
+            0,
+            _PracticeRecordingDraft(
+              filePath: finalPath,
+              durationSeconds: actualSeconds,
+              recordedAt: DateTime.now(),
+              isSilent: isSilent,
+            ),
+          );
+        }
+        _recordingSeconds = 0;
+        _recordedFilePath = null;
+        _recordingStartTime = null;
       });
     } catch (_) {
       if (mounted) {
@@ -283,25 +306,32 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
     }
   }
 
-  Future<void> _togglePlayDraft() async {
+  Future<void> _togglePlayDraft(String filePath) async {
     if (_isSubmitting || _isRecording || _isProcessingAction) return;
-    if (_recordedFilePath == null || !File(_recordedFilePath!).existsSync()) {
-      return;
-    }
+    if (!File(filePath).existsSync()) return;
 
     _isProcessingAction = true;
     try {
-      if (_isPlayingDraft) {
+      if (_isPlayingDraft && _playingDraftPath == filePath) {
         await _audioPlayer.pause();
-        if (mounted) setState(() => _isPlayingDraft = false);
+        if (mounted) {
+          setState(() {
+            _isPlayingDraft = false;
+            _playingDraftPath = null;
+          });
+        }
       } else {
-        await _audioPlayer.play(DeviceFileSource(_recordedFilePath!));
+        if (_isPlayingDraft) await _audioPlayer.stop();
+        await _audioPlayer.play(DeviceFileSource(filePath));
         if (!mounted) return;
         if (!_isAppActive) {
           await _audioPlayer.pause();
           return;
         }
-        setState(() => _isPlayingDraft = true);
+        setState(() {
+          _isPlayingDraft = true;
+          _playingDraftPath = filePath;
+        });
       }
     } catch (_) {
       if (mounted) {
@@ -320,31 +350,29 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
     }
   }
 
-  Future<void> _discardDraft() async {
+  Future<void> _discardDraft(String filePath) async {
     if (_isSubmitting || _isRecording || _isProcessingAction) return;
     _isProcessingAction = true;
 
     try {
-      if (_isPlayingDraft) {
+      if (_isPlayingDraft && _playingDraftPath == filePath) {
         await _audioPlayer.stop();
-      }
-      if (_recordedFilePath != null) {
-        final file = File(_recordedFilePath!);
-        if (await file.exists()) {
-          await file.delete();
+        if (mounted) {
+          setState(() {
+            _isPlayingDraft = false;
+            _playingDraftPath = null;
+          });
         }
       }
+      final file = File(filePath);
+      if (await file.exists()) await file.delete();
       if (!mounted) return;
       setState(() {
-        _hasDraftRecording = false;
-        _recordedFilePath = null;
-        _draftAssignment = null;
-        _recordingSeconds = 0;
-        _isPlayingDraft = false;
-        _isDraftSilent = false;
-        _currentAmplitudeDb = -160.0;
-        _maxRecordedAmplitudeDb = -160.0;
-        _amplitudeQueried = false;
+        _recordingDrafts.removeWhere((draft) => draft.filePath == filePath);
+        if (_playingDraftPath == filePath) {
+          _isPlayingDraft = false;
+          _playingDraftPath = null;
+        }
       });
     } catch (_) {
     } finally {
@@ -364,12 +392,16 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
     try {
       if (_isRecording) await _stopRecording();
       if (!mounted) return;
+      if (_recordingDrafts.isEmpty) {
+        Navigator.of(context).pop();
+        return;
+      }
       final discard = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Bỏ bản thu nháp?'),
+          title: const Text('Bỏ các bản thu nháp?'),
           content: const Text(
-            'Bản thu chưa nộp sẽ bị xoá nếu bạn rời màn hình.',
+            'Các bản thu chưa nộp sẽ bị xoá nếu bạn rời màn hình.',
           ),
           actions: [
             TextButton(
@@ -384,14 +416,20 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
         ),
       );
       if (discard != true || !mounted) return;
-      await _discardDraft();
-      if (mounted && !_hasDraftRecording) Navigator.of(context).pop();
+      for (final draft in List.of(_recordingDrafts)) {
+        final file = File(draft.filePath);
+        if (await file.exists()) await file.delete();
+      }
+      if (mounted) {
+        setState(() => _recordingDrafts.clear());
+        Navigator.of(context).pop();
+      }
     } finally {
       _confirmingExit = false;
     }
   }
 
-  Future<void> _submitRecording() async {
+  Future<void> _submitRecording(_PracticeRecordingDraft draft) async {
     // 1. Chặn double-tap ngay lập tức trước bất kỳ await nào
     if (_isSubmitting || _isRecording || _isProcessingAction) return;
     if (!_ensureCanSubmit()) return;
@@ -402,11 +440,11 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
     });
 
     // 2. Chụp filePath và duration riêng cho request này
-    final submitFilePath = _recordedFilePath;
-    final submitDuration = _recordingSeconds;
+    final submitFilePath = draft.filePath;
+    final submitDuration = draft.durationSeconds;
 
     try {
-      if (submitFilePath == null || !File(submitFilePath).existsSync()) {
+      if (!File(submitFilePath).existsSync()) {
         if (mounted) {
           setState(() => _isSubmitting = false);
           ScaffoldMessenger.of(context).showSnackBar(
@@ -487,9 +525,14 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
       if (!mounted || session.sessionEpoch != epoch) return;
       if (!_ensureCanSubmit()) return;
 
-      if (_isPlayingDraft) {
+      if (_isPlayingDraft && _playingDraftPath == submitFilePath) {
         await _audioPlayer.stop();
-        if (mounted) setState(() => _isPlayingDraft = false);
+        if (mounted) {
+          setState(() {
+            _isPlayingDraft = false;
+            _playingDraftPath = null;
+          });
+        }
       }
 
       if (!mounted || session.sessionEpoch != epoch) return;
@@ -514,18 +557,15 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
       if (!mounted) return;
       setState(() {
         _isSubmitting = false;
-        // Chỉ xóa bản nháp nếu bản nháp hiện tại vẫn trùng khớp với bản vừa nộp
-        if (_recordedFilePath == submitFilePath) {
-          _hasDraftRecording = false;
-          _recordedFilePath = null;
-          _draftAssignment = null;
-          _recordingSeconds = 0;
-          _isDraftSilent = false;
-          _currentAmplitudeDb = -160.0;
-          _maxRecordedAmplitudeDb = -160.0;
-          _amplitudeQueried = false;
-        }
+        _recordingDrafts.removeWhere((item) => item.filePath == submitFilePath);
       });
+      try {
+        final submittedFile = File(submitFilePath);
+        if (submittedFile.existsSync()) submittedFile.deleteSync();
+      } catch (_) {
+        // The server submission is already successful; a local cleanup failure must not invite a duplicate upload.
+      }
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Đã nộp bản thu thành công!'),
@@ -556,12 +596,180 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
     }
   }
 
+  Widget _buildRecordingDraftCard(
+    _PracticeRecordingDraft draft,
+    int index,
+    PracticeAssignment assignment,
+  ) {
+    final isPlaying = _isPlayingDraft && _playingDraftPath == draft.filePath;
+    final canSubmit = assignment.canSubmit == true;
+    final hasPreviousSubmission =
+        assignment.status == PracticeStatus.submitted ||
+        assignment.status == PracticeStatus.needsRevision;
+    const waveformColor = Color(0xFF6E88A8);
+    const playerBlue = Color(0xFF0969E8);
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1C3047),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFF344B65)),
+      ),
+      child: Column(
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 6),
+              child: Text(
+                'Bản thu nháp',
+                style: AppTypography.bodySmall.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+          Row(
+            children: [
+              IconButton.filled(
+                tooltip: isPlaying ? 'Tạm dừng bản thu' : 'Nghe bản thu',
+                style: IconButton.styleFrom(
+                  backgroundColor: playerBlue,
+                  minimumSize: const Size(48, 48),
+                ),
+                onPressed: _isSubmitting
+                    ? null
+                    : () => _togglePlayDraft(draft.filePath),
+                icon: Icon(
+                  isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                  color: Colors.white,
+                  size: 27,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      height: 32,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: List.generate(29, (bar) {
+                          final height = 7.0 + ((bar * 17 + index * 5) % 22);
+                          return Container(
+                            width: 3,
+                            height: height,
+                            decoration: BoxDecoration(
+                              color: waveformColor,
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                          );
+                        }),
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        Text(
+                          _formatTime(draft.durationSeconds),
+                          style: AppTypography.bodySmall.copyWith(
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Icon(
+                          Icons.cloud_done_outlined,
+                          size: 15,
+                          color: Color(0xFFB7C7D9),
+                        ),
+                        const Spacer(),
+                        Text(
+                          DateFormat('HH:mm').format(draft.recordedAt),
+                          style: AppTypography.bodySmall.copyWith(
+                            color: const Color(0xFFB7C7D9),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (draft.isSilent) ...[
+            const SizedBox(height: 8),
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Bản thu có thể không có tiếng hoặc âm lượng nhỏ.',
+                style: TextStyle(color: Color(0xFFFFD180), fontSize: 12),
+              ),
+            ),
+          ],
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              IconButton(
+                tooltip: 'Xóa bản thu',
+                onPressed: _isSubmitting
+                    ? null
+                    : () => _discardDraft(draft.filePath),
+                icon: const Icon(Icons.delete_outline_rounded),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: SizedBox(
+                  height: 44,
+                  child: ElevatedButton.icon(
+                    onPressed: _isSubmitting || !canSubmit
+                        ? null
+                        : () => _submitRecording(draft),
+                    icon: _isSubmitting
+                        ? const SizedBox(
+                            width: 17,
+                            height: 17,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.send_rounded, size: 18),
+                    label: Text(
+                      _isSubmitting
+                          ? 'Đang gửi bản thu...'
+                          : hasPreviousSubmission
+                          ? 'Thay bản đã nộp bằng bản này'
+                          : 'Nộp bản thu này cho Ca trưởng',
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (hasPreviousSubmission && canSubmit) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Bản này sẽ trở thành lần nộp mới nhất trước hạn.',
+              style: AppTypography.bodySmall.copyWith(color: Colors.white70),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final detailAsync = ref.watch(practiceDetailProvider(widget.assignmentId));
 
     return PopScope(
-      canPop: !_isRecording && !_hasDraftRecording && !_isSubmitting,
+      canPop: !_isRecording && _recordingDrafts.isEmpty && !_isSubmitting,
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) unawaited(_confirmExit());
       },
@@ -610,7 +818,9 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
         data: (loadedAssignment) {
           final assignment =
               loadedAssignment ??
-              (_hasDraftRecording || _isRecording ? _draftAssignment : null);
+              (_recordingDrafts.isNotEmpty || _isRecording
+                  ? _draftAssignment
+                  : null);
           if (assignment == null) {
             return Scaffold(
               backgroundColor: AppColors.background,
@@ -632,24 +842,7 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
               assignment.canSubmit == true && !permissionUnavailable;
           return Scaffold(
             backgroundColor: AppColors.background,
-            appBar: AppBar(
-              title: const Text('Thu âm & Luyện tập'),
-              actions: [
-                IconButton(
-                  tooltip: 'Tải lại bài tập',
-                  onPressed:
-                      _isSubmitting ||
-                          _isRecording ||
-                          _isProcessingAction ||
-                          detailAsync.isLoading
-                      ? null
-                      : () => ref.invalidate(
-                          practiceDetailProvider(widget.assignmentId),
-                        ),
-                  icon: const Icon(Icons.refresh_rounded),
-                ),
-              ],
-            ),
+            appBar: AppBar(title: const Text('Thu âm & Luyện tập')),
             body: SafeArea(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
@@ -862,8 +1055,6 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                             Text(
                               _isRecording
                                   ? 'Đang thu âm...'
-                                  : _hasDraftRecording
-                                  ? 'Bản thu nháp sẵn sàng'
                                   : 'Phòng thu âm cá nhân',
                               style: AppTypography.titleMedium.copyWith(
                                 color: _isRecording
@@ -876,7 +1067,7 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
 
                             // Timer Display with tabular figures (Principle N1 - no layout jitter)
                             Text(
-                              _formatTime(_recordingSeconds),
+                              _formatTime(_isRecording ? _recordingSeconds : 0),
                               style: AppTypography.tabularCounter.copyWith(
                                 color: _isRecording
                                     ? AppColors.error
@@ -962,17 +1153,13 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                               button: true,
                               enabled:
                                   !_isSubmitting &&
-                                  !_hasDraftRecording &&
                                   !_isProcessingAction &&
                                   (_isRecording || canSubmit),
                               label: _isRecording
                                   ? 'Dừng thu âm'
                                   : 'Bắt đầu thu âm',
                               child: GestureDetector(
-                                onTap:
-                                    _isSubmitting ||
-                                        _hasDraftRecording ||
-                                        _isProcessingAction
+                                onTap: _isSubmitting || _isProcessingAction
                                     ? null
                                     : (_isRecording
                                           ? _stopRecording
@@ -1022,178 +1209,71 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                             Text(
                               _isRecording
                                   ? 'Chạm nút đỏ để dừng thu âm'
-                                  : _hasDraftRecording
-                                  ? canSubmit
-                                        ? 'Nghe lại hoặc chọn Thu lại để tạo bản thu mới'
-                                        : 'Bạn vẫn có thể nghe lại hoặc bỏ bản thu nháp.'
                                   : !canSubmit
                                   ? 'Thu âm đang tạm khóa'
-                                  : 'Chạm biểu tượng micro để bắt đầu',
+                                  : 'Thu nhiều bản, nghe lại và chọn bản tốt nhất để gửi',
                               style: AppTypography.bodySmall,
                             ),
-
-                            // Draft review controls with clear action hierarchy
-                            if (_hasDraftRecording && !_isRecording) ...[
-                              const SizedBox(height: 24),
-                              const Divider(),
-                              const SizedBox(height: 16),
-                              if (_isDraftSilent) ...[
-                                Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.statusWarningSoft,
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(
-                                      color: AppColors.statusWarning,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      const Icon(
-                                        Icons.mic_off_rounded,
-                                        color: AppColors.statusWarning,
-                                        size: 20,
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: Text(
-                                          'Bản thu nháp không có tiếng hoặc âm lượng quá nhỏ. Hãy kiểm tra lại micro của máy (trên máy ảo: bật "Virtual microphone uses host audio input") và thu lại để Ca trưởng nghe được rõ.',
-                                          style: AppTypography.bodySmall
-                                              .copyWith(
-                                                color: AppColors.onSurface,
-                                                height: 1.4,
-                                              ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 14),
-                              ],
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 12,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.surfaceContainerLow,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: AppColors.border),
-                                ),
-                                child: Row(
-                                  children: [
-                                    IconButton.filled(
-                                      style: IconButton.styleFrom(
-                                        backgroundColor: AppColors.secondary,
-                                        minimumSize: const Size(48, 48),
-                                      ),
-                                      onPressed: _isSubmitting
-                                          ? null
-                                          : _togglePlayDraft,
-                                      icon: Icon(
-                                        _isPlayingDraft
-                                            ? Icons.pause_rounded
-                                            : Icons.play_arrow_rounded,
-                                        color: Colors.white,
-                                        size: 28,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 14),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Bản thu nháp',
-                                            style: AppTypography.titleMedium
-                                                .copyWith(
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                          ),
-                                          Text(
-                                            'Thời lượng: ${_formatTime(_recordingSeconds)}',
-                                            style: AppTypography.tabularBody
-                                                .copyWith(
-                                                  color: AppColors.muted,
-                                                  fontSize: 12,
-                                                ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    OutlinedButton.icon(
-                                      style: OutlinedButton.styleFrom(
-                                        minimumSize: const Size(0, 48),
-                                        foregroundColor: AppColors.statusDanger,
-                                        side: const BorderSide(
-                                          color: AppColors.border,
-                                        ),
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 8,
-                                        ),
-                                      ),
-                                      onPressed: _isSubmitting
-                                          ? null
-                                          : _discardDraft,
-                                      icon: const Icon(
-                                        Icons.refresh_rounded,
-                                        size: 16,
-                                      ),
-                                      label: Text(
-                                        canSubmit ? 'Thu lại' : 'Bỏ bản nháp',
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 18),
-                              SizedBox(
-                                width: double.infinity,
-                                height: 50,
-                                child: ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.primary,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                  onPressed: _isSubmitting || !canSubmit
-                                      ? null
-                                      : _submitRecording,
-                                  icon: _isSubmitting
-                                      ? const SizedBox(
-                                          height: 20,
-                                          width: 20,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: Colors.white,
-                                          ),
-                                        )
-                                      : const Icon(
-                                          Icons.send_rounded,
-                                          size: 20,
-                                        ),
-                                  label: Text(
-                                    _isSubmitting
-                                        ? 'Đang gửi bản thu...'
-                                        : 'Nộp bản thu cho Ca trưởng',
-                                    style: AppTypography.labelLarge.copyWith(
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
                           ],
                         ),
                       ),
                     ),
                     const SizedBox(height: 16),
+
+                    if (_recordingDrafts.isNotEmpty) ...[
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Bản thu của bạn (${_recordingDrafts.length})',
+                                style: AppTypography.titleMedium.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Nghe lại từng bản rồi gửi bản bạn chọn. Bạn có thể thu thêm trước khi nộp.',
+                                style: AppTypography.bodySmall.copyWith(
+                                  color: AppColors.muted,
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              ..._recordingDrafts.indexed.map(
+                                (entry) => Padding(
+                                  padding: EdgeInsets.only(
+                                    bottom:
+                                        entry.$1 == _recordingDrafts.length - 1
+                                        ? 0
+                                        : 10,
+                                  ),
+                                  child: _buildRecordingDraftCard(
+                                    entry.$2,
+                                    entry.$1,
+                                    assignment,
+                                  ),
+                                ),
+                              ),
+                              if (assignment.status ==
+                                      PracticeStatus.submitted ||
+                                  assignment.status ==
+                                      PracticeStatus.needsRevision) ...[
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Gửi bản mới sẽ thay bản hiện tại làm lần nộp mới nhất; thao tác này chỉ được BE chấp nhận khi còn hạn.',
+                                  style: AppTypography.bodySmall.copyWith(
+                                    color: AppColors.muted,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
 
                     // Submissions History Card
                     Consumer(
@@ -1247,6 +1327,11 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                         if (subState.items.isEmpty) {
                           return const SizedBox.shrink();
                         }
+                        final latestAttemptNo = subState.items.fold<int>(
+                          0,
+                          (latest, item) =>
+                              item.attemptNo > latest ? item.attemptNo : latest,
+                        );
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
@@ -1284,7 +1369,9 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                                       itemBuilder: (context, index) {
                                         final sub = subState.items[index];
                                         final statusText =
-                                            sub.status == 'Passed'
+                                            sub.attemptNo < latestAttemptNo
+                                            ? 'Đã thay thế'
+                                            : sub.status == 'Passed'
                                             ? 'Đạt'
                                             : sub.status == 'NeedsRevision'
                                             ? 'Cần luyện thêm'

@@ -55,36 +55,57 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
   String _dateKey(DateTime date) => DateFormat('yyyy-MM-dd').format(date);
 
-  LiturgicalDateRange get _range => (
+  RehearsalDateRange get _weekRange => (
     fromDate: _dateKey(_weekStart),
     toDate: _dateKey(_addDays(_weekStart, 6)),
   );
 
-  List<_TimelineEntry> _rehearsalTimeline(List<RehearsalSession> rehearsals) =>
+  List<_TimelineEntry> _dayTimeline(
+    List<LiturgicalEvent> events,
+    List<RehearsalSession> rehearsals,
+  ) =>
       [
+        for (final event in events)
+          if (DateUtils.isSameDay(DateUtils.dateOnly(event.date), _selectedDay))
+            (start: _eventStart(event), event: event, rehearsal: null),
         for (final rehearsal in rehearsals)
           if (DateUtils.isSameDay(_parishTime(rehearsal.date), _selectedDay))
-            (start: rehearsal.date.toUtc(), event: null, rehearsal: rehearsal),
+            (
+              start: _parishTime(rehearsal.date),
+              event: null,
+              rehearsal: rehearsal,
+            ),
       ]..sort((a, b) {
         final timeOrder = a.start.compareTo(b.start);
         if (timeOrder != 0) return timeOrder;
-        return a.rehearsal!.id.compareTo(b.rehearsal!.id);
+        final aId = a.event?.id ?? a.rehearsal!.id;
+        final bId = b.event?.id ?? b.rehearsal!.id;
+        return aId.compareTo(bId);
       });
+
+  DateTime _eventStart(LiturgicalEvent event) {
+    final time = RegExp(r'(\d{1,2}):(\d{2})').firstMatch(event.timeRange);
+    return DateTime(
+      event.date.year,
+      event.date.month,
+      event.date.day,
+      time == null ? 0 : int.parse(time.group(1)!),
+      time == null ? 0 : int.parse(time.group(2)!),
+    );
+  }
 
   Future<void> _refresh() async {
     if (_refreshing) return;
     setState(() => _refreshing = true);
-    ref.invalidate(rehearsalsProvider);
-    ref.invalidate(liturgicalDaysProvider(_range));
+    ref.invalidate(rehearsalsForRangeProvider(_weekRange));
     ref.invalidate(calendarNotifierProvider);
     ref.invalidate(publicAppSettingsProvider);
     ref.invalidate(rehearsalDetailProvider);
     ref.invalidate(eventDetailProvider);
     try {
       await Future.wait([
-        ref.read(rehearsalsProvider.future),
+        ref.read(rehearsalsForRangeProvider(_weekRange).future),
         ref.read(calendarNotifierProvider.notifier).loadEvents(),
-        ref.read(liturgicalDaysProvider(_range).future),
       ]);
     } catch (_) {
       // Every source retains its own error and retry action.
@@ -96,17 +117,20 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   @override
   Widget build(BuildContext context) {
     final eventsState = ref.watch(calendarNotifierProvider);
-    final rehearsalsState = ref.watch(rehearsalsProvider);
+    final rehearsalRange = _weekRange;
+    final rehearsalsState = ref.watch(
+      rehearsalsForRangeProvider(rehearsalRange),
+    );
     final settings = ref.watch(publicAppSettingsProvider).asData?.value;
     final choirName = settings?.choirName.trim();
     final events = eventsState.asData?.value ?? const <LiturgicalEvent>[];
     final rehearsals =
         rehearsalsState.asData?.value ?? const <RehearsalSession>[];
-    final rehearsalItems = _rehearsalTimeline(rehearsals);
+    final timelineItems = _dayTimeline(events, rehearsals);
     final today = _today();
     final isPastDay = _selectedDay.isBefore(today);
-    final loading = rehearsalsState.isLoading;
-    final incomplete = rehearsalsState.hasError;
+    final loading = eventsState.isLoading || rehearsalsState.isLoading;
+    final incomplete = eventsState.hasError || rehearsalsState.hasError;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -116,13 +140,13 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         titleSpacing: 16,
         title: Row(
           children: [
-            const CircleAvatar(
-              radius: 18,
-              backgroundColor: _softSurface,
-              child: Icon(
-                Icons.music_note_rounded,
-                color: AppColors.primary,
-                size: 22,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.asset(
+                'assets/images/harmonia_logo.png',
+                width: 36,
+                height: 36,
+                excludeFromSemantics: true,
               ),
             ),
             const SizedBox(width: 10),
@@ -133,7 +157,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                   Text(
                     choirName != null && choirName.isNotEmpty
                         ? choirName
-                        : 'Harmonia Choir',
+                        : 'Harmonia',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: AppTypography.labelSmall.copyWith(
@@ -162,35 +186,46 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               if (_tab == 0) ...[
                 _weekNavigator(today),
                 const SizedBox(height: 16),
-                _daySelector(today, rehearsals),
+                _daySelector(today, events, rehearsals),
                 const SizedBox(height: 16),
-                _daySummary(rehearsalItems.length, loading, incomplete),
                 const SizedBox(height: 20),
                 if (isPastDay)
                   _notice(
-                    'Chưa có lịch tập trong ngày đã qua.',
+                    'Chưa có lịch phục vụ hoặc lịch tập trong ngày đã qua.',
                   ),
                 if (loading)
                   const Padding(
                     padding: EdgeInsets.only(bottom: 16),
                     child: LinearProgressIndicator(),
                   ),
+                if (eventsState.hasError)
+                  _sourceError(
+                    eventsState.error!,
+                    'Thử lại lịch phục vụ',
+                    () => ref
+                        .read(calendarNotifierProvider.notifier)
+                        .loadEvents(),
+                  ),
                 if (rehearsalsState.hasError)
                   _sourceError(
                     rehearsalsState.error!,
                     'Thử lại lịch tập',
-                    () => ref.invalidate(rehearsalsProvider),
+                    () => ref.invalidate(
+                      rehearsalsForRangeProvider(rehearsalRange),
+                    ),
                   ),
-                if (rehearsalItems.isEmpty && !loading && !incomplete && !isPastDay)
+                if (timelineItems.isEmpty &&
+                    !loading &&
+                    !incomplete &&
+                    !isPastDay)
                   _notice(
-                    'Chưa có lịch tập trong ngày ${DateFormat('dd/MM/yyyy').format(_selectedDay)}.',
+                    'Chưa có lịch phục vụ hoặc lịch tập trong ngày ${DateFormat('dd/MM/yyyy').format(_selectedDay)}.',
                   ),
-                for (final item in rehearsalItems) _timelineRow(item),
+                for (final item in timelineItems) _timelineRow(item),
               ] else ...[
                 LiturgicalMonthCalendar(
                   initialDate: _selectedDay,
                   events: events,
-                  rehearsals: rehearsals,
                 ),
               ],
             ],
@@ -209,7 +244,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     ),
     child: Row(
       children: [
-        for (final (index, label) in [(0, 'Lịch tuần'), (1, 'Lịch phụng vụ')])
+        for (final (index, label) in [(0, 'Lịch tuần'), (1, 'Lịch tháng')])
           Expanded(
             child: Semantics(
               selected: _tab == index,
@@ -284,6 +319,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
   Widget _daySelector(
     DateTime today,
+    List<LiturgicalEvent> events,
     List<RehearsalSession> rehearsals,
   ) => _panel(
     padding: const EdgeInsets.all(8),
@@ -294,6 +330,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             child: _dayButton(
               _addDays(_weekStart, i),
               today,
+              events,
               rehearsals,
             ),
           ),
@@ -304,12 +341,17 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   Widget _dayButton(
     DateTime day,
     DateTime today,
+    List<LiturgicalEvent> events,
     List<RehearsalSession> rehearsals,
   ) {
     final selected = DateUtils.isSameDay(day, _selectedDay);
-    final hasActivity = rehearsals.any(
-      (rehearsal) => DateUtils.isSameDay(_parishTime(rehearsal.date), day),
-    );
+    final hasActivity =
+        events.any(
+          (event) => DateUtils.isSameDay(DateUtils.dateOnly(event.date), day),
+        ) ||
+        rehearsals.any(
+          (rehearsal) => DateUtils.isSameDay(_parishTime(rehearsal.date), day),
+        );
     final foreground = selected ? AppColors.onPrimary : AppColors.onSurface;
     return Semantics(
       label: 'Chọn ngày ${DateFormat('dd/MM/yyyy').format(day)}',
@@ -362,55 +404,22 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     );
   }
 
-  Widget _daySummary(
-    int count,
-    bool loading,
-    bool incomplete,
-  ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: _softSurface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          const Padding(
-            padding: EdgeInsets.only(top: 1),
-            child: Icon(
-              Icons.music_note_rounded,
-              size: 18,
-              color: AppColors.primary,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              _selectedDay.isBefore(_today())
-                  ? 'Lịch tập đã qua'
-                  : loading
-                  ? 'Đang tải lịch tập…'
-                  : incomplete
-                  ? 'Chưa tải được đầy đủ lịch tập'
-                  : '$count buổi tập trong ngày • Giờ Việt Nam',
-              style: AppTypography.labelMedium,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _timelineRow(_TimelineEntry item) {
-    final rehearsal = item.rehearsal!;
-    final times = [
-      DateFormat('HH:mm').format(_parishTime(rehearsal.date)),
-      if (rehearsal.endTime != null)
-        DateFormat('HH:mm').format(_parishTime(rehearsal.endTime!)),
-    ];
+    final rehearsal = item.rehearsal;
+    final event = item.event;
+    final times = rehearsal == null
+        ? [DateFormat('HH:mm').format(item.start)]
+        : [
+            DateFormat('HH:mm').format(_parishTime(rehearsal.date)),
+            if (rehearsal.endTime != null)
+              DateFormat('HH:mm').format(_parishTime(rehearsal.endTime!)),
+          ];
     return Padding(
-      key: ValueKey('timeline-rehearsal-${rehearsal.id}'),
+      key: ValueKey(
+        event == null
+            ? 'timeline-rehearsal-${rehearsal!.id}'
+            : 'timeline-event-${event.id}',
+      ),
       padding: const EdgeInsets.only(bottom: 20),
       child: IntrinsicHeight(
         child: Row(
@@ -450,7 +459,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                     width: 12,
                     height: 12,
                     decoration: BoxDecoration(
-                      color: AppColors.primary,
+                      color: event == null
+                          ? AppColors.primary
+                          : AppColors.statusWarning,
                       shape: BoxShape.circle,
                       border: Border.all(color: AppColors.surface, width: 2),
                     ),
@@ -468,10 +479,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: CalendarRehearsalCard(
-                rehearsal: rehearsal,
-                attendanceOnly: false,
-              ),
+              child: event == null
+                  ? CalendarRehearsalCard(
+                      rehearsal: rehearsal!,
+                      attendanceOnly: false,
+                    )
+                  : CalendarEventCard(event: event),
             ),
           ],
         ),

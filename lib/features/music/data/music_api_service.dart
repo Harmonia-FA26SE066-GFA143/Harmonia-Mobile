@@ -129,6 +129,19 @@ class MusicApiService {
     }
   }
 
+  Future<MusicMaterialPlaybackDto> getMaterialPlayback(String id) async {
+    try {
+      final response = await _client.dio.get(
+        ApiEndpoints.musicMaterialPlayback(id),
+      );
+      return MusicMaterialPlaybackDto.fromJson(
+        response.data as Map<String, dynamic>,
+      );
+    } on DioException catch (error) {
+      throw ApiClient.parseDioException(error);
+    }
+  }
+
   Future<MaterialLearningProgressDto> updateLearningProgress(
     String materialId,
     LearningStatus status,

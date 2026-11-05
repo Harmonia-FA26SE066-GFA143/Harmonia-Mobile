@@ -207,3 +207,45 @@ class MemberRehearsalDetail {
     _ => 'Chưa xác định trạng thái điểm danh',
   };
 }
+
+class RehearsalRecording {
+  final String id;
+  final String rehearsalId;
+  final String? songId;
+  final String? songTitle;
+  final String? title;
+  final String fileName;
+  final int fileSizeBytes;
+  final int? durationSeconds;
+  final String audioUrl;
+  final DateTime createdAt;
+
+  const RehearsalRecording({
+    required this.id,
+    required this.rehearsalId,
+    this.songId,
+    this.songTitle,
+    this.title,
+    required this.fileName,
+    required this.fileSizeBytes,
+    this.durationSeconds,
+    required this.audioUrl,
+    required this.createdAt,
+  });
+
+  factory RehearsalRecording.fromJson(Map<String, dynamic> json) {
+    final duration = json['durationSeconds'];
+    return RehearsalRecording(
+      id: json['id'] as String,
+      rehearsalId: json['rehearsalId'] as String,
+      songId: json['songId'] as String?,
+      songTitle: json['songTitle'] as String?,
+      title: json['title'] as String?,
+      fileName: json['fileName'] as String? ?? '',
+      fileSizeBytes: (json['fileSizeBytes'] as num?)?.toInt() ?? 0,
+      durationSeconds: (duration as num?)?.toInt(),
+      audioUrl: json['audioUrl'] as String? ?? '',
+      createdAt: DateTime.parse(json['createdAt'] as String).toLocal(),
+    );
+  }
+}

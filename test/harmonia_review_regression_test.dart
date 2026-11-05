@@ -175,14 +175,24 @@ class FakeProfileRepository implements ProfileRepository {
     UpdateMyMemberProfileRequest request,
   ) => throw UnimplementedError();
   @override
+  Future<void> updateAvatar(String filePath) => throw UnimplementedError();
+  @override
+  Future<void> deleteAvatar() => throw UnimplementedError();
+  @override
   Future<MemberSkill?> getSkillById(String id) => throw UnimplementedError();
   @override
-  Future<void> declareNewSkill({
+  Future<MemberSkill> declareNewSkill({
     required String skillId,
     String? level,
     String? name,
     String? categoryName,
     String? note,
+  }) => throw UnimplementedError();
+  @override
+  Future<MemberSkill> uploadSkillEvidence({
+    required String id,
+    required String filePath,
+    void Function(int sent, int total)? onSendProgress,
   }) => throw UnimplementedError();
   @override
   Future<PagedList<ParticipationHistoryDto>> getParticipationHistory({

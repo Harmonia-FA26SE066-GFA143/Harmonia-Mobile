@@ -106,7 +106,10 @@ class FakeCalendarApiService extends CalendarApiService {
   }) async => throw const ForbiddenException();
 
   @override
-  Future<List<Map<String, dynamic>>> getUpcomingRehearsals() async {
+  Future<List<Map<String, dynamic>>> getUpcomingRehearsals({
+    String? fromDate,
+    String? toDate,
+  }) async {
     return [
       {
         'id': 'rehearsal-1',

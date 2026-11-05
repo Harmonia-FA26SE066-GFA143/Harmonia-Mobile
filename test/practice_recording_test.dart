@@ -27,6 +27,7 @@ class RecordingRepository extends MockPracticeRepositoryImpl {
   Completer<PracticeAssignment?>? assignmentPending;
   void Function()? onUpload;
   int uploads = 0;
+  final List<String> submittedPaths = [];
   int detailCalls = 0;
   int assignmentCalls = 0;
 
@@ -60,6 +61,7 @@ class RecordingRepository extends MockPracticeRepositoryImpl {
     required int durationSeconds,
   }) async {
     uploads++;
+    submittedPaths.add(audioPath);
     onUpload?.call();
     if (uploadError case final error?) throw error;
   }
@@ -385,21 +387,17 @@ void main() {
     });
   }
 
-  testWidgets('missing capability blocks recording with reload guidance', (
+  testWidgets('missing capability blocks recording without a reload button', (
     tester,
   ) async {
     await open(tester, canSubmit: null);
     await start(tester);
     expect(recordCalls, isNot(contains('start')));
     expect(
-      find.text('Chưa xác minh được quyền nộp bản thu. Vui lòng tải lại.'),
+      find.text('Chưa xác minh được quyền nộp bản thu. Vui lòng thử lại sau.'),
       findsOneWidget,
     );
-    repository.assignment = recordingAssignment();
-    await tester.tap(find.byTooltip('Tải lại bài tập'));
-    await tester.pumpAndSettle();
-    await start(tester);
-    expect(recordCalls, contains('start'));
+    expect(find.byTooltip('Tải lại bài tập'), findsNothing);
     await close(tester);
   });
 
@@ -409,7 +407,7 @@ void main() {
     await open(tester, isOverdue: true);
     await draft(tester);
     final callsBeforeSubmit = repository.assignmentCalls;
-    final submit = find.text('Nộp bản thu cho Ca trưởng');
+    final submit = find.text('Nộp bản thu này cho Ca trưởng');
     await tester.ensureVisible(submit);
     await tester.tap(submit);
     await tester.runAsync(
@@ -454,7 +452,7 @@ void main() {
       reason: 'PRACTICE_SUBMISSION_ALREADY_PASSED',
       status: PracticeStatus.passed,
     );
-    final submit = find.text('Nộp bản thu cho Ca trưởng');
+    final submit = find.text('Nộp bản thu này cho Ca trưởng');
     await tester.ensureVisible(submit);
     await tester.tap(submit);
     await tester.runAsync(
@@ -483,13 +481,13 @@ void main() {
     await close(tester);
   });
 
-  testWidgets('preflight failure keeps draft and reload allows retry', (
+  testWidgets('preflight failure keeps draft without a reload button', (
     tester,
   ) async {
     await open(tester);
     await draft(tester);
     repository.assignmentError = const TimeoutException();
-    final submit = find.text('Nộp bản thu cho Ca trưởng');
+    final submit = find.text('Nộp bản thu này cho Ca trưởng');
     await tester.ensureVisible(submit);
     await tester.tap(submit);
     await tester.runAsync(
@@ -499,16 +497,7 @@ void main() {
     expect(repository.uploads, 0);
     expect(File(recordingPath!).existsSync(), isTrue);
     expect(find.text('Bản thu nháp'), findsOneWidget);
-    repository.assignmentError = null;
-    await tester.tap(find.byTooltip('Tải lại bài tập'));
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(submit);
-    await tester.tap(submit);
-    await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 50)),
-    );
-    await tester.pumpAndSettle();
-    expect(repository.uploads, 1);
+    expect(find.byTooltip('Tải lại bài tập'), findsNothing);
     await close(tester);
   });
 
@@ -518,7 +507,7 @@ void main() {
     await open(tester);
     await draft(tester);
     repository.assignmentPending = Completer<PracticeAssignment?>();
-    final submit = find.text('Nộp bản thu cho Ca trưởng');
+    final submit = find.text('Nộp bản thu này cho Ca trưởng');
     await tester.ensureVisible(submit);
     await tester.tap(submit);
     await tester.runAsync(
@@ -547,7 +536,7 @@ void main() {
       repository.uploadError = const ConflictException(
         code: 'PRACTICE_SUBMISSION_PAST_DUE',
       );
-      final submit = find.text('Nộp bản thu cho Ca trưởng');
+      final submit = find.text('Nộp bản thu này cho Ca trưởng');
       await tester.ensureVisible(submit);
       await tester.tap(submit);
       await tester.runAsync(
@@ -589,7 +578,7 @@ void main() {
       await open(tester);
       await draft(tester);
       repository.assignmentMissing = true;
-      final submit = find.text('Nộp bản thu cho Ca trưởng');
+      final submit = find.text('Nộp bản thu này cho Ca trưởng');
       await tester.ensureVisible(submit);
       await tester.tap(submit);
       await tester.runAsync(
@@ -599,8 +588,8 @@ void main() {
       expect(repository.uploads, 0);
       expect(File(recordingPath!).existsSync(), isTrue);
       expect(find.text('Bản thu nháp'), findsOneWidget);
-      expect(find.byTooltip('Tải lại bài tập'), findsOneWidget);
-      expect(find.text('Bỏ bản nháp'), findsOneWidget);
+      expect(find.byTooltip('Tải lại bài tập'), findsNothing);
+      expect(find.byTooltip('Xóa bản thu'), findsOneWidget);
       final play = find.widgetWithIcon(IconButton, Icons.play_arrow_rounded);
       await tester.ensureVisible(play);
       await tester.tap(play);
@@ -666,8 +655,8 @@ void main() {
     await tester.pumpAndSettle();
     await draft(tester);
     expect(tester.takeException(), isNull);
-    expect(find.text('Thu lại'), findsOneWidget);
-    expect(find.text('Nộp bản thu cho Ca trưởng'), findsOneWidget);
+    expect(find.byTooltip('Xóa bản thu'), findsOneWidget);
+    expect(find.text('Nộp bản thu này cho Ca trưởng'), findsOneWidget);
     repository.assignment = recordingAssignment(
       canSubmit: false,
       reason: 'PRACTICE_SUBMISSION_PAST_DUE',
@@ -676,7 +665,7 @@ void main() {
         .invalidate(practiceDetailProvider('record-test'));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
-    expect(find.text('Bỏ bản nháp'), findsOneWidget);
+    expect(find.byTooltip('Xóa bản thu'), findsOneWidget);
     await close(tester);
   });
 
@@ -708,7 +697,7 @@ void main() {
     );
     await open(tester);
     await draft(tester);
-    final submit = find.text('Nộp bản thu cho Ca trưởng');
+    final submit = find.text('Nộp bản thu này cho Ca trưởng');
     await tester.ensureVisible(submit);
     await tester.tap(submit);
     await tester.runAsync(
@@ -728,6 +717,57 @@ void main() {
     await close(tester);
   });
 
+  testWidgets('keeps multiple recordings and submits only the chosen one', (
+    tester,
+  ) async {
+    await open(tester);
+    await draft(tester);
+    final firstPath = recordingPath!;
+
+    await start(tester);
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 1100)),
+    );
+    await tester.tap(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Semantics && widget.properties.label == 'Dừng thu âm',
+      ),
+    );
+    await tester.pumpAndSettle();
+    final secondPath = recordingPath!;
+
+    expect(find.text('Bản thu nháp'), findsNWidgets(2));
+    final submitButtons = find.text('Nộp bản thu này cho Ca trưởng');
+    await tester.ensureVisible(submitButtons.last);
+    await tester.tap(submitButtons.first);
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(repository.uploads, 1);
+    expect(repository.submittedPaths, [secondPath]);
+    expect(find.text('Bản thu nháp'), findsOneWidget);
+    expect(File(firstPath).existsSync(), isTrue);
+    expect(File(secondPath).existsSync(), isFalse);
+    await close(tester);
+  });
+
+  testWidgets('a new recording replaces the current submission attempt', (
+    tester,
+  ) async {
+    await open(tester, assignmentStatus: PracticeStatus.submitted);
+    await draft(tester);
+
+    expect(find.text('Thay bản đã nộp bằng bản này'), findsOneWidget);
+    expect(
+      find.text('Bản này sẽ trở thành lần nộp mới nhất trước hạn.'),
+      findsOneWidget,
+    );
+    await close(tester);
+  });
+
   testWidgets('leaving a draft requires confirmation and cancel preserves it', (
     tester,
   ) async {
@@ -735,7 +775,7 @@ void main() {
     await draft(tester);
     await tester.runAsync(() => binding.handlePopRoute());
     await tester.pumpAndSettle();
-    expect(find.text('Bỏ bản thu nháp?'), findsOneWidget);
+    expect(find.text('Bỏ các bản thu nháp?'), findsOneWidget);
     await tester.tap(find.text('Ở lại'));
     await tester.pumpAndSettle();
     expect(find.text('Bản thu nháp'), findsOneWidget);
@@ -770,7 +810,7 @@ void main() {
       findsOneWidget,
     );
     failPlayerStop = true;
-    final submit = find.text('Nộp bản thu cho Ca trưởng');
+    final submit = find.text('Nộp bản thu này cho Ca trưởng');
     await tester.ensureVisible(submit);
     await tester.tap(submit);
     await tester.runAsync(

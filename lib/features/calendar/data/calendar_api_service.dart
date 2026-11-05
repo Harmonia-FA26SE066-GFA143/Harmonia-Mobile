@@ -28,8 +28,21 @@ class CalendarApiService {
 
   Future<List<Map<String, dynamic>>> getUpcomingEvents() =>
       _getList(ApiEndpoints.scheduleEvents);
-  Future<List<Map<String, dynamic>>> getUpcomingRehearsals() =>
-      _getList(ApiEndpoints.scheduleRehearsals);
+  Future<List<Map<String, dynamic>>> getUpcomingRehearsals({
+    String? fromDate,
+    String? toDate,
+  }) {
+    if ((fromDate == null) != (toDate == null)) {
+      throw const ValidationException(
+        code: 'REPORT_DATE_RANGE_INVALID',
+        message: 'Both fromDate and toDate are required.',
+      );
+    }
+    return _getList(
+      ApiEndpoints.scheduleRehearsals,
+      query: fromDate == null ? null : {'fromDate': fromDate, 'toDate': toDate},
+    );
+  }
 
   Future<List<MyParticipation>> getMyParticipations() async =>
       (await _getList(ApiEndpoints.myParticipations))
@@ -106,40 +119,6 @@ class CalendarApiService {
     }
   }
 
-  Future<List<LiturgicalDay>> getLiturgicalDays(
-    String fromDate,
-    String toDate,
-  ) async => (await _getList(
-    ApiEndpoints.liturgicalDays,
-    query: {'fromDate': fromDate, 'toDate': toDate},
-  )).map(LiturgicalDay.fromJson).toList();
-
-  Future<LiturgicalDay?> getLiturgicalDay(String date) async {
-    try {
-      final response = await _client.dio.get(ApiEndpoints.liturgicalDay(date));
-      return LiturgicalDay.fromJson(response.data as Map<String, dynamic>);
-    } on DioException catch (error) {
-      final parsed = ApiClient.parseDioException(error);
-      if (parsed is NotFoundException &&
-          parsed.code == 'CALENDAR_DAY_NOT_FOUND') {
-        return null;
-      }
-      throw parsed;
-    }
-  }
-
-  Future<int> syncLiturgicalDays(int year) async {
-    try {
-      final response = await _client.dio.post(
-        ApiEndpoints.syncLiturgicalDays,
-        data: {'year': year},
-      );
-      return (response.data as num).toInt();
-    } on DioException catch (error) {
-      throw ApiClient.parseDioException(error);
-    }
-  }
-
   Future<PublicAppSettings> getPublicSettings() async =>
       PublicAppSettings.fromList(
         await _getList(ApiEndpoints.publicSystemSettings),
@@ -152,4 +131,9 @@ class CalendarApiService {
     songs.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
     return songs;
   }
+
+  Future<List<RehearsalRecording>> getRehearsalRecordings(String id) async =>
+      (await _getList(ApiEndpoints.rehearsalRecordings(id)))
+          .map(RehearsalRecording.fromJson)
+          .toList();
 }

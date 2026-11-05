@@ -1,17 +1,23 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/di/core_providers.dart';
+import '../../../core/errors/app_exceptions.dart';
+import '../../../core/errors/error_messages.dart';
 import '../../auth/data/auth_dto.dart';
 import '../../auth/presentation/auth_notifier.dart';
 import '../../lookups/data/lookup_dto.dart';
 import '../../lookups/data/lookups_api_service.dart';
+import '../data/avatar_image_picker.dart';
+import '../data/member_skill_evidence_picker.dart';
 import '../data/profile_models.dart';
 import '../data/profile_repository.dart';
 
@@ -25,7 +31,109 @@ class ProfileScreen extends ConsumerStatefulWidget {
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Key _profileRefreshKey = UniqueKey();
   bool _logoutDialogOpen = false;
+  bool _isAvatarUpdating = false;
   late final AppLifecycleListener _lifecycleListener;
+
+  Future<void> _deleteTemporaryEvidence(String path) async {
+    try {
+      await File(path).delete();
+    } on FileSystemException {
+      // The operating system may already have removed the temporary file.
+    }
+  }
+
+  Future<void> _reloadAvatar() async {
+    ref.invalidate(currentMemberProfileProvider);
+    setState(() => _profileRefreshKey = UniqueKey());
+  }
+
+  String _avatarErrorMessage(Object error) {
+    if (error is AppException) {
+      return switch (error.code) {
+        'AVATAR_FILE_TOO_LARGE' => 'Ảnh đại diện không được vượt quá 2 MB.',
+        'AVATAR_FILE_TYPE_NOT_ALLOWED' => 'Chỉ hỗ trợ ảnh JPG, PNG hoặc WEBP.',
+        'AVATAR_FILE_REQUIRED' => 'Không tìm thấy tệp ảnh đã chọn.',
+        'EXTERNAL_STORAGE_FAILED' =>
+          'Máy chủ chưa lưu được ảnh. Vui lòng thử lại sau.',
+        _ => error.message,
+      };
+    }
+    if (error is PlatformException) {
+      return switch (error.code) {
+        'AVATAR_FILE_TOO_LARGE' => 'Ảnh đại diện không được vượt quá 2 MB.',
+        'AVATAR_FILE_TYPE_NOT_ALLOWED' => 'Chỉ hỗ trợ ảnh JPG, PNG hoặc WEBP.',
+        _ => 'Không thể mở thư viện ảnh. Vui lòng thử lại.',
+      };
+    }
+    return 'Không thể cập nhật ảnh đại diện. Vui lòng thử lại.';
+  }
+
+  Future<void> _pickAndUploadAvatar(ProfileRepository repo) async {
+    if (_isAvatarUpdating) return;
+    setState(() => _isAvatarUpdating = true);
+    String? selectedPath;
+    try {
+      selectedPath = await AvatarImagePicker().pickImage();
+      if (!mounted || selectedPath == null) return;
+      await repo.updateAvatar(selectedPath);
+      if (!mounted) return;
+      await _reloadAvatar();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã cập nhật ảnh đại diện.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(_avatarErrorMessage(error))));
+    } finally {
+      if (selectedPath != null) {
+        try {
+          final file = File(selectedPath);
+          if (await file.exists()) await file.delete();
+        } catch (_) {}
+      }
+      if (mounted) setState(() => _isAvatarUpdating = false);
+    }
+  }
+
+  Future<void> _deleteAvatar(ProfileRepository repo) async {
+    if (_isAvatarUpdating) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Xóa ảnh đại diện?'),
+        content: const Text('Bạn có thể thêm ảnh mới bất cứ lúc nào.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Hủy'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Xóa ảnh'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmed != true) return;
+
+    setState(() => _isAvatarUpdating = true);
+    try {
+      await repo.deleteAvatar();
+      if (!mounted) return;
+      await _reloadAvatar();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Đã xóa ảnh đại diện.')));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(_avatarErrorMessage(error))));
+    } finally {
+      if (mounted) setState(() => _isAvatarUpdating = false);
+    }
+  }
 
   @override
   void initState() {
@@ -206,7 +314,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                   nav.pop();
                                   _refreshProfile();
                                   messenger.showSnackBar(
-                                    const SnackBar(
+                                    SnackBar(
                                       content: Text(
                                         'Đã cập nhật hồ sơ thành công!',
                                       ),
@@ -245,6 +353,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   void _showDeclareSkillDialog(BuildContext context, ProfileRepository repo) {
     SkillDto? selectedSkill;
     SkillLevel selectedLevel = SkillLevel.intermediate;
+    String? evidencePath;
+    String? evidenceFileName;
 
     bool isLoadingSkills = true;
     bool isSubmitting = false;
@@ -376,6 +486,101 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         }
                       },
                     ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'Minh chứng ghi âm hoặc video (không bắt buộc)',
+                      style: AppTypography.labelLarge,
+                    ),
+                    const SizedBox(height: 6),
+                    OutlinedButton.icon(
+                      onPressed: isSubmitting
+                          ? null
+                          : () async {
+                              try {
+                                final path = await MemberSkillEvidencePicker()
+                                    .pickFile();
+                                if (path == null || !context.mounted) return;
+                                final previousPath = evidencePath;
+                                setModalState(() {
+                                  evidencePath = path;
+                                  evidenceFileName = File(path)
+                                      .uri
+                                      .pathSegments
+                                      .last;
+                                  errorMessage = null;
+                                });
+                                if (previousPath != null) {
+                                  unawaited(
+                                    _deleteTemporaryEvidence(previousPath),
+                                  );
+                                }
+                              } catch (error) {
+                                if (!context.mounted) return;
+                                setModalState(() {
+                                  errorMessage = ErrorMessages.forException(
+                                    error,
+                                    defaultMessage:
+                                        'Không thể mở thư viện tệp.',
+                                  );
+                                });
+                              }
+                            },
+                      icon: const Icon(Icons.upload_file_rounded),
+                      label: Text(
+                        evidenceFileName == null
+                            ? 'Chọn ghi âm hoặc video'
+                            : 'Đổi tệp minh chứng',
+                      ),
+                    ),
+                    if (evidenceFileName != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.attach_file_rounded,
+                              size: 16,
+                              color: AppColors.muted,
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                evidenceFileName!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.bodySmall,
+                              ),
+                            ),
+                            IconButton(
+                              tooltip: 'Bỏ tệp minh chứng',
+                              visualDensity: VisualDensity.compact,
+                              onPressed: isSubmitting
+                                  ? null
+                                  : () {
+                                      final previousPath = evidencePath;
+                                      setModalState(() {
+                                        evidencePath = null;
+                                        evidenceFileName = null;
+                                      });
+                                      if (previousPath != null) {
+                                        unawaited(
+                                          _deleteTemporaryEvidence(
+                                            previousPath,
+                                          ),
+                                        );
+                                      }
+                                    },
+                              icon: const Icon(Icons.close_rounded, size: 18),
+                            ),
+                          ],
+                        ),
+                      ),
+                    Text(
+                      'Ghi âm MP3, M4A, WAV tối đa 20 MB; video MP4, MOV tối đa 100 MB.',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.muted,
+                      ),
+                    ),
                     if (errorMessage != null) ...[
                       const SizedBox(height: 10),
                       Text(
@@ -401,14 +606,53 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                   this.context,
                                 );
                                 // Send actual skillId GUID and English enum wireName
-                                await repo.declareNewSkill(
-                                  skillId: selectedSkill!.id,
-                                  level: selectedLevel.wireName,
-                                  name: selectedSkill!.name,
-                                );
+                                final declaredSkill = await repo
+                                    .declareNewSkill(
+                                      skillId: selectedSkill!.id,
+                                      level: selectedLevel.wireName,
+                                      name: selectedSkill!.name,
+                                    );
+
+                                if (evidencePath != null) {
+                                  try {
+                                    await repo.uploadSkillEvidence(
+                                      id: declaredSkill.id,
+                                      filePath: evidencePath!,
+                                    );
+                                  } catch (error) {
+                                    nav.pop();
+                                    await _deleteTemporaryEvidence(
+                                      evidencePath!,
+                                    );
+                                    if (mounted) {
+                                      ref.invalidate(
+                                        currentMemberSkillsProvider,
+                                      );
+                                      ref
+                                          .read(
+                                            memberSkillsNotifierProvider
+                                                .notifier,
+                                          )
+                                          .refresh();
+                                      messenger.showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Bản khai đã gửi, nhưng minh chứng chưa tải lên: ${ErrorMessages.forException(error)}. Mở kỹ năng vừa khai báo để thử gửi lại.',
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                    return;
+                                  }
+                                }
 
                                 if (mounted) {
                                   nav.pop();
+                                  if (evidencePath != null) {
+                                    await _deleteTemporaryEvidence(
+                                      evidencePath!,
+                                    );
+                                  }
                                   ref.invalidate(currentMemberSkillsProvider);
                                   ref
                                       .read(
@@ -416,9 +660,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                       )
                                       .refresh();
                                   messenger.showSnackBar(
-                                    const SnackBar(
+                                    SnackBar(
                                       content: Text(
-                                        'Đã gửi bản khai kỹ năng thành công! Đang chờ duyệt.',
+                                        evidencePath == null
+                                            ? 'Đã gửi bản khai kỹ năng thành công! Đang chờ duyệt.'
+                                            : 'Đã gửi bản khai và minh chứng thành công. Đang chờ duyệt.',
                                       ),
                                       backgroundColor: AppColors.statusSuccess,
                                     ),
@@ -427,14 +673,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               } catch (e) {
                                 setModalState(() {
                                   isSubmitting = false;
-                                  final errStr = e.toString();
-                                  if (errStr.contains(
-                                    'MEMBER_SKILL_ALREADY_DECLARED',
-                                  )) {
-                                    errorMessage = 'Bạn đã khai báo kỹ năng này trước đó (đang chờ duyệt hoặc đã duyệt).';
-                                  } else {
-                                    errorMessage = 'Không thể gửi bản khai: $e';
-                                  }
+                                  errorMessage =
+                                      'Không thể gửi bản khai: ${ErrorMessages.forException(e)}';
                                 });
                               }
                             },
@@ -456,217 +696,400 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           },
         );
       },
-    );
+    ).whenComplete(() {
+      final path = evidencePath;
+      if (path != null) unawaited(_deleteTemporaryEvidence(path));
+    });
   }
 
   void _showSkillDetailDialog(BuildContext context, String skillId) {
+    var isUploadingEvidence = false;
+    double? evidenceUploadProgress;
+    String? evidenceUploadError;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (context) {
         return Consumer(
           builder: (context, ref, _) {
-            return FutureBuilder<MemberSkill?>(
-              future: ref.watch(memberSkillDetailProvider(skillId).future),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Padding(
-                    padding: EdgeInsets.all(32),
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.primary,
+            return StatefulBuilder(
+              builder: (context, setSheetState) => FutureBuilder<MemberSkill?>(
+                future: ref.watch(memberSkillDetailProvider(skillId).future),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Padding(
+                      padding: EdgeInsets.all(32),
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          color: AppColors.primary,
+                        ),
                       ),
-                    ),
-                  );
-                }
-                if (snapshot.hasError) {
-                  return Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.error_outline_rounded,
-                          size: 40,
-                          color: AppColors.statusDanger,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Không thể tải chi tiết kỹ năng: ${snapshot.error}',
-                          style: AppTypography.bodyMedium,
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: const Text('Đóng'),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                final skill = snapshot.data;
-                if (skill == null) {
-                  return Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text('Không tìm thấy thông tin kỹ năng.'),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: const Text('Đóng'),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                Color badgeBg;
-                Color badgeFg;
-                if (skill.status == SkillApprovalStatus.approved) {
-                  badgeBg = AppColors.statusSuccessSoft;
-                  badgeFg = AppColors.statusSuccess;
-                } else if (skill.status == SkillApprovalStatus.rejected) {
-                  badgeBg = AppColors.statusDangerSoft;
-                  badgeFg = AppColors.statusDanger;
-                } else {
-                  badgeBg = AppColors.statusWarningSoft;
-                  badgeFg = AppColors.statusWarning;
-                }
-
-                return Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    );
+                  }
+                  if (snapshot.hasError) {
+                    return Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            'Chi tiết kỹ năng',
-                            style: AppTypography.titleLarge,
+                          const Icon(
+                            Icons.error_outline_rounded,
+                            size: 40,
+                            color: AppColors.statusDanger,
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.close_rounded),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Không thể tải chi tiết kỹ năng: ${snapshot.error}',
+                            style: AppTypography.bodyMedium,
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
                             onPressed: () => Navigator.of(context).pop(),
+                            child: const Text('Đóng'),
                           ),
                         ],
                       ),
-                      const Divider(),
-                      const SizedBox(height: 8),
-                      Text(
-                        skill.name,
-                        style: AppTypography.headlineSmall.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        skill.categoryName,
-                        style: AppTypography.bodyMedium.copyWith(
-                          color: AppColors.muted,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
+                    );
+                  }
+
+                  final skill = snapshot.data;
+                  if (skill == null) {
+                    return Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
+                          const Text('Không tìm thấy thông tin kỹ năng.'),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: const Text('Đóng'),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  Color badgeBg;
+                  Color badgeFg;
+                  if (skill.status == SkillApprovalStatus.approved) {
+                    badgeBg = AppColors.statusSuccessSoft;
+                    badgeFg = AppColors.statusSuccess;
+                  } else if (skill.status == SkillApprovalStatus.rejected) {
+                    badgeBg = AppColors.statusDangerSoft;
+                    badgeFg = AppColors.statusDanger;
+                  } else {
+                    badgeBg = AppColors.statusWarningSoft;
+                    badgeFg = AppColors.statusWarning;
+                  }
+
+                  return Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Chi tiết kỹ năng',
+                              style: AppTypography.titleLarge,
                             ),
-                            decoration: BoxDecoration(
-                              color: badgeBg,
-                              borderRadius: BorderRadius.circular(10),
+                            IconButton(
+                              icon: const Icon(Icons.close_rounded),
+                              onPressed: () => Navigator.of(context).pop(),
                             ),
-                            child: Text(
-                              skill.status.label,
-                              style: AppTypography.labelSmall.copyWith(
-                                color: badgeFg,
-                                fontWeight: FontWeight.bold,
+                          ],
+                        ),
+                        const Divider(),
+                        const SizedBox(height: 8),
+                        Text(
+                          skill.name,
+                          style: AppTypography.headlineSmall.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          skill.categoryName,
+                          style: AppTypography.bodyMedium.copyWith(
+                            color: AppColors.muted,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: badgeBg,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                skill.status.label,
+                                style: AppTypography.labelSmall.copyWith(
+                                  color: badgeFg,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceContainerLow,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                'Cấp độ: ${skill.levelLabel}',
+                                style: AppTypography.labelSmall.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        if (skill.declaredAt != null)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Text(
+                              'Ngày khai báo: ${DateFormat('dd/MM/yyyy HH:mm').format(skill.declaredAt!)}',
+                              style: AppTypography.bodySmall,
+                            ),
+                          ),
+                        if (skill.approvedAt != null)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Text(
+                              'Ngày duyệt: ${DateFormat('dd/MM/yyyy HH:mm').format(skill.approvedAt!)}',
+                              style: AppTypography.bodySmall,
+                            ),
+                          ),
+                        if (skill.status == SkillApprovalStatus.rejected &&
+                            skill.rejectReason != null &&
+                            skill.rejectReason!.isNotEmpty) ...[
+                          const SizedBox(height: 10),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColors.statusDangerSoft,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Lý do từ chối từ Ca trưởng:',
+                                  style: AppTypography.labelSmall.copyWith(
+                                    color: AppColors.statusDanger,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  skill.rejectReason!,
+                                  style: AppTypography.bodySmall.copyWith(
+                                    color: AppColors.statusDanger,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        if (skill.evidence != null) ...[
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
                               color: AppColors.surfaceContainerLow,
                               borderRadius: BorderRadius.circular(10),
                             ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  skill.evidence!.type == 'Voice'
+                                      ? Icons.mic_none_rounded
+                                      : Icons.videocam_outlined,
+                                  color: AppColors.primary,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        skill.evidence!.fileName,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: AppTypography.labelLarge,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '${skill.evidence!.type == 'Voice' ? 'Ghi âm' : 'Video'} • ${(skill.evidence!.fileSizeBytes / (1024 * 1024)).toStringAsFixed(1)} MB',
+                                        style: AppTypography.bodySmall.copyWith(
+                                          color: AppColors.muted,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        if (skill.status == SkillApprovalStatus.pending) ...[
+                          if (evidenceUploadError != null) ...[
+                            const SizedBox(height: 10),
+                            Text(
+                              evidenceUploadError!,
+                              style: AppTypography.bodySmall.copyWith(
+                                color: AppColors.statusDanger,
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 12),
+                          OutlinedButton.icon(
+                            onPressed: isUploadingEvidence
+                                ? null
+                                : () async {
+                                    String? path;
+                                    try {
+                                      path = await MemberSkillEvidencePicker()
+                                          .pickFile();
+                                    } catch (error) {
+                                      if (!context.mounted) return;
+                                      setSheetState(() {
+                                        evidenceUploadError =
+                                            ErrorMessages.forException(
+                                              error,
+                                              defaultMessage:
+                                                  'Không thể mở thư viện tệp.',
+                                            );
+                                      });
+                                      return;
+                                    }
+                                    if (path == null || !context.mounted) {
+                                      return;
+                                    }
+                                    setSheetState(() {
+                                      isUploadingEvidence = true;
+                                      evidenceUploadProgress = 0;
+                                      evidenceUploadError = null;
+                                    });
+                                    try {
+                                      await ref
+                                          .read(profileRepositoryProvider)
+                                          .uploadSkillEvidence(
+                                            id: skill.id,
+                                            filePath: path,
+                                            onSendProgress: (sent, total) {
+                                              if (total > 0 &&
+                                                  context.mounted) {
+                                                setSheetState(() {
+                                                  evidenceUploadProgress =
+                                                      sent / total;
+                                                });
+                                              }
+                                            },
+                                          );
+                                      if (!context.mounted) return;
+                                      setSheetState(() {
+                                        isUploadingEvidence = false;
+                                        evidenceUploadProgress = null;
+                                      });
+                                      ref.invalidate(
+                                        memberSkillDetailProvider(skill.id),
+                                      );
+                                      await ref
+                                          .read(
+                                            memberSkillsNotifierProvider
+                                                .notifier,
+                                          )
+                                          .refresh();
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(this.context)
+                                            .showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  'Đã gửi minh chứng cho Ca trưởng.',
+                                                ),
+                                              ),
+                                            );
+                                      }
+                                    } catch (error) {
+                                      if (!context.mounted) return;
+                                      setSheetState(() {
+                                        isUploadingEvidence = false;
+                                        evidenceUploadProgress = null;
+                                        evidenceUploadError =
+                                            ErrorMessages.forException(
+                                              error,
+                                              defaultMessage: 'Không thể tải minh chứng lên. Vui lòng thử lại.',
+                                            );
+                                      });
+                                    } finally {
+                                      try {
+                                        await File(path).delete();
+                                      } on FileSystemException {
+                                        // The operating system may already have removed the temporary file.
+                                      }
+                                    }
+                                  },
+                            icon: isUploadingEvidence
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.upload_file_rounded),
+                            label: Text(
+                              isUploadingEvidence
+                                  ? 'Đang tải ${(100 * (evidenceUploadProgress ?? 0)).round()}%'
+                                  : skill.evidence == null
+                                  ? 'Gửi minh chứng ghi âm / video'
+                                  : 'Thay minh chứng',
+                            ),
+                          ),
+                          if (isUploadingEvidence &&
+                              evidenceUploadProgress != null) ...[
+                            const SizedBox(height: 8),
+                            LinearProgressIndicator(
+                              value: evidenceUploadProgress,
+                              color: AppColors.primary,
+                            ),
+                          ],
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6),
                             child: Text(
-                              'Cấp độ: ${skill.levelLabel}',
-                              style: AppTypography.labelSmall.copyWith(
-                                fontWeight: FontWeight.w600,
+                              'Ghi âm tối đa 20 MB; video tối đa 100 MB. Chỉ có thể gửi khi kỹ năng đang chờ duyệt.',
+                              style: AppTypography.bodySmall.copyWith(
+                                color: AppColors.muted,
                               ),
                             ),
                           ),
                         ],
-                      ),
-                      const SizedBox(height: 16),
-                      if (skill.declaredAt != null)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: Text(
-                            'Ngày khai báo: ${DateFormat('dd/MM/yyyy HH:mm').format(skill.declaredAt!)}',
-                            style: AppTypography.bodySmall,
-                          ),
-                        ),
-                      if (skill.approvedAt != null)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: Text(
-                            'Ngày duyệt: ${DateFormat('dd/MM/yyyy HH:mm').format(skill.approvedAt!)}',
-                            style: AppTypography.bodySmall,
-                          ),
-                        ),
-                      if (skill.status == SkillApprovalStatus.rejected &&
-                          skill.rejectReason != null &&
-                          skill.rejectReason!.isNotEmpty) ...[
-                        const SizedBox(height: 10),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppColors.statusDangerSoft,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Lý do từ chối từ Ca trưởng:',
-                                style: AppTypography.labelSmall.copyWith(
-                                  color: AppColors.statusDanger,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                skill.rejectReason!,
-                                style: AppTypography.bodySmall.copyWith(
-                                  color: AppColors.statusDanger,
-                                ),
-                              ),
-                            ],
-                          ),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('Đóng'),
                         ),
                       ],
-                      const SizedBox(height: 24),
-                      ElevatedButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Đóng'),
-                      ),
-                    ],
-                  ),
-                );
-              },
+                    ),
+                  );
+                },
+              ),
             );
           },
         );
@@ -722,13 +1145,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text('Hồ sơ ca viên', style: AppTypography.headlineSmall),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            tooltip: 'Làm mới',
-            onPressed: _refreshProfile,
-          ),
-        ],
       ),
       body: SafeArea(
         child: FutureBuilder<MemberProfileDto>(
@@ -799,30 +1215,53 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       padding: const EdgeInsets.all(16),
                       child: Row(
                         children: [
-                          Container(
-                            width: 64,
-                            height: 64,
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.1),
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: AppColors.primary,
-                                width: 2,
-                              ),
-                            ),
-                            child: Center(
-                              child: Text(
-                                profile.fullName.isNotEmpty
-                                    ? profile.fullName[0].toUpperCase()
-                                    : 'C',
-                                style: AppTypography.headlineMedium.copyWith(
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.bold,
+                          Stack(
+                            children: [
+                              Container(
+                                width: 76,
+                                height: 76,
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.1,
+                                  ),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: AppColors.primary,
+                                    width: 2,
+                                  ),
                                 ),
+                                clipBehavior: Clip.antiAlias,
+                                child: profile.avatarUrl?.isNotEmpty == true
+                                    ? Image.network(
+                                        profile.avatarUrl!,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, _, _) => Icon(
+                                          Icons.person_outline_rounded,
+                                          color: AppColors.primary,
+                                          size: 42,
+                                        ),
+                                      )
+                                    : Icon(
+                                        Icons.person_outline_rounded,
+                                        color: AppColors.primary,
+                                        size: 42,
+                                      ),
                               ),
-                            ),
+                              if (_isAvatarUpdating)
+                                Positioned.fill(
+                                  child: ColoredBox(
+                                    color: Colors.black38,
+                                    child: const Center(
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
-                          const SizedBox(width: 16),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -859,6 +1298,40 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                   style: AppTypography.labelSmall.copyWith(
                                     color: AppColors.muted,
                                   ),
+                                ),
+                                const SizedBox(height: 8),
+                                Wrap(
+                                  spacing: 4,
+                                  runSpacing: 0,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    TextButton.icon(
+                                      onPressed: _isAvatarUpdating
+                                          ? null
+                                          : () => _pickAndUploadAvatar(repo),
+                                      icon: const Icon(
+                                        Icons.file_upload_outlined,
+                                        size: 17,
+                                      ),
+                                      label: Text(
+                                        profile.avatarUrl?.isNotEmpty == true
+                                            ? 'Đổi ảnh'
+                                            : 'Tải ảnh lên',
+                                      ),
+                                    ),
+                                    if (profile.avatarUrl?.isNotEmpty == true)
+                                      IconButton(
+                                        tooltip: 'Xóa ảnh đại diện',
+                                        visualDensity: VisualDensity.compact,
+                                        onPressed: _isAvatarUpdating
+                                            ? null
+                                            : () => _deleteAvatar(repo),
+                                        icon: const Icon(
+                                          Icons.delete_outline_rounded,
+                                          size: 19,
+                                        ),
+                                      ),
+                                  ],
                                 ),
                               ],
                             ),

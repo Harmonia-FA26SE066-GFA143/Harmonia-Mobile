@@ -72,6 +72,7 @@ class MemberSkill {
   final String? rejectReason;
   final DateTime? declaredAt;
   final DateTime? approvedAt;
+  final MemberSkillEvidence? evidence;
 
   String get levelLabel => SkillLevel.toLabel(level);
 
@@ -87,5 +88,22 @@ class MemberSkill {
     this.rejectReason,
     this.declaredAt,
     this.approvedAt,
+    this.evidence,
+  });
+}
+
+class MemberSkillEvidence {
+  final String type;
+  final String fileName;
+  final int fileSizeBytes;
+  final DateTime? uploadedAt;
+  final String url;
+
+  const MemberSkillEvidence({
+    required this.type,
+    required this.fileName,
+    required this.fileSizeBytes,
+    this.uploadedAt,
+    required this.url,
   });
 }

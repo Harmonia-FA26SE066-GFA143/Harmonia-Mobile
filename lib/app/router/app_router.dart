@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/di/core_providers.dart';
 import '../../core/session/session_manager.dart';
 import '../../features/auth/presentation/change_password_screen.dart';
+import '../../features/auth/presentation/forgot_password_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/reset_password_screen.dart';
 import '../../features/calendar/presentation/calendar_screen.dart';
@@ -17,6 +18,7 @@ import '../../features/music/presentation/music_material_screen.dart';
 import '../../features/notifications/presentation/notification_list_screen.dart';
 import '../../features/practice/presentation/practice_detail_screen.dart';
 import '../../features/practice/presentation/practice_list_screen.dart';
+import '../../features/practice/presentation/practice_history_screen.dart';
 import '../../features/practice/presentation/practice_submission_detail_screen.dart';
 import '../../features/profile/presentation/participation_history_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
@@ -46,6 +48,7 @@ bool _isValidInternalRoute(String? path) {
   final location = uri?.path ?? path;
   if (location == '/login' ||
       location == '/splash' ||
+      location == '/forgot-password' ||
       location == '/reset-password') {
     return false;
   }
@@ -61,7 +64,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     initialLocation: '/splash',
     redirect: (context, state) {
       // Allow /reset-password across all session statuses (initial, unauth, auth)
-      if (state.matchedLocation == '/reset-password' ||
+      if (state.matchedLocation == '/forgot-password' ||
+          state.uri.path == '/forgot-password' ||
+          state.matchedLocation == '/reset-password' ||
           state.uri.path == '/reset-password') {
         return null;
       }
@@ -129,6 +134,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const SplashScreen(),
       ),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+      GoRoute(
+        path: '/forgot-password',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => ForgotPasswordScreen(
+          initialEmail: state.uri.queryParameters['email'] ?? '',
+        ),
+      ),
       GoRoute(
         path: '/change-password',
         parentNavigatorKey: _rootNavigatorKey,
@@ -246,6 +258,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final id = state.pathParameters['id'] ?? '';
           return PracticeDetailScreen(assignmentId: id);
         },
+      ),
+      GoRoute(
+        path: '/practice-history',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const PracticeHistoryScreen(),
       ),
       GoRoute(
         path: '/practice-submission/:id',

@@ -9,6 +9,7 @@ import '../../music/data/music_repository.dart';
 import '../data/calendar_member_dto.dart';
 import '../data/calendar_repository.dart';
 import '../data/liturgical_models.dart';
+import 'participation_prompt.dart';
 
 const _softSurface = Color(0xFFF1F1F3);
 
@@ -118,11 +119,46 @@ class CalendarEventCard extends ConsumerWidget {
                 '/event-detail/${Uri.encodeComponent(event.id)}',
               ),
             ),
+            if (current.canRespond) _EventParticipationActions(event: current),
           ],
         ],
       ),
     );
   }
+}
+
+class _EventParticipationActions extends ConsumerWidget {
+  final LiturgicalEvent event;
+
+  const _EventParticipationActions({required this.event});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => Padding(
+    padding: const EdgeInsets.only(top: 4),
+    child: Wrap(
+      spacing: 4,
+      runSpacing: 0,
+      children: [
+        for (final (label, status) in [
+          ('Có mặt', ParticipationStatus.confirmed),
+          ('Vắng', ParticipationStatus.declined),
+          ('Chưa chắc chắn', ParticipationStatus.unsure),
+        ])
+          TextButton(
+            onPressed: () =>
+                showParticipationPrompt(context, ref, event, status),
+            style: TextButton.styleFrom(
+              foregroundColor: status == ParticipationStatus.unsure
+                  ? AppColors.statusWarning
+                  : AppColors.primary,
+              minimumSize: const Size(48, 40),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+            ),
+            child: Text(label, style: AppTypography.labelSmall),
+          ),
+      ],
+    ),
+  );
 }
 
 class CalendarRehearsalCard extends ConsumerWidget {

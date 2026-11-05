@@ -80,6 +80,10 @@ class AuthInterceptor extends Interceptor {
     ErrorInterceptorHandler handler,
   ) async {
     final statusCode = err.response?.statusCode;
+    if (err.requestOptions.extra['skipAuthRetry'] == true) {
+      handler.next(err);
+      return;
+    }
     final path = err.requestOptions.path;
     final requestEpoch =
         err.requestOptions.extra['sessionEpoch'] as int? ??

@@ -41,6 +41,72 @@ enum LearningStatus {
   }
 }
 
+enum PlaybackInstrument {
+  piano('Piano'),
+  organ('Organ'),
+  guitar('Guitar'),
+  stringEnsemble('StringEnsemble');
+
+  final String wireName;
+  const PlaybackInstrument(this.wireName);
+
+  String get label => switch (this) {
+    PlaybackInstrument.piano => 'Piano',
+    PlaybackInstrument.organ => 'Đàn organ',
+    PlaybackInstrument.guitar => 'Guitar',
+    PlaybackInstrument.stringEnsemble => 'Bộ dây',
+  };
+
+  static PlaybackInstrument fromWire(dynamic value) {
+    if (value is num) {
+      final index = value.toInt();
+      if (index >= 0 && index < values.length) return values[index];
+    }
+    final normalized = value?.toString().toLowerCase();
+    return values.firstWhere(
+      (instrument) => instrument.wireName.toLowerCase() == normalized,
+      orElse: () => PlaybackInstrument.piano,
+    );
+  }
+}
+
+class MusicMaterialPlaybackDto {
+  final String id;
+  final String songId;
+  final String title;
+  final String status;
+  final int schemaVersion;
+  final double durationSeconds;
+  final PlaybackInstrument instrument;
+  final String audioUrl;
+  final String notesUrl;
+
+  const MusicMaterialPlaybackDto({
+    required this.id,
+    required this.songId,
+    required this.title,
+    required this.status,
+    required this.schemaVersion,
+    required this.durationSeconds,
+    required this.instrument,
+    required this.audioUrl,
+    required this.notesUrl,
+  });
+
+  factory MusicMaterialPlaybackDto.fromJson(Map<String, dynamic> json) =>
+      MusicMaterialPlaybackDto(
+        id: json['id']?.toString() ?? '',
+        songId: json['songId']?.toString() ?? '',
+        title: json['title']?.toString() ?? '',
+        status: json['status']?.toString() ?? '',
+        schemaVersion: (json['schemaVersion'] as num?)?.toInt() ?? 1,
+        durationSeconds: (json['durationSeconds'] as num?)?.toDouble() ?? 0,
+        instrument: PlaybackInstrument.fromWire(json['instrument']),
+        audioUrl: json['audioUrl']?.toString() ?? '',
+        notesUrl: json['notesUrl']?.toString() ?? '',
+      );
+}
+
 class SongDto {
   final String id;
   final String title;
@@ -224,7 +290,10 @@ class SearchSongsRequest {
   final String? massTypeId;
   final String? ceremonyTypeId;
   final String? songThemeId;
+  final String? liturgicalSlotId;
   final String? skillId;
+  final bool? isClassified;
+  final MaterialType? missingMaterialType;
   final int pageNumber;
   final int pageSize;
 
@@ -234,7 +303,10 @@ class SearchSongsRequest {
     this.massTypeId,
     this.ceremonyTypeId,
     this.songThemeId,
+    this.liturgicalSlotId,
     this.skillId,
+    this.isClassified,
+    this.missingMaterialType,
     this.pageNumber = 1,
     this.pageSize = 20,
   });
@@ -259,8 +331,17 @@ class SearchSongsRequest {
     if (songThemeId != null) {
       params['songThemeId'] = songThemeId;
     }
+    if (liturgicalSlotId != null) {
+      params['liturgicalSlotId'] = liturgicalSlotId;
+    }
     if (skillId != null) {
       params['skillId'] = skillId;
+    }
+    if (isClassified != null) {
+      params['isClassified'] = isClassified;
+    }
+    if (missingMaterialType != null) {
+      params['missingMaterialType'] = missingMaterialType!.wireName;
     }
     return params;
   }

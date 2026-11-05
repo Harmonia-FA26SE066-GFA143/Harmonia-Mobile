@@ -90,6 +90,13 @@ class _PracticeListScreenState extends ConsumerState<PracticeListScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text('Bài tập & Bản thu', style: AppTypography.headlineSmall),
+        actions: [
+          IconButton(
+            tooltip: 'Lịch sử luyện tập',
+            onPressed: () => context.push('/practice-history'),
+            icon: const Icon(Icons.history_rounded),
+          ),
+        ],
       ),
       body: SafeArea(
         child: Column(

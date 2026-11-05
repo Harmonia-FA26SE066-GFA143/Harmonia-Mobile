@@ -95,6 +95,7 @@ class MemberSkillDto {
   final DateTime? declaredAt;
   final DateTime? approvedAt;
   final String? rejectReason;
+  final MemberSkillEvidenceDto? evidence;
 
   const MemberSkillDto({
     required this.id,
@@ -107,6 +108,7 @@ class MemberSkillDto {
     this.declaredAt,
     this.approvedAt,
     this.rejectReason,
+    this.evidence,
   });
 
   factory MemberSkillDto.fromJson(Map<String, dynamic> json) {
@@ -125,6 +127,11 @@ class MemberSkillDto {
           ? DateTime.tryParse(json['approvedAt'].toString())?.toLocal()
           : null,
       rejectReason: json['rejectReason']?.toString(),
+      evidence: json['evidence'] is Map<String, dynamic>
+          ? MemberSkillEvidenceDto.fromJson(
+              json['evidence'] as Map<String, dynamic>,
+            )
+          : null,
     );
   }
 
@@ -139,6 +146,42 @@ class MemberSkillDto {
     if (declaredAt != null) 'declaredAt': declaredAt!.toIso8601String(),
     if (approvedAt != null) 'approvedAt': approvedAt!.toIso8601String(),
     if (rejectReason != null) 'rejectReason': rejectReason,
+    if (evidence != null) 'evidence': evidence!.toJson(),
+  };
+}
+
+class MemberSkillEvidenceDto {
+  final String type;
+  final String fileName;
+  final int fileSizeBytes;
+  final DateTime? uploadedAt;
+  final String url;
+
+  const MemberSkillEvidenceDto({
+    required this.type,
+    required this.fileName,
+    required this.fileSizeBytes,
+    this.uploadedAt,
+    required this.url,
+  });
+
+  factory MemberSkillEvidenceDto.fromJson(Map<String, dynamic> json) =>
+      MemberSkillEvidenceDto(
+        type: json['type']?.toString() ?? '',
+        fileName: json['fileName']?.toString() ?? '',
+        fileSizeBytes: (json['fileSizeBytes'] as num?)?.toInt() ?? 0,
+        uploadedAt: json['uploadedAt'] != null
+            ? DateTime.tryParse(json['uploadedAt'].toString())?.toLocal()
+            : null,
+        url: json['url']?.toString() ?? '',
+      );
+
+  Map<String, dynamic> toJson() => {
+    'type': type,
+    'fileName': fileName,
+    'fileSizeBytes': fileSizeBytes,
+    if (uploadedAt != null) 'uploadedAt': uploadedAt!.toIso8601String(),
+    'url': url,
   };
 }
 

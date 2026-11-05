@@ -53,9 +53,6 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final calendarState = ref.watch(calendarNotifierProvider);
-    final nowVn = DateTime.now().toUtc().add(const Duration(hours: 7));
-    final today = DateFormat('yyyy-MM-dd').format(nowVn);
-    final dayState = ref.watch(liturgicalDayProvider(today));
     final settings = ref.watch(publicAppSettingsProvider).value;
     final choirLabel = settings?.choirName.isNotEmpty == true
         ? settings!.choirName
@@ -69,6 +66,7 @@ class HomeScreen extends ConsumerWidget {
         ? memberName
         : 'Ca viên';
     final avatarInitial = displayName.characters.first.toUpperCase();
+    final avatarUrl = profileState.asData?.value.avatarUrl;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -77,7 +75,6 @@ class HomeScreen extends ConsumerWidget {
           onRefresh: () async {
             ref.invalidate(rehearsalsProvider);
             ref.invalidate(publicAppSettingsProvider);
-            ref.invalidate(liturgicalDayProvider(today));
             ref.invalidate(currentMemberProfileProvider);
             await ref.read(calendarNotifierProvider.notifier).loadEvents();
             await ref
@@ -107,15 +104,30 @@ class HomeScreen extends ConsumerWidget {
                           width: 1.5,
                         ),
                       ),
-                      child: Center(
-                        child: Text(
-                          avatarInitial,
-                          style: AppTypography.titleLarge.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: avatarUrl?.isNotEmpty == true
+                          ? Image.network(
+                              avatarUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => Center(
+                                child: Text(
+                                  avatarInitial,
+                                  style: AppTypography.titleLarge.copyWith(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            )
+                          : Center(
+                              child: Text(
+                                avatarInitial,
+                                style: AppTypography.titleLarge.copyWith(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -240,18 +252,7 @@ class HomeScreen extends ConsumerWidget {
                             ),
                           ),
                           Text(
-                            dayState.when(
-                              data: (day) => day == null
-                                  ? 'Chưa có lịch lễ hôm nay'
-                                  : [
-                                      day.celebrationLabel,
-                                      if (day.rankLabel != null) day.rankLabel!,
-                                      if (day.seasonLabel != null)
-                                        day.seasonLabel!,
-                                    ].join(' • '),
-                              loading: () => 'Đang tải lịch lễ…',
-                              error: (_, _) => 'Chưa tải được lịch lễ hôm nay',
-                            ),
+                            'Chỉ hiển thị sự kiện sắp tới được cha xứ công bố.',
                             style: AppTypography.bodySmall,
                           ),
                         ],
@@ -319,7 +320,7 @@ class HomeScreen extends ConsumerWidget {
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                'Lịch phụng vụ đang được cập nhật từ máy chủ.',
+                                'Chưa có sự kiện sắp tới được công bố cho ca viên.',
                                 style: AppTypography.bodySmall.copyWith(
                                   color: AppColors.muted,
                                 ),

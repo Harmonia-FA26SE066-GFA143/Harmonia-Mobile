@@ -12,6 +12,14 @@ class MusicLibraryState {
   final String keyword;
   final MaterialType? materialType;
   final LearningStatus? learningStatus;
+  final String? liturgicalSeasonId;
+  final String? massTypeId;
+  final String? ceremonyTypeId;
+  final String? songThemeId;
+  final String? liturgicalSlotId;
+  final String? skillId;
+  final bool? isClassified;
+  final MaterialType? missingMaterialType;
   final List<SongDto> songs;
   final List<MusicMaterialDetailDto> materials;
   final int page;
@@ -25,6 +33,14 @@ class MusicLibraryState {
     this.keyword = '',
     this.materialType,
     this.learningStatus,
+    this.liturgicalSeasonId,
+    this.massTypeId,
+    this.ceremonyTypeId,
+    this.songThemeId,
+    this.liturgicalSlotId,
+    this.skillId,
+    this.isClassified,
+    this.missingMaterialType,
     this.songs = const [],
     this.materials = const [],
     this.page = 0,
@@ -35,6 +51,15 @@ class MusicLibraryState {
   });
 
   bool get isEmpty => materialsTab ? materials.isEmpty : songs.isEmpty;
+  bool get hasSongFilters =>
+      liturgicalSeasonId != null ||
+      massTypeId != null ||
+      ceremonyTypeId != null ||
+      songThemeId != null ||
+      liturgicalSlotId != null ||
+      skillId != null ||
+      isClassified != null ||
+      missingMaterialType != null;
 }
 
 class MusicLibraryNotifier extends StateNotifier<MusicLibraryState> {
@@ -50,6 +75,14 @@ class MusicLibraryNotifier extends StateNotifier<MusicLibraryState> {
     bool? materialsTab,
     MaterialType? materialType,
     LearningStatus? learningStatus,
+    String? liturgicalSeasonId,
+    String? massTypeId,
+    String? ceremonyTypeId,
+    String? songThemeId,
+    String? liturgicalSlotId,
+    String? skillId,
+    bool? isClassified,
+    MaterialType? missingMaterialType,
     bool replaceFilters = false,
   }) async {
     final old = state;
@@ -68,6 +101,30 @@ class MusicLibraryNotifier extends StateNotifier<MusicLibraryState> {
       learningStatus: replaceFilters
           ? learningStatus
           : (tab == old.materialsTab ? old.learningStatus : null),
+      liturgicalSeasonId: replaceFilters
+          ? liturgicalSeasonId
+          : (tab == old.materialsTab ? old.liturgicalSeasonId : null),
+      massTypeId: replaceFilters
+          ? massTypeId
+          : (tab == old.materialsTab ? old.massTypeId : null),
+      ceremonyTypeId: replaceFilters
+          ? ceremonyTypeId
+          : (tab == old.materialsTab ? old.ceremonyTypeId : null),
+      songThemeId: replaceFilters
+          ? songThemeId
+          : (tab == old.materialsTab ? old.songThemeId : null),
+      liturgicalSlotId: replaceFilters
+          ? liturgicalSlotId
+          : (tab == old.materialsTab ? old.liturgicalSlotId : null),
+      skillId: replaceFilters
+          ? skillId
+          : (tab == old.materialsTab ? old.skillId : null),
+      isClassified: replaceFilters
+          ? isClassified
+          : (tab == old.materialsTab ? old.isClassified : null),
+      missingMaterialType: replaceFilters
+          ? missingMaterialType
+          : (tab == old.materialsTab ? old.missingMaterialType : null),
       songs: changed ? const [] : old.songs,
       materials: changed ? const [] : old.materials,
       loading: true,
@@ -89,6 +146,14 @@ class MusicLibraryNotifier extends StateNotifier<MusicLibraryState> {
       keyword: old.keyword,
       materialType: old.materialType,
       learningStatus: old.learningStatus,
+      liturgicalSeasonId: old.liturgicalSeasonId,
+      massTypeId: old.massTypeId,
+      ceremonyTypeId: old.ceremonyTypeId,
+      songThemeId: old.songThemeId,
+      liturgicalSlotId: old.liturgicalSlotId,
+      skillId: old.skillId,
+      isClassified: old.isClassified,
+      missingMaterialType: old.missingMaterialType,
       songs: old.songs,
       materials: old.materials,
       page: old.page,
@@ -124,7 +189,18 @@ class MusicLibraryNotifier extends StateNotifier<MusicLibraryState> {
         hasMore = result.hasNextPage;
       } else {
         final result = await _repository.getSongsPage(
-          SearchSongsRequest(keyword: query.keyword, pageNumber: page),
+          SearchSongsRequest(
+            keyword: query.keyword,
+            liturgicalSeasonId: query.liturgicalSeasonId,
+            massTypeId: query.massTypeId,
+            ceremonyTypeId: query.ceremonyTypeId,
+            songThemeId: query.songThemeId,
+            liturgicalSlotId: query.liturgicalSlotId,
+            skillId: query.skillId,
+            isClassified: query.isClassified,
+            missingMaterialType: query.missingMaterialType,
+            pageNumber: page,
+          ),
         );
         songs = {
           for (final item in (append ? query.songs : <SongDto>[]))
@@ -140,6 +216,14 @@ class MusicLibraryNotifier extends StateNotifier<MusicLibraryState> {
         keyword: query.keyword,
         materialType: query.materialType,
         learningStatus: query.learningStatus,
+        liturgicalSeasonId: query.liturgicalSeasonId,
+        massTypeId: query.massTypeId,
+        ceremonyTypeId: query.ceremonyTypeId,
+        songThemeId: query.songThemeId,
+        liturgicalSlotId: query.liturgicalSlotId,
+        skillId: query.skillId,
+        isClassified: query.isClassified,
+        missingMaterialType: query.missingMaterialType,
         songs: songs,
         materials: materials,
         page: currentPage,
@@ -152,6 +236,14 @@ class MusicLibraryNotifier extends StateNotifier<MusicLibraryState> {
         keyword: query.keyword,
         materialType: query.materialType,
         learningStatus: query.learningStatus,
+        liturgicalSeasonId: query.liturgicalSeasonId,
+        massTypeId: query.massTypeId,
+        ceremonyTypeId: query.ceremonyTypeId,
+        songThemeId: query.songThemeId,
+        liturgicalSlotId: query.liturgicalSlotId,
+        skillId: query.skillId,
+        isClassified: query.isClassified,
+        missingMaterialType: query.missingMaterialType,
         songs: query.songs,
         materials: query.materials,
         page: query.page,
