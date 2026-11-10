@@ -210,6 +210,34 @@ void main() {
     });
   });
 
+  test('rehearsal schedule keeps notes separate from its heading', () async {
+    const notes = ['General rehearsal instruction', null, ''];
+    adapter.responseBody = (_) => [
+      for (var i = 0; i < notes.length; i++)
+        {
+          'id': 'rehearsal-$i',
+          'startTime': '2026-10-10T01:00:00Z',
+          'endTime': '2026-10-10T02:00:00Z',
+          'locationName': 'Test room',
+          'note': notes[i],
+          'songs': [
+            {
+              'songId': 'song-a',
+              'songTitle': 'Test song',
+              'displayOrder': 1,
+              'note': null,
+            },
+          ],
+        },
+    ];
+    final repo = CalendarRepositoryImpl(apiService: CalendarApiService(client));
+    final rehearsals = await repo.getRehearsals();
+    expect(adapter.requests.single.path, '/api/schedule/rehearsals');
+    expect(rehearsals.map((r) => r.title), everyElement('Buổi tập hát'));
+    expect(rehearsals.map((r) => r.note), notes);
+    expect(rehearsals.first.contentSummary, 'Test song');
+  });
+
   test('public settings map the three public string keys only', () async {
     adapter.responseBody = (_) => [
       {'key': 'Choir.Name', 'value': 'Test choir'},
@@ -387,7 +415,7 @@ void main() {
           .setParticipation(eventId, ParticipationStatus.confirmed);
       await Future<void>.delayed(Duration.zero);
       await session.endSession();
-      await session.markAuthenticated();
+      await session.markAuthenticated(role: 'ChoirMember');
       container.read(calendarNotifierProvider);
       await Future<void>.delayed(Duration.zero);
       repo.reply.complete();

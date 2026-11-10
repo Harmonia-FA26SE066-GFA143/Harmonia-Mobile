@@ -1,22 +1,25 @@
 enum MaterialType {
-  sheetMusic('SheetMusic', 'Bản nhạc phổ'),
-  lyrics('Lyrics', 'Lời bài hát'),
-  sampleAudio('SampleAudio', 'Audio mẫu'),
-  rehearsalMaterial('RehearsalMaterial', 'Tài liệu tập hát');
+  sheetMusic(0, 'SheetMusic', 'Bản nhạc phổ'),
+  lyrics(1, 'Lyrics', 'Lời bài hát'),
+  sampleAudio(2, 'SampleAudio', 'Audio mẫu'),
+  rehearsalMaterial(3, 'RehearsalMaterial', 'Tài liệu tập hát'),
+  interactiveScore(4, 'InteractiveScore', 'Bản nhạc tương tác'),
+  unknown(-1, 'Unknown', 'Loại tài liệu chưa hỗ trợ');
 
+  final int value;
   final String wireName;
   final String label;
-  const MaterialType(this.wireName, this.label);
+  const MaterialType(this.value, this.wireName, this.label);
 
-  static MaterialType fromWire(dynamic value) {
-    if (value == null) return MaterialType.sheetMusic;
-    final str = value.toString().toLowerCase();
-    for (final t in MaterialType.values) {
-      if (t.wireName.toLowerCase() == str || t.name == str) {
-        return t;
-      }
-    }
-    return MaterialType.sheetMusic;
+  static Iterable<MaterialType> get filterOptions =>
+      values.where((type) => type != unknown);
+
+  static MaterialType fromWire(Object? value) {
+    final name = value?.toString().toLowerCase();
+    return filterOptions.firstWhere(
+      (type) => type.value == value || type.wireName.toLowerCase() == name,
+      orElse: () => unknown,
+    );
   }
 }
 
@@ -357,6 +360,7 @@ class MusicMaterialDto {
   final String? targetSkillId;
   final String? targetSkillName;
   final String fileUrl;
+  final String? lyricsText;
   final String createdAt;
 
   const MusicMaterialDto({
@@ -369,6 +373,7 @@ class MusicMaterialDto {
     this.targetSkillId,
     this.targetSkillName,
     required this.fileUrl,
+    this.lyricsText,
     required this.createdAt,
   });
 
@@ -383,6 +388,7 @@ class MusicMaterialDto {
       targetSkillId: json['targetSkillId']?.toString(),
       targetSkillName: json['targetSkillName']?.toString(),
       fileUrl: json['fileUrl']?.toString() ?? '',
+      lyricsText: json['lyricsText'] as String?,
       createdAt: json['createdAt']?.toString() ?? '',
     );
   }
@@ -397,6 +403,7 @@ class MusicMaterialDto {
     'targetSkillId': targetSkillId,
     'targetSkillName': targetSkillName,
     'fileUrl': fileUrl,
+    'lyricsText': ?lyricsText,
     'createdAt': createdAt,
   };
 }
@@ -415,6 +422,7 @@ class MusicMaterialDetailDto extends MusicMaterialDto {
     super.targetSkillId,
     super.targetSkillName,
     required super.fileUrl,
+    super.lyricsText,
     required super.createdAt,
     required this.learningStatus,
     this.learningUpdatedAt,
@@ -432,6 +440,7 @@ class MusicMaterialDetailDto extends MusicMaterialDto {
       targetSkillId: base.targetSkillId,
       targetSkillName: base.targetSkillName,
       fileUrl: base.fileUrl,
+      lyricsText: base.lyricsText,
       createdAt: base.createdAt,
       learningStatus: LearningStatus.fromWire(json['learningStatus']),
       learningUpdatedAt: json['learningUpdatedAt']?.toString(),
@@ -553,6 +562,8 @@ class SongListDto {
   final int version;
   final String status;
   final List<SongListItemDto> items;
+  final DateTime? submittedAt;
+  final String? reviewNotes;
 
   const SongListDto({
     required this.id,
@@ -560,15 +571,22 @@ class SongListDto {
     required this.version,
     required this.status,
     required this.items,
+    this.submittedAt,
+    this.reviewNotes,
   });
 
   factory SongListDto.fromJson(Map<String, dynamic> json) {
     final rawItems = json['items'] as List<dynamic>? ?? [];
+    final reviews = json['reviews'] as List<dynamic>? ?? [];
     return SongListDto(
       id: json['id']?.toString() ?? '',
       eventId: json['eventId']?.toString() ?? '',
       version: (json['version'] as num?)?.toInt() ?? 1,
       status: json['status']?.toString() ?? '',
+      submittedAt: DateTime.tryParse(json['submittedAt']?.toString() ?? ''),
+      reviewNotes: reviews.isEmpty
+          ? null
+          : (reviews.last as Map)['notes'] as String?,
       items: rawItems
           .map((e) => SongListItemDto.fromJson(e as Map<String, dynamic>))
           .toList(),

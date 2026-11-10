@@ -2,10 +2,10 @@ import 'support/fake_profile_repository.dart';
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -22,6 +22,8 @@ import 'package:harmonia_mobile/features/auth/data/auth_dto.dart';
 import 'package:harmonia_mobile/features/auth/data/auth_repository.dart';
 import 'package:harmonia_mobile/features/auth/presentation/auth_notifier.dart';
 import 'package:harmonia_mobile/features/profile/data/profile_repository.dart';
+import 'package:harmonia_mobile/features/music/data/music_api_service.dart';
+import 'package:harmonia_mobile/features/staff_workspace/data/staff_workspace_repository.dart';
 import 'package:harmonia_mobile/features/profile/presentation/profile_screen.dart';
 
 UserDto account({
@@ -104,7 +106,11 @@ class AccountApi extends AuthApiService {
         ApiClient(storage: storage, sessionManager: session, customDio: Dio()),
       );
 
+  LoginResponse? loginResponse;
   Future<UserDto> Function()? meHandler;
+
+  @override
+  Future<LoginResponse> login(LoginRequest request) async => loginResponse!;
   Future<void> Function()? logoutHandler;
   Future<void> Function()? currentDeviceLogoutHandler;
   int meCalls = 0;
@@ -157,7 +163,7 @@ ResponseBody jsonResponse(int status, Object body) => ResponseBody.fromString(
 );
 
 void main() {
-  final binding = TestWidgetsFlutterBinding.ensureInitialized();
+  TestWidgetsFlutterBinding.ensureInitialized();
   late SecureStorageService storage;
   late SessionManager session;
   late AccountApi api;
@@ -183,28 +189,6 @@ void main() {
         ),
       ],
     );
-    final fontAssets = {
-      for (final weight in [
-        'Regular',
-        'Medium',
-        'SemiBold',
-        'Bold',
-        'ExtraBold',
-      ])
-        'fonts/PlusJakartaSans-$weight.ttf': [
-          {'asset': 'fonts/PlusJakartaSans-$weight.ttf'},
-        ],
-    };
-    binding.defaultBinaryMessenger.setMockMessageHandler('flutter/assets', (
-      message,
-    ) async {
-      final key = const StringCodec().decodeMessage(message)!;
-      if (key == 'AssetManifest.bin') {
-        return const StandardMessageCodec().encodeMessage(fontAssets);
-      }
-      if (key.startsWith('fonts/PlusJakartaSans-')) return ByteData(0);
-      return null;
-    });
   });
   tearDown(() {
     container.dispose();
@@ -239,6 +223,180 @@ void main() {
     );
     if (authenticate) await session.markAuthenticated(role: 'ChoirMember');
   }
+
+  for (final role in MobileRole.values) {
+    test(
+      'password login and account restoration use ${role.wireName}',
+      () async {
+        final user = account(role: role.wireName);
+        api.loginResponse = LoginResponse(
+          accessToken: 'login-access',
+          accessTokenExpiresAt: '2030-01-01T00:00:00Z',
+          refreshToken: 'login-refresh',
+          user: user,
+        );
+        await repository.login(email: user.email, password: 'test-password');
+        expect(session.role, role);
+        expect(await storage.getUserRole(), role.wireName);
+
+        await session.initialize(verifyAccount: true);
+        expect(session.status, AuthStatus.restoring);
+        api.meHandler = () async => user;
+        expect(
+          await container.read(authNotifierProvider.notifier).restoreSession(),
+          isTrue,
+        );
+        expect(session.status, AuthStatus.authenticated);
+        expect(session.role, role);
+      },
+    );
+  }
+
+  test(
+    'restoration rejects a cached token with a different verified role',
+    () async {
+      await saveAccount(authenticate: false);
+      api.meHandler = () async => account(role: 'ParishPriest');
+
+      expect(
+        await container.read(authNotifierProvider.notifier).restoreSession(),
+        isFalse,
+      );
+      expect(session.status, AuthStatus.unauthenticated);
+      expect(await storage.getAccessToken(), isNull);
+    },
+  );
+
+  test(
+    'a role change in an active session requires signing in again',
+    () async {
+      await saveAccount();
+      api.meHandler = () async => account(role: 'ChoirDirector');
+
+      expect(
+        await container
+            .read(authNotifierProvider.notifier)
+            .synchronizeAccount(),
+        isFalse,
+      );
+      expect(session.status, AuthStatus.unauthenticated);
+      expect(session.role, isNull);
+      expect(await storage.getAccessToken(), isNull);
+    },
+  );
+
+  test('staff publishes, submits and reviews the same event before member approval is visible', () async {
+    var approved = false;
+    final methods = <String>[];
+    final dio = Dio()
+      ..httpClientAdapter = AccountAdapter((request) {
+        methods.add('${request.method} ${request.path}');
+        switch (request.path) {
+          case '/api/liturgical-events':
+            expect(request.method, 'POST');
+            expect(request.data, containsPair('choirIds', ['lead', 'second']));
+            expect(request.data, containsPair('leadChoirId', 'lead'));
+            expect(request.data, containsPair('time', '06:00:00'));
+            return jsonResponse(200, {'id': 'event'});
+          case '/api/liturgical-events/event/choirs/lead/substitute-director':
+            expect(request.data, {
+              'directorId': 'substitute',
+              'reason': 'Ca trưởng vắng',
+            });
+            return jsonResponse(200, []);
+          case '/api/liturgical-events/event/publish':
+            return jsonResponse(200, {'status': 'Published'});
+          case '/api/song-lists':
+            expect(request.data, {
+              'eventId': 'event',
+              'items': [
+                {
+                  'songId': 'song',
+                  'slotId': 'slot',
+                  'displayOrder': 1,
+                  'note': null,
+                },
+              ],
+            });
+            return jsonResponse(200, {
+              'id': 'proposal',
+              'eventId': 'event',
+              'status': 'Draft',
+            });
+          case '/api/song-lists/proposal/submit':
+            return jsonResponse(200, {'status': 'Submitted'});
+          case '/api/song-lists/proposal/review':
+            expect(request.data, {'decision': 'Approve', 'notes': null});
+            approved = true;
+            return jsonResponse(200, {'status': 'Approved'});
+          case '/api/song-lists/event/event/approved':
+            return approved
+                ? jsonResponse(200, {
+                    'id': 'proposal',
+                    'eventId': 'event',
+                    'status': 'Approved',
+                    'items': [
+                      {'songTitle': 'Bài nhập lễ'},
+                    ],
+                  })
+                : jsonResponse(404, {'code': 'SONG_LIST_NOT_FOUND'});
+          default:
+            fail('Unexpected request: ${request.path}');
+        }
+      });
+    final client = ApiClient(
+      storage: storage,
+      sessionManager: session,
+      customDio: dio,
+    );
+    addTearDown(dio.close);
+    Future<StaffWorkspaceRepository> signedInAs(MobileRole role) async {
+      if (session.isAuthenticated) await session.endSession();
+      await session.markAuthenticated(role: role.wireName);
+      return StaffWorkspaceRepository(client, session.sessionEpoch);
+    }
+
+    final priest = await signedInAs(MobileRole.parishPriest);
+    final event = await priest.createEvent((
+      date: '2099-11-09',
+      time: '06:00:00',
+      locationId: 'location',
+      massTypeId: 'mass',
+      ceremonyTypeId: null,
+      seasonId: 'season',
+      categoryId: null,
+      title: 'Lễ Chúa Nhật',
+      requirements: null,
+      choirIds: ['lead', 'second'],
+      leadChoirId: 'lead',
+    ));
+    await priest.setSubstitute(event, 'lead', 'substitute', 'Ca trưởng vắng');
+    await priest.publish(event);
+    final director = await signedInAs(MobileRole.choirDirector);
+    final draft = await director.saveProposal(event, null, [
+      (songId: 'song', slotId: 'slot', note: null),
+    ]);
+    await director.submitProposal(draft.id);
+
+    final music = MusicApiService(client);
+    await signedInAs(MobileRole.choirMember);
+    expect(await music.getApprovedSongListForEvent(event), isNull);
+    final reviewer = await signedInAs(MobileRole.parishPriest);
+    await reviewer.reviewProposal(draft.id, 'Approve', null);
+    await signedInAs(MobileRole.choirMember);
+    final result = await music.getApprovedSongListForEvent(event);
+    expect(result?.items.single.songTitle, 'Bài nhập lễ');
+    expect(methods, [
+      'POST /api/liturgical-events',
+      'PUT /api/liturgical-events/event/choirs/lead/substitute-director',
+      'PATCH /api/liturgical-events/event/publish',
+      'POST /api/song-lists',
+      'POST /api/song-lists/proposal/submit',
+      'GET /api/song-lists/event/event/approved',
+      'POST /api/song-lists/proposal/review',
+      'GET /api/song-lists/event/event/approved',
+    ]);
+  });
 
   test('getMe synchronizes account cache and forced password flag without changing epoch', () async {
     await saveAccount();
@@ -450,6 +608,46 @@ void main() {
     );
   }
 
+  test(
+    'a refresh with a different role ends the session before retrying',
+    () async {
+      await saveAccount();
+      final requests = <String>[];
+      final dio = Dio()
+        ..httpClientAdapter = AccountAdapter((request) {
+          requests.add(request.path);
+          return jsonResponse(401, {'code': 'UNAUTHORIZED'});
+        });
+      final refresh = Dio()
+        ..httpClientAdapter = AccountAdapter((request) {
+          expect(request.path, '/api/auth/refresh');
+          return jsonResponse(200, {
+            'accessToken': 'renewed-access',
+            'accessTokenExpiresAt': '2030-01-01T00:00:00Z',
+            'refreshToken': 'renewed-refresh',
+            'user': account(role: 'ChoirDirector').toJson(),
+          });
+        });
+      dio.interceptors.add(
+        AuthInterceptor(
+          storage: storage,
+          sessionManager: session,
+          dio: dio,
+          refreshClient: refresh,
+        ),
+      );
+      addTearDown(() {
+        dio.close();
+        refresh.close();
+      });
+
+      await expectLater(dio.get('/api/auth/me'), throwsA(isA<DioException>()));
+      expect(requests, ['/api/auth/me']);
+      expect(session.status, AuthStatus.unauthenticated);
+      expect(await storage.getAccessToken(), isNull);
+    },
+  );
+
   test('malformed account response cannot authenticate restoration', () async {
     await saveAccount(authenticate: false);
     final body = account().toJson()..remove('isActive');
@@ -572,6 +770,222 @@ void main() {
       );
     },
   );
+
+  for (final role in [MobileRole.choirDirector, MobileRole.parishPriest]) {
+    testWidgets(
+      'verified ${role.wireName} opens its tabs and notification target',
+      (tester) async {
+        final director = role == MobileRole.choirDirector;
+        final workspace = director ? '/manage' : '/approvals';
+        final label = director ? 'Quản lý' : 'Phê duyệt';
+        final referenceType = director ? 'DirectorNote' : 'SongList';
+        final detail = director
+            ? '/director-note/resource'
+            : '/song-list/resource';
+        final resource = director
+            ? '/api/director-notes/resource'
+            : '/api/song-lists/resource';
+        final workspaceApi = director
+            ? '/api/choirs'
+            : '/api/song-lists/pending';
+        await saveAccount(authenticate: false);
+        await storage.saveUser(
+          id: 'staff',
+          email: 'staff@example.test',
+          roleName: role.wireName,
+        );
+        api.meHandler = () async => account(id: 'staff', role: role.wireName);
+        final eventApi = director
+            ? '/api/schedule/events/event'
+            : '/api/liturgical-events/event';
+        var reviewStatus = 'Submitted';
+        final event = {
+          'id': 'event',
+          'status': director ? 'Published' : 'Draft',
+          'title': 'Chương trình kiểm thử',
+          'eventDate': '2099-11-09',
+          'time': '10:00:00',
+          'locationName': 'Nhà thờ chính',
+          'specialRequirements': 'Chuẩn bị trước giờ lễ',
+        };
+        final requests = <String>[];
+        final dio = Dio()
+          ..httpClientAdapter = AccountAdapter((request) {
+            final path = request.path;
+            requests.add(path);
+            if (path == '/api/liturgical-events') {
+              return jsonResponse(200, {
+                'items': [event],
+              });
+            }
+            if (path == eventApi) return jsonResponse(200, event);
+            if (path == '/api/liturgical-events/event/choirs') {
+              return jsonResponse(200, [
+                {
+                  'choirId': 'lead-choir',
+                  'name': 'Ca đoàn Cecilia',
+                  'isActive': true,
+                  'isLead': true,
+                  'directorId': 'director',
+                  'substituteDirectorId': 'staff',
+                },
+              ]);
+            }
+            if (path == '/api/song-lists/resource/review') {
+              expect(request.method, 'POST');
+              expect(request.data, {'decision': 'Approve', 'notes': null});
+              reviewStatus = 'Approved';
+              return jsonResponse(200, {});
+            }
+            if (path == workspaceApi) {
+              return jsonResponse(
+                200,
+                director
+                    ? [
+                        {'name': 'Ca đoàn Cecilia', 'isActive': true},
+                      ]
+                    : [
+                        {
+                          'id': 'resource',
+                          'eventId': 'event',
+                          'status': 'Submitted',
+                          'version': 1,
+                        },
+                      ],
+              );
+            }
+            if (path == '/api/notifications/unread-count') {
+              return jsonResponse(200, 0);
+            }
+            if (path == '/api/notifications') {
+              return jsonResponse(200, {
+                'items': [
+                  {
+                    'id': 'notification',
+                    'type': director ? 'DirectorNote' : 'SongListSubmitted',
+                    'title': 'Thông báo theo vai trò',
+                    'content': 'Thông tin chi tiết',
+                    'referenceType': referenceType,
+                    'referenceId': 'resource',
+                    'createdAt': '2026-11-09T00:00:00Z',
+                    'isRead': true,
+                  },
+                ],
+              });
+            }
+            if (path == resource) {
+              return jsonResponse(
+                200,
+                director
+                    ? {
+                        'fromUserName': 'Cha xứ',
+                        'content': 'Nội dung ghi chú đầy đủ',
+                        'sentAt': '2026-11-09T00:00:00Z',
+                      }
+                    : {
+                        'id': 'resource',
+                        'eventId': 'event',
+                        'status': reviewStatus,
+                        'items': [
+                          {'id': 'item', 'songTitle': 'Ca nhập lễ'},
+                        ],
+                      },
+              );
+            }
+            return jsonResponse(404, {'code': 'NOT_FOUND'});
+          });
+        final roleContainer = ProviderContainer(
+          overrides: [
+            sessionManagerProvider.overrideWithValue(session),
+            authRepositoryProvider.overrideWithValue(repository),
+            apiClientProvider.overrideWithValue(
+              ApiClient(
+                storage: storage,
+                sessionManager: session,
+                customDio: dio,
+              ),
+            ),
+          ],
+        );
+        addTearDown(() async {
+          await tester.pumpWidget(const SizedBox.shrink());
+          roleContainer.dispose();
+          dio.close();
+        });
+        final router = roleContainer.read(appRouterProvider);
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: roleContainer,
+            child: MaterialApp.router(routerConfig: router),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(session.status, AuthStatus.authenticated);
+        expect(router.routeInformationProvider.value.uri.path, '/home');
+        expect(find.text(role.label), findsOneWidget);
+        await tester.tap(find.text(label));
+        await tester.pumpAndSettle();
+        expect(router.routeInformationProvider.value.uri.path, workspace);
+        expect(requests, contains(workspaceApi));
+        expect(
+          find.text(director ? 'Ca đoàn Cecilia' : 'Danh sách bài hát • Bản 1'),
+          findsOneWidget,
+        );
+
+        router.go(director ? '/approvals' : '/manage');
+        await tester.pumpAndSettle();
+        expect(router.routeInformationProvider.value.uri.path, '/home');
+        router.go('/practice-detail/member-assignment');
+        await tester.pumpAndSettle();
+        expect(router.routeInformationProvider.value.uri.path, '/home');
+        expect(requests.any((path) => path.contains('/mine')), isFalse);
+
+        await tester.tap(find.text('Lịch'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Chương trình kiểm thử'));
+        await tester.pumpAndSettle();
+        expect(requests, contains(eventApi));
+        expect(find.text('Ghi chú mục vụ & Dặn dò phòng áo'), findsOneWidget);
+        expect(
+          find.widgetWithText(
+            FilledButton,
+            director ? 'Đề xuất bài hát' : 'Công bố phụng vụ',
+          ),
+          findsOneWidget,
+        );
+        router.pop();
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Thông báo'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Thông báo theo vai trò'));
+        await tester.pumpAndSettle();
+        expect(
+          router.routerDelegate.currentConfiguration.last.matchedLocation,
+          detail,
+        );
+        expect(requests, contains(resource));
+        expect(
+          find.text(director ? 'Nội dung ghi chú đầy đủ' : 'Ca nhập lễ'),
+          findsOneWidget,
+        );
+        if (!director) {
+          final approve = find.widgetWithText(
+            FilledButton,
+            'Phê duyệt danh sách',
+          );
+          await tester.ensureVisible(approve);
+          await tester.tap(approve);
+          await tester.pumpAndSettle();
+          await tester.tap(find.widgetWithText(FilledButton, 'Xác nhận'));
+          await tester.pumpAndSettle();
+          expect(requests, contains('/api/song-lists/resource/review'));
+          expect(find.text('Đã duyệt'), findsOneWidget);
+        }
+      },
+    );
+  }
 
   for (final serverWorks in [true, false]) {
     testWidgets(

@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../app/widgets/app_page_header.dart';
+import '../../../app/widgets/stitch_entrance.dart';
 import '../../../app/theme/app_typography.dart';
 import '../data/practice_models.dart';
 import '../data/practice_repository.dart';
@@ -88,10 +90,14 @@ class _PracticeListScreenState extends ConsumerState<PracticeListScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: Text('Bài tập & Bản thu', style: AppTypography.headlineSmall),
+      appBar: AppPageHeader(
+        large: true,
+        title: const Text('Bài tập & Bản thu'),
         actions: [
           IconButton(
+            style: IconButton.styleFrom(
+              backgroundColor: const Color(0x24FFFFFF),
+            ),
             tooltip: 'Lịch sử luyện tập',
             onPressed: () => context.push('/practice-history'),
             icon: const Icon(Icons.history_rounded),
@@ -103,8 +109,8 @@ class _PracticeListScreenState extends ConsumerState<PracticeListScreen> {
           children: [
             // Filter chips with server counts
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: AppColors.surface,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              color: AppColors.background,
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: countsAsync.when(
@@ -178,7 +184,6 @@ class _PracticeListScreenState extends ConsumerState<PracticeListScreen> {
                 ),
               ),
             ),
-            const Divider(height: 1),
 
             // Assignments list
             Expanded(
@@ -197,7 +202,7 @@ class _PracticeListScreenState extends ConsumerState<PracticeListScreen> {
                           size: 48,
                           color: AppColors.statusDanger,
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 16),
                         Text(
                           'Lỗi tải danh sách bài tập: $e',
                           style: AppTypography.bodyMedium,
@@ -246,12 +251,12 @@ class _PracticeListScreenState extends ConsumerState<PracticeListScreen> {
                     onRefresh: () async => _reload(),
                     color: AppColors.primary,
                     child: ListView.separated(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(20),
                       itemCount:
                           assignments.length +
                           (practiceState.hasNextPage ? 1 : 0),
                       separatorBuilder: (context, index) =>
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 16),
                       itemBuilder: (context, index) {
                         if (index == assignments.length) {
                           if (practiceState.loadMoreError != null) {
@@ -261,7 +266,7 @@ class _PracticeListScreenState extends ConsumerState<PracticeListScreen> {
                                 children: [
                                   Text(
                                     practiceState.loadMoreError!,
-                                    style: AppTypography.bodySmall.copyWith(
+                                    style: AppTypography.bodyMedium.copyWith(
                                       color: AppColors.statusDanger,
                                     ),
                                     textAlign: TextAlign.center,
@@ -308,46 +313,76 @@ class _PracticeListScreenState extends ConsumerState<PracticeListScreen> {
                         final item = assignments[index];
                         final statusColor = _getStatusColor(item.status);
 
-                        return Card(
-                          child: InkWell(
-                            onTap: () {
-                              context.push('/practice-detail/${item.id}');
-                            },
-                            borderRadius: BorderRadius.circular(16),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 3,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.primary.withValues(
-                                            alpha: 0.1,
+                        return StitchEntrance(
+                          key: ValueKey(item.id),
+                          child: Card(
+                            child: InkWell(
+                              onTap: () {
+                                context.push('/practice-detail/${item.id}');
+                              },
+                              borderRadius: BorderRadius.circular(24),
+                              child: Padding(
+                                padding: const EdgeInsets.all(20),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 3,
                                           ),
-                                          borderRadius: BorderRadius.circular(
-                                            10,
+                                          decoration: BoxDecoration(
+                                            color: AppColors.primary.withValues(
+                                              alpha: 0.1,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            item.vocalPart,
+                                            style: AppTypography.labelSmall
+                                                .copyWith(
+                                                  color: AppColors.primary,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                           ),
                                         ),
-                                        child: Text(
-                                          item.vocalPart,
-                                          style: AppTypography.labelSmall
-                                              .copyWith(
-                                                color: AppColors.primary,
-                                                fontWeight: FontWeight.bold,
+                                        Wrap(
+                                          spacing: 6,
+                                          runSpacing: 6,
+                                          children: [
+                                            if (item.isOverdue) ...[
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 3,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors
+                                                      .statusDangerSoft,
+                                                  borderRadius:
+                                                      BorderRadius.circular(24),
+                                                ),
+                                                child: Text(
+                                                  'Quá hạn',
+                                                  style: AppTypography
+                                                      .labelSmall
+                                                      .copyWith(
+                                                        color: AppColors
+                                                            .statusDanger,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                ),
                                               ),
-                                        ),
-                                      ),
-                                      Row(
-                                        children: [
-                                          if (item.isOverdue) ...[
+                                              const SizedBox(width: 6),
+                                            ],
                                             Container(
                                               padding:
                                                   const EdgeInsets.symmetric(
@@ -355,79 +390,80 @@ class _PracticeListScreenState extends ConsumerState<PracticeListScreen> {
                                                     vertical: 3,
                                                   ),
                                               decoration: BoxDecoration(
-                                                color:
-                                                    AppColors.statusDangerSoft,
+                                                color: statusColor.withValues(
+                                                  alpha: 0.12,
+                                                ),
                                                 borderRadius:
-                                                    BorderRadius.circular(10),
+                                                    BorderRadius.circular(24),
                                               ),
                                               child: Text(
-                                                'Quá hạn',
+                                                item.status.label,
                                                 style: AppTypography.labelSmall
                                                     .copyWith(
-                                                      color: AppColors
-                                                          .statusDanger,
+                                                      color: statusColor,
                                                       fontWeight:
                                                           FontWeight.bold,
                                                     ),
                                               ),
                                             ),
-                                            const SizedBox(width: 6),
                                           ],
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 3,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: statusColor.withValues(
-                                                alpha: 0.12,
-                                              ),
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                            ),
-                                            child: Text(
-                                              item.status.label,
-                                              style: AppTypography.labelSmall
-                                                  .copyWith(
-                                                    color: statusColor,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                            ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            item.title,
+                                            style: AppTypography.titleMedium
+                                                .copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                           ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    item.title,
-                                    style: AppTypography.titleMedium.copyWith(
-                                      fontWeight: FontWeight.bold,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        CircleAvatar(
+                                          backgroundColor: statusColor
+                                              .withValues(alpha: .1),
+                                          foregroundColor: statusColor,
+                                          child: const Icon(
+                                            Icons.mic_none_rounded,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Bài hát: ${item.songTitle}',
-                                    style: AppTypography.bodySmall.copyWith(
-                                      color: AppColors.body,
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Bài hát: ${item.songTitle}',
+                                      style: AppTypography.bodyMedium.copyWith(
+                                        color: AppColors.body,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.timer_outlined,
-                                        size: 16,
-                                        color: AppColors.muted,
+                                    const Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: 14,
                                       ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        'Hạn nộp: ${DateFormat('dd/MM/yyyy HH:mm').format(item.dueDate)}',
-                                        style: AppTypography.labelSmall,
-                                      ),
-                                    ],
-                                  ),
-                                ],
+                                      child: Divider(),
+                                    ),
+                                    Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.timer_outlined,
+                                          size: 16,
+                                          color: AppColors.muted,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Expanded(
+                                          child: Text(
+                                            'Hạn nộp: ${DateFormat('dd/MM/yyyy HH:mm').format(item.dueDate)}',
+                                            style: AppTypography.labelSmall,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),

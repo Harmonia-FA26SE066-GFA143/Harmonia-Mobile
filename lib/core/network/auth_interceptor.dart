@@ -228,6 +228,18 @@ class AuthInterceptor extends Interceptor {
         final newRefreshToken = data['refreshToken'] as String;
         final expiresAt = data['accessTokenExpiresAt']?.toString() ?? '';
 
+        final account = data['user'];
+        if (account is Map) {
+          final role = MobileRole.fromWire(account['roleName']);
+          if (account['isActive'] == false ||
+              (account.containsKey('roleName') &&
+                  role != sessionManager.role)) {
+            await sessionManager.endSession();
+            safeComplete(null);
+            return null;
+          }
+        }
+
         // 5. Check before saving tokens
         if (sessionManager.sessionEpoch != requestEpoch ||
             !sessionManager.isAuthenticated) {
@@ -255,6 +267,11 @@ class AuthInterceptor extends Interceptor {
           }
         }
 
+        if (sessionManager.sessionEpoch != requestEpoch ||
+            !sessionManager.isAuthenticated) {
+          safeComplete(null);
+          return null;
+        }
         safeComplete(newAccessToken);
         return newAccessToken;
       } else {

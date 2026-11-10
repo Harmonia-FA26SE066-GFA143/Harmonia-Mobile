@@ -12,6 +12,11 @@ class SignalRService {
       StreamController<Map<String, dynamic>>.broadcast();
   final _connectedStreamController = StreamController<void>.broadcast();
 
+  final _directorNoteController = StreamController<int>.broadcast();
+  int _directorNoteVersion = 0;
+
+  Stream<int> get directorNoteStream => _directorNoteController.stream;
+
   Stream<Map<String, dynamic>> get notificationStream =>
       _notificationStreamController.stream;
   Stream<void> get connectedStream => _connectedStreamController.stream;
@@ -71,11 +76,23 @@ class SignalRService {
           _notificationStreamController.add(data);
         }
       });
-      connection.onreconnected(({connectionId}) {
-        if (isCurrent()) _connectedStreamController.add(null);
-      });
+      for (final method in [
+        'ReceiveDirectorNoteAsync',
+        'ReceiveDirectorNotesReadAsync',
+      ]) {
+        connection.on(method, (_) {
+          if (isCurrent()) _directorNoteController.add(++_directorNoteVersion);
+        });
+      }
+      void notifyConnected() {
+        if (!isCurrent()) return;
+        _connectedStreamController.add(null);
+        _directorNoteController.add(++_directorNoteVersion);
+      }
+
+      connection.onreconnected(({connectionId}) => notifyConnected());
       await connection.start();
-      if (isCurrent() && isConnected) _connectedStreamController.add(null);
+      if (isConnected) notifyConnected();
     } catch (_) {
       // Reconnect automatically, or retry when the app returns to the foreground.
     } finally {
@@ -97,5 +114,6 @@ class SignalRService {
     unawaited(stop());
     _notificationStreamController.close();
     _connectedStreamController.close();
+    _directorNoteController.close();
   }
 }

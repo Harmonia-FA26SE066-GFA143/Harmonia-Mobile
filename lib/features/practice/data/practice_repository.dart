@@ -6,6 +6,7 @@ import '../../../core/session/session_manager.dart';
 import '../../notifications/data/notification_dto.dart';
 import 'practice_api_service.dart';
 import 'practice_models.dart';
+import '../../music/data/music_dto.dart' show MaterialType;
 
 export '../../notifications/data/notification_dto.dart' show PagedList;
 
@@ -216,6 +217,26 @@ class PracticeRepositoryImpl implements PracticeRepository {
       id: id,
       title: title,
       songTitle: songTitle,
+      songId: map['songId'] as String?,
+      materials: [
+        for (final item
+            in (map['materials'] as List? ?? const [])
+                .whereType<Map<String, dynamic>>())
+          if (item['id'] is String && item['title'] is String)
+            (
+              id: item['id'] as String,
+              title: item['title'] as String,
+              type: MaterialType.fromWire(item['materialType']),
+            ),
+        if ((map['materials'] as List?)?.isNotEmpty != true &&
+            map['materialId'] is String &&
+            map['materialTitle'] is String)
+          (
+            id: map['materialId'] as String,
+            title: map['materialTitle'] as String,
+            type: MaterialType.fromWire(map['materialType']),
+          ),
+      ],
       instruction: instruction,
       dueDate: dueDate ?? DateTime.now(),
       vocalPart: 'Ca viên',

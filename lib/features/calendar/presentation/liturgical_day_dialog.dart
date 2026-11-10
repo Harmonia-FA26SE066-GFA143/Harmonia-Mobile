@@ -23,16 +23,12 @@ class LiturgicalDayDialog extends StatelessWidget {
     required DateTime date,
     List<LiturgicalEvent> events = const [],
     List<RehearsalSession> rehearsals = const [],
-  }) =>
-      showDialog<void>(
-        context: context,
-        barrierDismissible: true,
-        builder: (_) => LiturgicalDayDialog(
-          date: date,
-          events: events,
-          rehearsals: rehearsals,
-        ),
-      );
+  }) => showDialog<void>(
+    context: context,
+    barrierDismissible: true,
+    builder: (_) =>
+        LiturgicalDayDialog(date: date, events: events, rehearsals: rehearsals),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -119,7 +115,9 @@ class LiturgicalDayDialog extends StatelessWidget {
                           actionLabel: 'Chi tiết sự kiện',
                           onAction: () {
                             Navigator.of(context).pop();
-                            context.push('/event/${Uri.encodeComponent(event.id)}');
+                            context.push(
+                              '/event/${Uri.encodeComponent(event.id)}',
+                            );
                           },
                         ),
                       ],
@@ -131,12 +129,19 @@ class LiturgicalDayDialog extends StatelessWidget {
                         const SizedBox(height: 8),
                         _activityCard(
                           title: rehearsal.title,
-                          subtitle: rehearsal.location,
+                          subtitle: [
+                            if (rehearsal.location.isNotEmpty)
+                              rehearsal.location,
+                            if (rehearsal.note?.trim().isNotEmpty ?? false)
+                              'Ghi chú: ${rehearsal.note!.trim()}',
+                          ].join('\n'),
                           time: rehearsal.timeRange,
                           actionLabel: 'Chi tiết buổi tập',
                           onAction: () {
                             Navigator.of(context).pop();
-                            context.push('/rehearsal/${Uri.encodeComponent(rehearsal.id)}');
+                            context.push(
+                              '/rehearsal/${Uri.encodeComponent(rehearsal.id)}',
+                            );
                           },
                         ),
                       ],
@@ -152,13 +157,13 @@ class LiturgicalDayDialog extends StatelessWidget {
   }
 
   Widget _sectionTitle(String title) => Text(
-        title,
-        style: AppTypography.labelSmall.copyWith(
-          color: AppColors.primary,
-          fontWeight: FontWeight.w700,
-          fontSize: 11,
-        ),
-      );
+    title,
+    style: AppTypography.labelSmall.copyWith(
+      color: AppColors.primary,
+      fontWeight: FontWeight.w700,
+      fontSize: 11,
+    ),
+  );
 
   Widget _activityCard({
     required String title,
@@ -166,58 +171,57 @@ class LiturgicalDayDialog extends StatelessWidget {
     required String time,
     required String actionLabel,
     required VoidCallback onAction,
-  }) =>
-      Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF8FAFC),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: AppTypography.labelMedium.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    time.isNotEmpty ? '$time • $subtitle' : subtitle,
-                    style: AppTypography.bodySmall.copyWith(
-                      color: AppColors.muted,
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
+  }) => Container(
+    padding: const EdgeInsets.all(10),
+    decoration: BoxDecoration(
+      color: const Color(0xFFF8FAFC),
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: AppColors.border),
+    ),
+    child: Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: AppTypography.labelMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-            const SizedBox(width: 8),
-            ElevatedButton(
-              onPressed: onAction,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                minimumSize: const Size(0, 36),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+              const SizedBox(height: 2),
+              Text(
+                time.isNotEmpty ? '$time • $subtitle' : subtitle,
+                style: AppTypography.bodySmall.copyWith(
+                  color: AppColors.muted,
+                  fontSize: 11,
                 ),
               ),
-              child: Text(
-                actionLabel,
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
-      );
+        const SizedBox(width: 8),
+        ElevatedButton(
+          onPressed: onAction,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            minimumSize: const Size(0, 36),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+          child: Text(
+            actionLabel,
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+          ),
+        ),
+      ],
+    ),
+  );
 }

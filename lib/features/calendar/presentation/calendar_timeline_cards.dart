@@ -11,7 +11,8 @@ import '../data/calendar_repository.dart';
 import '../data/liturgical_models.dart';
 import 'participation_prompt.dart';
 
-const _softSurface = Color(0xFFF1F1F3);
+const _softSurface = Color(0xFFF6F7F9);
+const _timelineAccent = Color(0xFF842539);
 
 class CalendarEventCard extends ConsumerWidget {
   final LiturgicalEvent event;
@@ -82,7 +83,10 @@ class CalendarEventCard extends ConsumerWidget {
           Text(current.title, style: _eventTitle),
           if (current.location.isNotEmpty) ...[
             const SizedBox(height: 6),
-            _Metadata(icon: Icons.church_outlined, text: current.location),
+            _InfoPanel(
+              icon: Icons.church_outlined,
+              child: Text(current.location, style: AppTypography.labelLarge),
+            ),
           ],
           if (loading) ...[
             const SizedBox(height: 12),
@@ -208,6 +212,13 @@ class CalendarRehearsalCard extends ConsumerWidget {
           if (current.location.isNotEmpty) ...[
             const SizedBox(height: 6),
             _Metadata(icon: Icons.location_on_outlined, text: current.location),
+          ],
+          if (current.note?.trim().isNotEmpty ?? false) ...[
+            const SizedBox(height: 8),
+            _Metadata(
+              icon: Icons.notes_rounded,
+              text: 'Ghi chú: ${current.note!.trim()}',
+            ),
           ],
           if (loading) ...[
             const SizedBox(height: 12),
@@ -401,7 +412,7 @@ class CalendarApprovedSongs extends ConsumerWidget {
   }
 }
 
-TextStyle get _eventTitle => AppTypography.headlineSmall.copyWith(fontSize: 17);
+TextStyle get _eventTitle => AppTypography.headlineSmall;
 
 class _CalendarSurface extends StatelessWidget {
   final Widget child;
@@ -414,18 +425,18 @@ class _CalendarSurface extends StatelessWidget {
     margin: EdgeInsets.zero,
     clipBehavior: Clip.antiAlias,
     color: AppColors.surface,
-    elevation: 0,
+    elevation: .8,
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(24),
       side: const BorderSide(color: AppColors.border),
     ),
     child: DecoratedBox(
       decoration: BoxDecoration(
         border: accent
-            ? const Border(left: BorderSide(color: AppColors.primary, width: 4))
+            ? const Border(left: BorderSide(color: _timelineAccent, width: 4))
             : null,
       ),
-      child: Padding(padding: const EdgeInsets.all(16), child: child),
+      child: Padding(padding: const EdgeInsets.all(20), child: child),
     ),
   );
 }
@@ -504,7 +515,7 @@ class _CardFooter extends StatelessWidget {
             children: [
               Padding(
                 padding: const EdgeInsets.only(top: 5),
-                child: Icon(Icons.circle, size: 7, color: color),
+                child: Icon(Icons.schedule_outlined, size: 14, color: color),
               ),
               const SizedBox(width: 6),
               Expanded(
@@ -531,7 +542,7 @@ class _CardFooter extends StatelessWidget {
             child: TextButton(
               onPressed: onOpen,
               style: TextButton.styleFrom(
-                foregroundColor: AppColors.primary,
+                foregroundColor: _timelineAccent,
                 minimumSize: const Size(48, 48),
                 padding: const EdgeInsets.symmetric(horizontal: 4),
               ),
@@ -542,7 +553,7 @@ class _CardFooter extends StatelessWidget {
                   Text(
                     'Xem chi tiết',
                     style: AppTypography.labelMedium.copyWith(
-                      color: AppColors.primary,
+                      color: _timelineAccent,
                       fontWeight: FontWeight.w600,
                     ),
                   ),

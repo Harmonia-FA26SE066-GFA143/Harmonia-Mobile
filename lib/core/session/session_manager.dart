@@ -6,19 +6,38 @@ import '../storage/secure_storage_service.dart';
 
 enum AuthStatus { initial, restoring, authenticated, unauthenticated }
 
+enum MobileRole {
+  choirMember('ChoirMember', 'Ca viên'),
+  choirDirector('ChoirDirector', 'Ca trưởng'),
+  parishPriest('ParishPriest', 'Cha xứ');
+
+  const MobileRole(this.wireName, this.label);
+
+  final String wireName;
+  final String label;
+
+  static MobileRole? fromWire(Object? value) {
+    for (final role in values) {
+      if (role.wireName == value) return role;
+    }
+    return null;
+  }
+}
+
 class SessionManager extends ChangeNotifier {
   final SecureStorageService _storage;
   final _statusController = StreamController<AuthStatus>.broadcast();
 
   AuthStatus _status = AuthStatus.initial;
-  String? _userRole;
+  MobileRole? _role;
   bool _isPasswordChangeRequired = false;
   int _sessionEpoch = 0;
 
   AuthStatus get status => _status;
-  String? get userRole => _userRole;
+  MobileRole? get role => _role;
+  String? get userRole => _role?.wireName;
   bool get isPasswordChangeRequired => _isPasswordChangeRequired;
-  // Restoration may refresh credentials, but the router still gates member UI.
+  // Restoration may refresh credentials while the router waits for account verification.
   bool get isAuthenticated =>
       _status == AuthStatus.authenticated || _status == AuthStatus.restoring;
   int get sessionEpoch => _sessionEpoch;
@@ -30,25 +49,24 @@ class SessionManager extends ChangeNotifier {
     final initialEpoch = _sessionEpoch;
     try {
       final token = await _storage.getAccessToken();
-      final role = await _storage.getUserRole();
+      final role = MobileRole.fromWire(await _storage.getUserRole());
       final pwChangeRequired = await _storage.isPasswordChangeRequired();
       if (_sessionEpoch != initialEpoch) return;
 
-      // Only ChoirMember is permitted into mobile flow per Rule 04
-      if (token != null && token.isNotEmpty && role == 'ChoirMember') {
+      if (token != null && token.isNotEmpty && role != null) {
         _status = verifyAccount
             ? AuthStatus.restoring
             : AuthStatus.authenticated;
-        _userRole = role;
+        _role = role;
         _isPasswordChangeRequired = pwChangeRequired;
         _sessionEpoch++;
       } else {
-        if (token != null && role != 'ChoirMember') {
+        if (token != null && role == null) {
           await _storage.clearAll();
           if (_sessionEpoch != initialEpoch) return;
         }
         _status = AuthStatus.unauthenticated;
-        _userRole = null;
+        _role = null;
         _isPasswordChangeRequired = false;
         _sessionEpoch++;
       }
@@ -60,7 +78,7 @@ class SessionManager extends ChangeNotifier {
       } catch (_) {}
       if (_sessionEpoch != initialEpoch) return;
       _status = AuthStatus.unauthenticated;
-      _userRole = null;
+      _role = null;
       _isPasswordChangeRequired = false;
       _sessionEpoch++;
     }
@@ -69,21 +87,24 @@ class SessionManager extends ChangeNotifier {
     notifyListeners();
   }
 
-  void completeRestoration(int epoch) {
+  void completeRestoration(int epoch, MobileRole verifiedRole) {
     if (_sessionEpoch != epoch || _status != AuthStatus.restoring) return;
+    _role = verifiedRole;
     _status = AuthStatus.authenticated;
     _statusController.add(_status);
     notifyListeners();
   }
 
   Future<void> markAuthenticated({
-    String? role,
+    required String role,
     bool isPasswordChangeRequired = false,
   }) async {
+    final mobileRole = MobileRole.fromWire(role);
+    if (mobileRole == null) throw ArgumentError.value(role, 'role');
     _sessionEpoch++;
     final currentEpoch = _sessionEpoch;
     _status = AuthStatus.authenticated;
-    _userRole = role ?? 'ChoirMember';
+    _role = mobileRole;
     _isPasswordChangeRequired = isPasswordChangeRequired;
     _statusController.add(_status);
     notifyListeners();
@@ -106,7 +127,7 @@ class SessionManager extends ChangeNotifier {
   Future<void> endSession() async {
     _sessionEpoch++;
     _status = AuthStatus.unauthenticated;
-    _userRole = null;
+    _role = null;
     _isPasswordChangeRequired = false;
     _statusController.add(_status);
     notifyListeners();

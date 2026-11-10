@@ -3,146 +3,342 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../app/theme/app_typography.dart';
+import '../../../app/widgets/app_page_header.dart';
+import '../../../app/widgets/stitch_entrance.dart';
 import '../../../core/errors/error_messages.dart';
+import '../../practice/data/practice_repository.dart';
 import '../data/music_dto.dart';
 import 'music_library_notifier.dart';
+import 'music_tile_icon.dart';
+import 'reference_audio_panel.dart';
 
 class SongDetailScreen extends ConsumerWidget {
-  final String songId;
   const SongDetailScreen({super.key, required this.songId});
+  final String songId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final detail = ref.watch(songDetailProvider(songId));
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Chi tiết bài hát')),
-      body: SafeArea(
-        child: detail.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(ErrorMessages.forException(error)),
-                ),
-                TextButton(
-                  onPressed: () => ref.invalidate(songDetailProvider(songId)),
-                  child: const Text('Thử lại'),
-                ),
-              ],
-            ),
+    final provider = songDetailProvider(songId);
+    final detail = ref.watch(provider);
+    final theme = Theme.of(context);
+
+    return Theme(
+      data: theme.copyWith(
+        textTheme: theme.textTheme.apply(fontFamily: 'Plus Jakarta Sans'),
+      ),
+      child: Scaffold(
+        backgroundColor: const Color(0xFFFFF7F9),
+        appBar: AppPageHeader(
+          centerTitle: true,
+          roundedBottom: true,
+          gradient: const LinearGradient(
+            colors: [Color(0xFFE5003E), Color(0xFFF44269)],
           ),
-          data: (song) {
-            if (song == null) {
-              return const Center(child: Text('Không tìm thấy bài hát'));
-            }
-            final classification = song.classification;
-            return RefreshIndicator(
-              onRefresh: () async {
-                ref.invalidate(songDetailProvider(songId));
-                await ref.read(songDetailProvider(songId).future);
-              },
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
+          titleFontFamily: 'Plus Jakarta Sans',
+          title: const Text('Chi tiết bài hát'),
+        ),
+        body: SafeArea(
+          child: detail.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, _) => Center(
+              child: Padding(
                 padding: const EdgeInsets.all(16),
-                children: [
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            song.title,
-                            style: Theme.of(context).textTheme.headlineSmall
-                                ?.copyWith(color: AppColors.primary),
-                          ),
-                          if (song.composer.isNotEmpty) ...[
-                            const SizedBox(height: 8),
-                            Text('Tác giả: ${song.composer}'),
-                          ],
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 4,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      ErrorMessages.forException(error),
+                      textAlign: TextAlign.center,
+                    ),
+                    TextButton(
+                      onPressed: () => ref.invalidate(provider),
+                      child: const Text('Thử lại'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            data: (song) {
+              if (song == null) {
+                return const Center(child: Text('Không tìm thấy bài hát'));
+              }
+              final classification = song.classification;
+              final assignment = ref
+                  .watch(practiceListNotifierProvider)
+                  .value
+                  ?.items
+                  .where((row) => row.songId == songId)
+                  .firstOrNull;
+              final tags = [
+                ...?classification?.liturgicalSeasons.map(
+                  (season) => season.name,
+                ),
+                ...?classification?.massTypes.map((mass) => mass.name),
+                ...?classification?.vocalRequirements.map(
+                  (voice) => voice.skillName,
+                ),
+              ];
+              return RefreshIndicator(
+                onRefresh: () async => await ref.refresh(provider.future),
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    StitchEntrance(
+                      child: Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(17),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              if (song.tone.isNotEmpty)
-                                Chip(label: Text('Giọng: ${song.tone}')),
-                              if (song.tempo.isNotEmpty)
-                                Chip(label: Text('Tempo: ${song.tempo}')),
-                              if (classification != null) ...[
-                                for (final season
-                                    in classification.liturgicalSeasons)
-                                  Chip(label: Text(season.name)),
-                                for (final mass in classification.massTypes)
-                                  Chip(label: Text(mass.name)),
-                                for (final voice
-                                    in classification.vocalRequirements)
-                                  Chip(label: Text(voice.skillName)),
+                              Text(
+                                song.title,
+                                style: AppTypography.headlineMedium.copyWith(
+                                  fontFamily: 'Playfair Display',
+                                  color: const Color(0xFF111C2D),
+                                ),
+                              ),
+                              if (song.composer.trim().isNotEmpty) ...[
+                                const SizedBox(height: 6),
+                                Text('Tác giả: ${song.composer}'),
+                              ],
+                              if (song.tone.isNotEmpty ||
+                                  song.tempo.isNotEmpty) ...[
+                                const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 12),
+                                  child: Divider(),
+                                ),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    if (song.tone.isNotEmpty)
+                                      _SongFact(
+                                        icon: Icons.music_note,
+                                        name: 'Cung giọng',
+                                        value: song.tone,
+                                      ),
+                                    if (song.tempo.isNotEmpty)
+                                      _SongFact(
+                                        icon: Icons.speed_rounded,
+                                        name: 'Điệu thức & Nhịp',
+                                        value: song.tempo,
+                                      ),
+                                  ],
+                                ),
+                              ],
+                              if (tags.isNotEmpty) ...[
+                                const SizedBox(height: 12),
+                                Wrap(
+                                  spacing: 6,
+                                  runSpacing: 6,
+                                  children: [
+                                    for (final tag in tags.toSet())
+                                      Chip(label: Text(tag)),
+                                  ],
+                                ),
                               ],
                             ],
                           ),
-                          if (song.lyrics.isNotEmpty) ...[
-                            const SizedBox(height: 12),
-                            Text(
-                              'Ghi chú',
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(song.lyrics),
-                          ],
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Tài liệu học của tôi',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  if (song.materials.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 24),
-                      child: Text(
-                        'Chưa có tài liệu phù hợp với kỹ năng của bạn cho bài hát này.',
-                      ),
+                    const SizedBox(height: 22),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Tài liệu học cho kỹ năng của bạn',
+                            style: AppTypography.titleMedium,
+                          ),
+                        ),
+                        if (song.materials.isNotEmpty)
+                          Chip(
+                            backgroundColor: AppColors.primarySoft,
+                            label: Text('${song.materials.length} mục'),
+                          ),
+                      ],
                     ),
-                  for (final material in song.materials)
-                    Card(
-                      child: ListTile(
-                        leading: Icon(
-                          material.materialType == MaterialType.sampleAudio
-                              ? Icons.audiotrack
-                              : Icons.description,
-                          color: AppColors.primary,
+                    const SizedBox(height: 8),
+                    if (song.materials.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 18),
+                        child: Text(
+                          'Chưa có tài liệu phù hợp với kỹ năng của bạn cho bài hát này.',
                         ),
-                        title: Text(material.title),
-                        subtitle: Text(
-                          [
-                            material.materialType.label,
-                            if (material.targetSkillName != null)
-                              material.targetSkillName!,
-                            if (material is MusicMaterialDetailDto)
-                              material.learningStatus.label,
-                          ].join(' • '),
+                      ),
+                    for (final material in song.materials)
+                      _SongMaterialCard(material: material, songId: songId),
+                    if (song.lyrics.trim().isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Card(
+                        color: const Color(0xFFFFEFF3),
+                        child: ListTile(
+                          leading: const Icon(
+                            Icons.tips_and_updates_outlined,
+                            color: AppColors.primary,
+                          ),
+                          title: const Text('Ghi chú bài hát'),
+                          subtitle: Text(song.lyrics),
                         ),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () => context.push(
+                      ),
+                    ],
+                    if (assignment != null) ...[
+                      const SizedBox(height: 14),
+                      FilledButton.icon(
+                        icon: const Icon(Icons.mic_none_rounded),
+                        label: const Text('Vào phòng thu luyện giọng'),
+                        onPressed: () => context.push(
                           Uri(
-                            path: '/music-material/${material.id}',
-                            queryParameters: {'songId': songId},
+                            pathSegments: [
+                              '',
+                              'practice-detail',
+                              assignment.id,
+                            ],
                           ).toString(),
                         ),
                       ),
-                    ),
-                ],
+                    ],
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SongFact extends StatelessWidget {
+  const _SongFact({
+    required this.icon,
+    required this.name,
+    required this.value,
+  });
+  final IconData icon;
+  final String name, value;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 10),
+    decoration: BoxDecoration(
+      color: const Color(0xFFFAF3F6),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: AppColors.border),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: AppColors.primary, size: 19),
+        const SizedBox(width: 7),
+        Flexible(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                name,
+                style: AppTypography.labelSmall.copyWith(
+                  color: AppColors.muted,
+                ),
               ),
-            );
-          },
+              Text(value, style: AppTypography.labelLarge),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _SongMaterialCard extends StatelessWidget {
+  const _SongMaterialCard({required this.material, required this.songId});
+  final MusicMaterialDto material;
+  final String songId;
+
+  @override
+  Widget build(BuildContext context) {
+    final type = material.materialType;
+    final progress = material is MusicMaterialDetailDto
+        ? (material as MusicMaterialDetailDto).learningStatus
+        : null;
+    final audio = type == MaterialType.sampleAudio;
+    void open() => context.push(
+      Uri(
+        pathSegments: ['', 'music-material', material.id],
+        queryParameters: {'songId': songId},
+      ).toString(),
+    );
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: MusicTileIcon(materialType: type),
+              title: Text(
+                material.title,
+                style: AppTypography.titleMedium.copyWith(
+                  fontFamily: 'Plus Jakarta Sans',
+                ),
+              ),
+              subtitle: Text(
+                [
+                  type.label,
+                  ?material.targetSkillName,
+                  ?progress?.label,
+                ].join(' • '),
+              ),
+            ),
+            const Divider(),
+            if (material.lyricsText?.trim().isNotEmpty == true)
+              Container(
+                margin: const EdgeInsets.only(top: 10, bottom: 4),
+                padding: const EdgeInsets.all(11),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8F6F3),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  material.lyricsText!,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                if (audio)
+                  TextButton.icon(
+                    icon: const Icon(Icons.play_arrow_rounded),
+                    label: const Text('Nghe mẫu'),
+                    onPressed: () => showReferenceAudio(
+                      context,
+                      songId: songId,
+                      materialId: material.id,
+                      title: material.title,
+                    ),
+                  ),
+                TextButton.icon(
+                  icon: const Icon(Icons.open_in_new_rounded, size: 17),
+                  label: Text(
+                    type == MaterialType.lyrics
+                        ? 'Xem toàn bộ lời hát'
+                        : 'Mở tài liệu',
+                  ),
+                  onPressed: open,
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

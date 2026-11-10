@@ -130,7 +130,8 @@ class CalendarRepositoryImpl implements CalendarRepository {
 
       return RehearsalSession(
         id: id,
-        title: note != null && note.isNotEmpty ? note : 'Buổi tập hát',
+        title: 'Buổi tập hát',
+        note: note,
         date:
             start ??
             (throw const FormatException('Rehearsal start time is missing.')),

@@ -8,8 +8,13 @@ enum NotificationType {
   ),
   assignmentNotice(3, 'Phân công phục vụ', 'AssignmentNotice'),
   practiceFeedback(4, 'Nhận xét bài thu âm', 'PracticeFeedback'),
-  directorNote(5, 'Ghi chú từ Ca trưởng', 'DirectorNote'),
-  skillReview(6, 'Kết quả duyệt kỹ năng', 'SkillReview');
+  directorNote(5, 'Ghi chú', 'DirectorNote'),
+  skillReview(6, 'Kết quả duyệt kỹ năng', 'SkillReview'),
+  eventCancelled(7, 'Sự kiện đã bị hủy', 'EventCancelled'),
+  songListSubmitted(8, 'Danh sách bài hát chờ duyệt', 'SongListSubmitted'),
+  rehearsalChanged(9, 'Thay đổi lịch tập', 'RehearsalChanged'),
+  eventChoirChanged(10, 'Thay đổi ca đoàn phục vụ', 'EventChoirChanged'),
+  unknown(-1, 'Thông báo', 'Unknown');
 
   final int value;
   final String label;
@@ -19,7 +24,7 @@ enum NotificationType {
   static NotificationType fromValue(Object? value) {
     return NotificationType.values.firstWhere(
       (e) => e.value == value || e.wireName == value,
-      orElse: () => NotificationType.directorNote,
+      orElse: () => NotificationType.unknown,
     );
   }
 }

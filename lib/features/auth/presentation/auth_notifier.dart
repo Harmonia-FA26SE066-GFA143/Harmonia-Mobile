@@ -132,6 +132,7 @@ class AuthNotifier extends Notifier<AuthState> {
             'AUTH_ACCOUNT_INACTIVE',
             'USER_NOT_FOUND',
             'FORBIDDEN_ROLE',
+            'AUTH_ROLE_CHANGED',
           ].contains(error.code);
       if (!current && !ended) return false;
       state = AuthState(

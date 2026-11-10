@@ -1,16 +1,22 @@
 import 'package:flutter/material.dart';
 
-/// Centralized design tokens and color palette extracted directly from Stitch UI
+/// Shared colors from the approved Harmonia Mobile Stitch designs.
 class AppColors {
   AppColors._();
 
-  // Liturgical Burgundy Palette (Default Stitch Mobile Theme)
-  static const Color primary = Color(0xFF8E3B4B);
-  static const Color primaryDark = Color(0xFF6F2B39);
-  static const Color primaryLight = Color(0xFFBA5D6F);
-  static const Color primaryContainer = Color(0xFF8E3B4B);
+  // Brand colors.
+  static const Color primary = Color(0xFFE40035);
+  static const Color primaryDark = Color(0xFFB5002B);
+  static const Color primaryLight = Color(0xFFF36B97);
+  static const Color primarySoft = Color(0xFFFFEDF2);
+  static const Color primaryContainer = primary;
   static const Color onPrimary = Color(0xFFFFFFFF);
-  static const Color onPrimaryContainer = Color(0xFFFFBAC3);
+  static const Color onPrimaryContainer = Color(0xFFFFDCE5);
+  static const LinearGradient brandGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [primary, primaryDark],
+  );
 
   // Liturgical Navy Palette (Alternative liturgical theme from Stitch)
   static const Color navyPrimary = Color(0xFF06334C);
@@ -18,8 +24,8 @@ class AppColors {
   static const Color onNavyPrimary = Color(0xFFFFFFFF);
 
   // Secondary & Accents
-  static const Color secondary = Color(0xFF3E6562);
-  static const Color secondaryContainer = Color(0xFFE3E1EA);
+  static const Color secondary = Color(0xFF64748B);
+  static const Color secondaryContainer = Color(0xFFF0F3F7);
   static const Color onSecondary = Color(0xFFFFFFFF);
   static const Color onSecondaryContainer = Color(0xFF64646B);
 
@@ -29,27 +35,27 @@ class AppColors {
   static const Color tertiary = Color(0xFF3F2E00);
 
   // Neutral & Surfaces
-  static const Color background = Color(0xFFF7F7F8);
-  static const Color canvas = Color(0xFFF7F7F8);
+  static const Color background = Color(0xFFF7F8FA);
+  static const Color canvas = background;
   static const Color surface = Color(0xFFFFFFFF);
-  static const Color surfaceContainerLow = Color(0xFFF6F2F7);
-  static const Color surfaceContainerHigh = Color(0xFFEAE7EB);
-  static const Color onSurface = Color(0xFF18181B);
-  static const Color onSurfaceVariant = Color(0xFF544244);
-  static const Color border = Color(0xFFE4E4E7);
-  static const Color outline = Color(0xFF877274);
-  static const Color outlineVariant = Color(0xFFC2C7CD);
-  static const Color body = Color(0xFF3F3F46);
-  static const Color muted = Color(0xFF71717A);
+  static const Color surfaceContainerLow = Color(0xFFF5F7FA);
+  static const Color surfaceContainerHigh = Color(0xFFEEF0F4);
+  static const Color onSurface = Color(0xFF20232A);
+  static const Color onSurfaceVariant = Color(0xFF64748B);
+  static const Color border = Color(0xFFECEDEF);
+  static const Color outline = Color(0xFF94A3B8);
+  static const Color outlineVariant = Color(0xFFD8DDE5);
+  static const Color body = Color(0xFF475569);
+  static const Color muted = Color(0xFF737783);
   static const Color disabled = Color(0xFFA1A1AA);
 
   // Status & Feedback Colors
-  static const Color statusSuccess = Color(0xFF15803D);
-  static const Color statusSuccessSoft = Color(0x1A15803D);
-  static const Color statusWarning = Color(0xFFB45309);
-  static const Color statusWarningSoft = Color(0x1AB45309);
-  static const Color statusDanger = Color(0xFFB91C1C);
-  static const Color statusDangerSoft = Color(0x1AB91C1C);
+  static const Color statusSuccess = Color(0xFF008A65);
+  static const Color statusSuccessSoft = Color(0xFFEAFBF3);
+  static const Color statusWarning = Color(0xFFB86A00);
+  static const Color statusWarningSoft = Color(0xFFFFF7E6);
+  static const Color statusDanger = Color(0xFFDC2626);
+  static const Color statusDangerSoft = Color(0xFFFFF0F0);
   static const Color statusInfo = Color(0xFF1D4ED8);
   static const Color statusInfoSoft = Color(0x1A1D4ED8);
 

@@ -197,6 +197,8 @@ void main() {
       DateTime.parse('2026-10-10T01:00:00Z').toLocal(),
     );
     expect(detail.songs.map((s) => s.songId), ['song-a', 'song-b']);
+    expect(detail.rehearsal.title, 'Buổi tập hát');
+    expect(detail.rehearsal.note, 'Test rehearsal');
     expect(detail.myAttendanceStatus, 'Present');
   });
   test(
@@ -292,7 +294,7 @@ void main() {
     final assertion = expectLater(request, throwsA(anything));
     await adapter.invitationStarted.future;
     await testSession.endSession();
-    await testSession.markAuthenticated();
+    await testSession.markAuthenticated(role: 'ChoirMember');
     adapter.invitationGate!.complete();
     await assertion;
     expect(adapter.requests.where((r) => r.method == 'PUT'), isEmpty);
@@ -315,7 +317,7 @@ void main() {
     );
     await storage.started.future;
     await session.endSession();
-    await session.markAuthenticated();
+    await session.markAuthenticated(role: 'ChoirMember');
     storage.token.complete('fixture-token-b');
     await assertion;
     expect(adapter.requests.where((r) => r.method == 'PUT'), isEmpty);

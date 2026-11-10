@@ -309,6 +309,15 @@ void main() {
       expect(progressReq.toJson()['status'], 'Learned');
     });
 
+    test('Interactive scores decode from both API enum representations', () {
+      for (final value in ['InteractiveScore', 4]) {
+        final material = MusicMaterialDto.fromJson({'materialType': value});
+        expect(material.materialType, MaterialType.interactiveScore);
+      }
+      expect(MaterialType.fromWire('FutureType'), MaterialType.unknown);
+      expect(MaterialType.filterOptions, isNot(contains(MaterialType.unknown)));
+    });
+
     test('Auth extended requests and UserDto serialize properly', () {
       const googleReq = GoogleLoginRequest(
         idToken: 'google-id-token-abc',

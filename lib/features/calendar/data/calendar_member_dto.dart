@@ -46,17 +46,20 @@ class MyAssignment {
   final String skillName;
   final String? songListItemId;
   final String? songTitle;
+  final String? note;
   const MyAssignment({
     required this.skillId,
     required this.skillName,
     this.songListItemId,
     this.songTitle,
+    this.note,
   });
   factory MyAssignment.fromJson(Map<String, dynamic> json) => MyAssignment(
     skillId: json['skillId'] as String,
     skillName: json['skillName'] as String,
     songListItemId: json['songListItemId'] as String?,
     songTitle: json['songTitle'] as String?,
+    note: json['note'] as String?,
   );
 }
 
@@ -185,7 +188,8 @@ class MemberRehearsalDetail {
     return MemberRehearsalDetail(
       rehearsal: RehearsalSession(
         id: json['id'] as String,
-        title: json['note'] as String? ?? 'Buổi tập hát',
+        title: 'Buổi tập hát',
+        note: json['note'] as String?,
         date: start,
         endTime: end,
         timeRange:

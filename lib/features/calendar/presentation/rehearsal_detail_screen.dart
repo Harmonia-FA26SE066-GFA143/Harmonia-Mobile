@@ -14,7 +14,13 @@ import '../data/calendar_repository.dart';
 class RehearsalDetailScreen extends ConsumerStatefulWidget {
   final String rehearsalId;
 
-  const RehearsalDetailScreen({super.key, required this.rehearsalId});
+  const RehearsalDetailScreen({
+    super.key,
+    required this.rehearsalId,
+    this.showOwnAttendance = true,
+  });
+
+  final bool showOwnAttendance;
 
   @override
   ConsumerState<RehearsalDetailScreen> createState() =>
@@ -271,8 +277,14 @@ class _RehearsalDetailScreenState extends ConsumerState<RehearsalDetailScreen> {
                           ),
                           if (rehearsal.location.isNotEmpty)
                             Text(rehearsal.location),
-                          const SizedBox(height: 8),
-                          Text('Điểm danh: ${rehearsal.attendanceStatus}'),
+                          if (rehearsal.note?.trim().isNotEmpty ?? false) ...[
+                            const SizedBox(height: 8),
+                            Text('Ghi chú: ${rehearsal.note!.trim()}'),
+                          ],
+                          if (widget.showOwnAttendance) ...[
+                            const SizedBox(height: 8),
+                            Text('Điểm danh: ${rehearsal.attendanceStatus}'),
+                          ],
                         ],
                       ),
                     ),

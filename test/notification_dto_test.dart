@@ -13,8 +13,15 @@ void main() {
       expect(NotificationType.fromValue(3), NotificationType.assignmentNotice);
       expect(NotificationType.fromValue(4), NotificationType.practiceFeedback);
       expect(NotificationType.fromValue(5), NotificationType.directorNote);
-      // Fallback for unknown enum
-      expect(NotificationType.fromValue(99), NotificationType.directorNote);
+      expect(
+        NotificationType.fromValue('EventChoirChanged'),
+        NotificationType.eventChoirChanged,
+      );
+      expect(
+        NotificationType.fromValue(10),
+        NotificationType.eventChoirChanged,
+      );
+      expect(NotificationType.fromValue(99), NotificationType.unknown);
     });
 
     test('NotificationDto decodes properly from JSON', () {

@@ -1,10 +1,29 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
+
 class AppEnv {
   AppEnv._();
+
+  static const _productionApiUrl =
+      'https://harmonia-be-a7hneqh4aacsd2e6.southeastasia-01.azurewebsites.net';
+
+  static bool get demoToolsEnabled {
+    if (!kDebugMode || !const bool.fromEnvironment('HARMONIA_DEMO_TOOLS')) {
+      return false;
+    }
+    final api = Uri.tryParse(apiBaseUrl);
+    return api != null &&
+        (api.scheme == 'http' || api.scheme == 'https') &&
+        api.hasAuthority &&
+        api.userInfo.isEmpty &&
+        api.host.isNotEmpty &&
+        api.host.replaceFirst(RegExp(r'\.+$'), '') !=
+            Uri.parse(_productionApiUrl).host;
+  }
 
   /// Backend API URL. The application always uses real backend repositories.
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://harmonia-be-a7hneqh4aacsd2e6.southeastasia-01.azurewebsites.net',
+    defaultValue: _productionApiUrl,
   );
 
   /// Optional API Key for external services or backend authentication if required.

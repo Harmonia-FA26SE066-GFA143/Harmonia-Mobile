@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
@@ -6,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../../core/errors/app_exceptions.dart';
 import '../../../core/network/api_client.dart';
+import 'score_timeline.dart';
 
 /// Uses a separate client so signed file requests never receive Harmonia tokens.
 class MusicFileLoader {
@@ -36,6 +38,36 @@ class MusicFileLoader {
       );
     }
     return uri;
+  }
+
+  Future<List<ScoreNote>> downloadNotes(
+    String url,
+    CancelToken cancelToken,
+  ) async {
+    final uri = validatedUrl(url);
+    try {
+      final response = await _dio.get<ResponseBody>(
+        uri.toString(),
+        cancelToken: cancelToken,
+        options: Options(responseType: ResponseType.stream),
+      );
+      const limit = 16 * 1024 * 1024;
+      final bytes = BytesBuilder(copy: false);
+      await for (final chunk in response.data!.stream) {
+        if (bytes.length + chunk.length > limit) {
+          throw const FormatException('Note timeline is too large.');
+        }
+        bytes.add(chunk);
+      }
+      return await compute(parseScoreNotes, bytes.takeBytes());
+    } on FormatException {
+      throw const AppException(
+        code: 'MATERIAL_NOTES_INVALID',
+        message: 'Không thể đọc dữ liệu nốt nhạc.',
+      );
+    } on DioException catch (error) {
+      throw ApiClient.parseDioException(error);
+    }
   }
 
   Future<CachedMusicPdf> downloadPdf(

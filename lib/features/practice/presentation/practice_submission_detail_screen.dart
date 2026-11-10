@@ -6,6 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../app/widgets/app_page_header.dart';
+import '../../../app/widgets/stitch_entrance.dart';
+import '../../music/data/music_file_loader.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/di/core_providers.dart';
 import '../../../core/errors/error_messages.dart';
@@ -24,7 +27,10 @@ class PracticeSubmissionDetailScreen extends ConsumerStatefulWidget {
 class _PracticeSubmissionDetailScreenState
     extends ConsumerState<PracticeSubmissionDetailScreen> {
   late final AudioPlayer _audioPlayer;
-  StreamSubscription? _playerCompleteSubscription;
+  final _subscriptions = <StreamSubscription<Object?>>[];
+  Duration _position = Duration.zero;
+  Duration? _duration;
+  bool _prepared = false;
   bool _isPlaying = false;
   bool _isLoadingAudio = false;
 
@@ -33,15 +39,31 @@ class _PracticeSubmissionDetailScreenState
     super.initState();
     AudioLogger.logLevel = AudioLogLevel.none;
     _audioPlayer = AudioPlayer();
-    _playerCompleteSubscription = _audioPlayer.onPlayerComplete.listen((_) {
-      if (mounted) setState(() => _isPlaying = false);
-    });
+    _subscriptions.addAll([
+      _audioPlayer.onPlayerComplete.listen((_) {
+        if (mounted) {
+          setState(() {
+            _isPlaying = false;
+            _prepared = false;
+            _position = Duration.zero;
+          });
+        }
+      }),
+      _audioPlayer.onPositionChanged.listen((position) {
+        if (mounted) setState(() => _position = position);
+      }),
+      _audioPlayer.onDurationChanged.listen((duration) {
+        if (mounted) setState(() => _duration = duration);
+      }),
+    ]);
   }
 
   @override
   void dispose() {
-    _playerCompleteSubscription?.cancel();
-    _audioPlayer.dispose();
+    for (final sub in _subscriptions) {
+      unawaited(sub.cancel());
+    }
+    unawaited(_audioPlayer.dispose());
     super.dispose();
   }
 
@@ -58,11 +80,19 @@ class _PracticeSubmissionDetailScreenState
 
     try {
       if (_isPlaying) {
-        await _audioPlayer.stop();
+        await _audioPlayer.pause();
         if (mounted) setState(() => _isPlaying = false);
         return;
       }
-      // Luôn lấy URL ký mới nhất ngay trước khi phát theo yêu cầu BE
+      if (_prepared) {
+        await _audioPlayer.resume();
+        if (mounted &&
+            ref.read(sessionManagerProvider).sessionEpoch == initialEpoch) {
+          setState(() => _isPlaying = true);
+        }
+        return;
+      }
+      // Fetch a fresh signed URL before starting a new playback.
       final repo = ref.read(practiceRepositoryProvider);
       final freshDetail = await repo.getMySubmissionDetail(widget.submissionId);
 
@@ -84,16 +114,23 @@ class _PracticeSubmissionDetailScreenState
         return;
       }
 
-      await _audioPlayer.play(UrlSource(audioUrl));
+      await _audioPlayer.play(
+        UrlSource(MusicFileLoader.validatedUrl(audioUrl).toString()),
+      );
       if (mounted &&
           ref.read(sessionManagerProvider).sessionEpoch == initialEpoch) {
         setState(() {
           _isPlaying = true;
+          _prepared = true;
         });
       }
     } catch (_) {
       if (mounted &&
           ref.read(sessionManagerProvider).sessionEpoch == initialEpoch) {
+        setState(() {
+          _isPlaying = false;
+          _prepared = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
@@ -110,6 +147,18 @@ class _PracticeSubmissionDetailScreenState
     }
   }
 
+  Future<void> _seek(double milliseconds) async {
+    try {
+      await _audioPlayer.seek(Duration(milliseconds: milliseconds.round()));
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Không thể tua bản thu.')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final detailAsync = ref.watch(
@@ -118,8 +167,9 @@ class _PracticeSubmissionDetailScreenState
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: Text('Chi tiết bản thu âm', style: AppTypography.headlineSmall),
+      appBar: AppPageHeader(
+        centerTitle: true,
+        title: const Text('Chi tiết bản thu âm'),
       ),
       body: SafeArea(
         child: detailAsync.when(
@@ -147,7 +197,7 @@ class _PracticeSubmissionDetailScreenState
                     style: AppTypography.bodyMedium,
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: () => ref.refresh(
                       mySubmissionDetailProvider(widget.submissionId),
@@ -185,151 +235,199 @@ class _PracticeSubmissionDetailScreenState
               statusLabel = 'Đã nộp • Chờ chấm';
             }
 
+            final length =
+                _duration ?? Duration(seconds: submission.durationSeconds);
+            final maxPosition = length.inMilliseconds.toDouble();
+            final position = _position.inMilliseconds.toDouble().clamp(
+              0.0,
+              maxPosition,
+            );
             return SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // Main Info Card
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary.withValues(
-                                    alpha: 0.1,
-                                  ),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  'Lần nộp ${submission.attemptNo}',
-                                  style: AppTypography.labelSmall.copyWith(
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: statusColor.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  statusLabel,
-                                  style: AppTypography.labelSmall.copyWith(
-                                    color: statusColor,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          if (submission.assignmentTitle != null) ...[
-                            Text(
-                              submission.assignmentTitle!,
-                              style: AppTypography.titleLarge.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                          ],
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.access_time_rounded,
-                                size: 16,
-                                color: AppColors.muted,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                'Nộp lúc: ${DateFormat('dd/MM/yyyy HH:mm').format(submission.submittedAt)}',
-                                style: AppTypography.bodySmall.copyWith(
-                                  color: AppColors.muted,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          const Divider(),
-                          const SizedBox(height: 12),
-
-                          // Audio playback box
-                          Container(
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceContainerLow,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: AppColors.border),
-                            ),
-                            child: Row(
+                  StitchEntrance(
+                    child: Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Wrap(
+                              alignment: WrapAlignment.spaceBetween,
+                              spacing: 8,
+                              runSpacing: 6,
                               children: [
-                                IconButton.filled(
-                                  style: IconButton.styleFrom(
-                                    backgroundColor: AppColors.primary,
-                                    minimumSize: const Size(48, 48),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
                                   ),
-                                  onPressed: _isLoadingAudio
-                                      ? null
-                                      : _playAudio,
-                                  icon: _isLoadingAudio
-                                      ? const SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: Colors.white,
-                                          ),
-                                        )
-                                      : Icon(
-                                          _isPlaying
-                                              ? Icons.pause_rounded
-                                              : Icons.play_arrow_rounded,
-                                          color: Colors.white,
-                                          size: 28,
-                                        ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary.withValues(
+                                      alpha: 0.1,
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    'Lần nộp ${submission.attemptNo}',
+                                    style: AppTypography.labelSmall.copyWith(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Bản ghi âm đã nộp',
-                                        style: AppTypography.titleMedium
-                                            .copyWith(
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        'Thời lượng: ${_formatDuration(submission.durationSeconds)}',
-                                        style: AppTypography.bodySmall.copyWith(
-                                          color: AppColors.muted,
-                                        ),
-                                      ),
-                                    ],
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: statusColor.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    statusLabel,
+                                    style: AppTypography.labelSmall.copyWith(
+                                      color: statusColor,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 12),
+                            if (submission.assignmentTitle != null) ...[
+                              Text(
+                                submission.assignmentTitle!,
+                                style: AppTypography.titleLarge.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                            ],
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.access_time_rounded,
+                                  size: 16,
+                                  color: AppColors.muted,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Nộp lúc: ${DateFormat('dd/MM/yyyy HH:mm').format(submission.submittedAt)}',
+                                  style: AppTypography.bodySmall.copyWith(
+                                    color: AppColors.muted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                            const Divider(),
+                            const SizedBox(height: 12),
+
+                            // Audio playback box
+                            Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFF5F7),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: const Color(0xFFFFDCE4),
+                                ),
+                              ),
+                              child: Column(
+                                children: [
+                                  Row(
+                                    children: [
+                                      IconButton.filled(
+                                        tooltip: _isPlaying
+                                            ? 'Tạm dừng bản thu'
+                                            : 'Phát bản thu',
+                                        style: IconButton.styleFrom(
+                                          backgroundColor: AppColors.primary,
+                                          minimumSize: const Size(48, 48),
+                                        ),
+                                        onPressed: _isLoadingAudio
+                                            ? null
+                                            : _playAudio,
+                                        icon: _isLoadingAudio
+                                            ? const SizedBox(
+                                                width: 20,
+                                                height: 20,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                      color: Colors.white,
+                                                    ),
+                                              )
+                                            : Icon(
+                                                _isPlaying
+                                                    ? Icons.pause_rounded
+                                                    : Icons.play_arrow_rounded,
+                                                color: Colors.white,
+                                                size: 28,
+                                              ),
+                                      ),
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Bản ghi âm đã nộp',
+                                              style: AppTypography.titleMedium
+                                                  .copyWith(
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              _isPlaying
+                                                  ? 'Đang phát'
+                                                  : 'Thời lượng: ${_formatDuration(length.inSeconds)}',
+                                              style: AppTypography.bodySmall
+                                                  .copyWith(
+                                                    color: AppColors.muted,
+                                                  ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        _formatDuration(_position.inSeconds),
+                                        style: AppTypography.labelSmall,
+                                      ),
+                                      Expanded(
+                                        child: Slider(
+                                          max: maxPosition > 0
+                                              ? maxPosition
+                                              : 1,
+                                          value: position,
+                                          onChanged:
+                                              _prepared && maxPosition > 0
+                                              ? _seek
+                                              : null,
+                                        ),
+                                      ),
+                                      Text(
+                                        _formatDuration(length.inSeconds),
+                                        style: AppTypography.labelSmall,
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -338,7 +436,7 @@ class _PracticeSubmissionDetailScreenState
                   // Feedbacks Section
                   Card(
                     child: Padding(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(20),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -350,10 +448,12 @@ class _PracticeSubmissionDetailScreenState
                                 size: 20,
                               ),
                               const SizedBox(width: 8),
-                              Text(
-                                'Nhận xét từ Ca trưởng (${submission.feedbacks.length})',
-                                style: AppTypography.titleMedium.copyWith(
-                                  fontWeight: FontWeight.bold,
+                              Expanded(
+                                child: Text(
+                                  'Nhận xét từ Ca trưởng (${submission.feedbacks.length})',
+                                  style: AppTypography.titleMedium.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ],
@@ -394,12 +494,14 @@ class _PracticeSubmissionDetailScreenState
                                         mainAxisAlignment:
                                             MainAxisAlignment.spaceBetween,
                                         children: [
-                                          Text(
-                                            fb.reviewerName ?? 'Ca trưởng',
-                                            style: AppTypography.titleMedium
-                                                .copyWith(
-                                                  fontWeight: FontWeight.bold,
-                                                ),
+                                          Expanded(
+                                            child: Text(
+                                              fb.reviewerName ?? 'Ca trưởng',
+                                              style: AppTypography.titleMedium
+                                                  .copyWith(
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                            ),
                                           ),
                                           Container(
                                             padding: const EdgeInsets.symmetric(

@@ -18,6 +18,7 @@ import 'package:harmonia_mobile/features/calendar/data/calendar_member_dto.dart'
 import 'package:harmonia_mobile/features/calendar/data/calendar_repository.dart';
 import 'package:harmonia_mobile/features/calendar/data/liturgical_models.dart';
 import 'package:harmonia_mobile/features/calendar/presentation/calendar_screen.dart';
+import 'package:harmonia_mobile/features/calendar/presentation/liturgical_day_dialog.dart';
 import 'package:harmonia_mobile/features/music/data/music_repository.dart';
 import 'package:harmonia_mobile/features/music/data/music_dto.dart';
 
@@ -245,6 +246,36 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets(
+    'week timeline orders rehearsal and service by parish clock time',
+    (tester) async {
+      repo.eventTime = '21:10:00';
+      repo.rehearsalInstant = DateTime.utc(
+        repo.day.year,
+        repo.day.month,
+        repo.day.day,
+        13,
+      );
+      repo.rehearsalTimeRange = '20:00 – 21:00';
+      await open(tester);
+      expect(
+        tester
+            .getTopLeft(
+              find.byKey(ValueKey('timeline-rehearsal-${repo.rehearsal.id}')),
+            )
+            .dy,
+        lessThan(
+          tester
+              .getTopLeft(
+                find.byKey(ValueKey('timeline-event-${repo.event.id}')),
+              )
+              .dy,
+        ),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('Stitch week controls and summary replace the seven-day list', (
     tester,
   ) async {
@@ -396,8 +427,16 @@ void main() {
         find.text(DateFormat('dd/MM/yyyy').format(repo.day)),
         findsOneWidget,
       );
-      expect(find.text('Thánh lễ từ API'), findsOneWidget);
-      expect(find.text('Buổi tập từ API'), findsOneWidget);
+      expect(find.textContaining('Lịch trình đã chọn'), findsOneWidget);
+      final dialog = find.byType(LiturgicalDayDialog);
+      expect(
+        find.descendant(of: dialog, matching: find.text('Thánh lễ từ API')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: dialog, matching: find.text('Buổi tập từ API')),
+        findsOneWidget,
+      );
       expect(find.text('SỰ KIỆN SẮP TỚI'), findsOneWidget);
       expect(find.text('BUỔI TẬP ĐƯỢC GIAO'), findsOneWidget);
       expect(find.textContaining('Mùa phụng vụ'), findsNothing);

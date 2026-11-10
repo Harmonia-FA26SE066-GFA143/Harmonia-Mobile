@@ -233,7 +233,13 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Thông báo kiểm thử'));
       await tester.pumpAndSettle();
-      expect(find.text('16/10/2026 09:15'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(BottomSheet),
+          matching: find.text('16/10/2026 09:15'),
+        ),
+        findsOneWidget,
+      );
     } finally {
       await tester.pumpWidget(const SizedBox.shrink());
       repository.dispose();

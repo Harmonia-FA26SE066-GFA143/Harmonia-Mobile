@@ -949,13 +949,10 @@ void main() {
         // User starts a new login request on LoginScreen
         // Verify login flow maintains its own loading and outcome
         await tester.enterText(
-          find.widgetWithText(TextFormField, 'cavien@example.com'),
+          find.byType(TextFormField).first,
           'cavien@example.com',
         );
-        await tester.enterText(
-          find.widgetWithText(TextFormField, 'Nhập mật khẩu'),
-          'Password123',
-        );
+        await tester.enterText(find.byType(TextFormField).last, 'Password123');
 
         // Trigger login submit
         await tester.tap(find.widgetWithText(ElevatedButton, 'Đăng nhập'));

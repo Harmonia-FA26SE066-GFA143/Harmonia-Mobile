@@ -86,6 +86,12 @@ void main() {
         // Now route should redirect away from login back into home or target
         loc = router.routerDelegate.currentConfiguration.uri.toString();
         expect(loc, isNot(contains('/login')));
+
+        for (final path in ['/manage', '/approvals', '/director-note/note']) {
+          router.go(path);
+          await tester.pumpAndSettle();
+          expect(router.routeInformationProvider.value.uri.path, '/home');
+        }
       },
     );
 

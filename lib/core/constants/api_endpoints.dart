@@ -38,6 +38,25 @@ class ApiEndpoints {
       '/api/rehearsals/$id/recordings';
   static const String scheduleRehearsals = '/api/schedule/rehearsals';
 
+  // Staff workspace endpoints
+  static const String liturgicalEvents = '/api/liturgical-events';
+  static String liturgicalEvent(String id) => '$liturgicalEvents/$id';
+  static String publishEvent(String id) => '${liturgicalEvent(id)}/publish';
+  static String eventChoirs(String id) => '${liturgicalEvent(id)}/choirs';
+  static String substituteDirector(String id, String choirId) =>
+      '${eventChoirs(id)}/$choirId/substitute-director';
+  static const String choirs = '/api/choirs';
+  static const String directorRecipients = '/api/director-notes/recipients';
+  static const String songLists = '/api/song-lists';
+  static String latestSongList(String eventId) =>
+      '$songLists/event/$eventId/latest';
+  static String songListItems(String id) => '${songList(id)}/items';
+  static String submitSongList(String id) => '${songList(id)}/submit';
+  static String reviewSongList(String id) => '${songList(id)}/review';
+  static const String pendingSongLists = '/api/song-lists/pending';
+  static String songList(String id) => '/api/song-lists/$id';
+  static String directorNote(String id) => '/api/director-notes/$id';
+
   // Song library endpoints
   static const String songs = '/api/songs';
   static String songById(String id) => '/api/songs/$id';

@@ -72,7 +72,64 @@ class ProgressRepository extends MockMusicRepositoryImpl {
   }
 }
 
+class InteractiveScoreRepository extends MockMusicRepositoryImpl {
+  String? playbackMaterialId;
+
+  @override
+  Future<music.MusicMaterialDetailDto?> getMyMaterial(
+    String id,
+    String songId,
+  ) async => music.MusicMaterialDetailDto.fromJson({
+    'id': id,
+    'songId': songId,
+    'materialType': 'InteractiveScore',
+    'title': 'Bản nhạc thử',
+    'fileName': 'score.mxl',
+  });
+
+  @override
+  Future<music.MusicMaterialPlaybackDto> getMaterialPlayback(String id) async {
+    playbackMaterialId = id;
+    throw const AppException(
+      code: 'MATERIAL_PLAYBACK_UNAVAILABLE',
+      message: 'Playback unavailable.',
+      statusCode: 409,
+    );
+  }
+}
+
 void main() {
+  testWidgets('MusicXML requests rendered playback for the selected material', (
+    tester,
+  ) async {
+    FlutterSecureStorage.setMockInitialValues({});
+    final session = SessionManager(SecureStorageService());
+    await session.markAuthenticated(role: 'ChoirMember');
+    final repository = InteractiveScoreRepository();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sessionManagerProvider.overrideWithValue(session),
+          musicRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: const MaterialApp(
+          home: MusicMaterialScreen(materialId: 'score-a', songId: 'song-a'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Phát bản nhạc'));
+    await tester.pumpAndSettle();
+
+    expect(repository.playbackMaterialId, 'score-a');
+    expect(
+      find.textContaining('Tài liệu chưa có dữ liệu phát'),
+      findsOneWidget,
+    );
+    await tester.pumpWidget(const SizedBox());
+    session.dispose();
+  });
+
   testWidgets(
     'failed progress update restores the displayed server status and uses the selected material ID',
     (tester) async {

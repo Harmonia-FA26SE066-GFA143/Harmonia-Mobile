@@ -11,44 +11,30 @@ void main() {
   });
 
   group('Session, Refresh and Account Switching Tests', () {
-    test('Role gate allows ChoirMember and rejects non-ChoirMember', () async {
-      final storage = SecureStorageService();
-      final session = SessionManager(storage);
-
-      // Save ChoirDirector token and role
-      await storage.saveTokens(
-        accessToken: 'director-token',
-        refreshToken: 'director-refresh',
-        expiresAt: '2026-12-31T00:00:00Z',
-      );
-      await storage.saveUser(
-        id: 'u-1',
-        email: 'director@harmonia.org',
-        roleName: 'ChoirDirector',
-      );
-
-      await session.initialize();
-      // Should be unauthenticated because only ChoirMember is permitted on mobile
-      expect(session.isAuthenticated, false);
-      expect(session.status, AuthStatus.unauthenticated);
-      expect(await storage.getAccessToken(), isNull);
-
-      // Now save ChoirMember
-      await storage.saveTokens(
-        accessToken: 'member-token',
-        refreshToken: 'member-refresh',
-        expiresAt: '2026-12-31T00:00:00Z',
-      );
-      await storage.saveUser(
-        id: 'u-2',
-        email: 'member@harmonia.org',
-        roleName: 'ChoirMember',
-      );
-
-      await session.initialize();
-      expect(session.isAuthenticated, true);
-      expect(session.userRole, 'ChoirMember');
-    });
+    test(
+      'cached Admin and unknown roles cannot restore a mobile session',
+      () async {
+        final storage = SecureStorageService();
+        final session = SessionManager(storage);
+        addTearDown(session.dispose);
+        for (final role in ['Admin', 'UnknownRole']) {
+          await storage.saveTokens(
+            accessToken: 'restricted-token',
+            refreshToken: 'restricted-refresh',
+            expiresAt: '2030-01-01T00:00:00Z',
+          );
+          await storage.saveUser(
+            id: 'restricted-user',
+            email: 'restricted@example.test',
+            roleName: role,
+          );
+          await session.initialize(verifyAccount: true);
+          expect(session.status, AuthStatus.unauthenticated);
+          expect(session.role, isNull);
+          expect(await storage.getAccessToken(), isNull);
+        }
+      },
+    );
 
     test('Account switching isolates data and resets session state', () async {
       final storage = SecureStorageService();

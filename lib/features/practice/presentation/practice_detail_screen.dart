@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide MaterialType;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -11,10 +11,17 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../app/widgets/app_page_header.dart';
+import '../../../app/widgets/stitch_entrance.dart';
+import '../../music/data/music_dto.dart' show MaterialType;
+import '../../music/presentation/reference_audio_panel.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/di/core_providers.dart';
 import '../../../core/errors/app_exceptions.dart';
 import '../../../core/errors/error_messages.dart';
+import '../../staff_workspace/data/staff_operations_api.dart';
+import '../../staff_workspace/presentation/staff_practice_screen.dart'
+    show showAudioScore;
 import '../data/practice_models.dart';
 import '../data/practice_repository.dart';
 
@@ -50,6 +57,7 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
   bool _isRecording = false;
   bool _isPlayingDraft = false;
   bool _isSubmitting = false;
+  bool _isScoring = false;
   bool _isProcessingAction = false;
   bool _isAppActive = true;
   bool _confirmingExit = false;
@@ -429,6 +437,56 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
     }
   }
 
+  Future<void> _scoreDraft(_PracticeRecordingDraft draft) async {
+    if (_isSubmitting ||
+        _isRecording ||
+        _isProcessingAction ||
+        !_ensureCanSubmit()) {
+      return;
+    }
+    final api = ref.read(staffOperationsApiProvider);
+    final session = ref.read(sessionManagerProvider.notifier);
+    final epoch = session.sessionEpoch;
+    setState(() {
+      _isScoring = true;
+      _isProcessingAction = true;
+    });
+    try {
+      final file = File(draft.filePath);
+      final size = await file.length();
+      final extension = file.path.split('.').last.toLowerCase();
+      if (size == 0 ||
+          size > 20 * 1024 * 1024 ||
+          !const ['mp3', 'm4a', 'wav'].contains(extension)) {
+        throw const AppException(
+          code: 'PRACTICE_DRAFT_INVALID',
+          message: 'Hãy chọn bản thu MP3, M4A hoặc WAV hợp lệ, tối đa 20 MB.',
+        );
+      }
+      if (!mounted || session.sessionEpoch != epoch) return;
+      final score = await api.scoreDraft(widget.assignmentId, draft.filePath);
+      if (mounted && session.sessionEpoch == epoch) {
+        await showAudioScore(context, score);
+      }
+    } catch (error) {
+      if (mounted && session.sessionEpoch == epoch) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ErrorMessages.forException(error)),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isScoring = false;
+          _isProcessingAction = false;
+        });
+      }
+    }
+  }
+
   Future<void> _submitRecording(_PracticeRecordingDraft draft) async {
     // 1. Chặn double-tap ngay lập tức trước bất kỳ await nào
     if (_isSubmitting || _isRecording || _isProcessingAction) return;
@@ -715,7 +773,7 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
             children: [
               IconButton(
                 tooltip: 'Xóa bản thu',
-                onPressed: _isSubmitting
+                onPressed: _isSubmitting || _isScoring
                     ? null
                     : () => _discardDraft(draft.filePath),
                 icon: const Icon(Icons.delete_outline_rounded),
@@ -725,7 +783,7 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                 child: SizedBox(
                   height: 44,
                   child: ElevatedButton.icon(
-                    onPressed: _isSubmitting || !canSubmit
+                    onPressed: _isSubmitting || _isScoring || !canSubmit
                         ? null
                         : () => _submitRecording(draft),
                     icon: _isSubmitting
@@ -751,6 +809,24 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
               ),
             ],
           ),
+          if (canSubmit)
+            Center(
+              child: TextButton.icon(
+                onPressed: _isSubmitting || _isRecording || _isProcessingAction
+                    ? null
+                    : () => _scoreDraft(draft),
+                icon: _isScoring
+                    ? const SizedBox.square(
+                        dimension: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.graphic_eq),
+                label: Text(
+                  _isScoring ? 'Đang phân tích...' : 'Thử chấm bản thu',
+                ),
+                style: TextButton.styleFrom(foregroundColor: Colors.white),
+              ),
+            ),
           if (hasPreviousSubmission && canSubmit) ...[
             const SizedBox(height: 6),
             Text(
@@ -778,14 +854,14 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
         skipError: true,
         loading: () => Scaffold(
           backgroundColor: AppColors.background,
-          appBar: AppBar(title: const Text('Thu âm & Luyện tập')),
+          appBar: AppPageHeader(title: const Text('Thu âm & Luyện tập')),
           body: const Center(
             child: CircularProgressIndicator(color: AppColors.primary),
           ),
         ),
         error: (err, _) => Scaffold(
           backgroundColor: AppColors.background,
-          appBar: AppBar(title: const Text('Thu âm & Luyện tập')),
+          appBar: AppPageHeader(title: const Text('Thu âm & Luyện tập')),
           body: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -824,7 +900,7 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
           if (assignment == null) {
             return Scaffold(
               backgroundColor: AppColors.background,
-              appBar: AppBar(title: const Text('Thu âm & Luyện tập')),
+              appBar: AppPageHeader(title: const Text('Thu âm & Luyện tập')),
               body: const Center(
                 child: Text(
                   'Không tìm thấy bài tập hoặc bạn không có quyền truy cập.',
@@ -840,9 +916,16 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
               loadedAssignment == null;
           final canSubmit =
               assignment.canSubmit == true && !permissionUnavailable;
+          final references = assignment.materials
+              .where(
+                (item) =>
+                    item.type == MaterialType.sampleAudio ||
+                    item.type == MaterialType.interactiveScore,
+              )
+              .toList();
           return Scaffold(
             backgroundColor: AppColors.background,
-            appBar: AppBar(title: const Text('Thu âm & Luyện tập')),
+            appBar: AppPageHeader(title: const Text('Thu âm & Luyện tập')),
             body: SafeArea(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
@@ -852,12 +935,13 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                     // Header Card
                     Card(
                       child: Padding(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(20),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
                               children: [
                                 Container(
                                   padding: const EdgeInsets.symmetric(
@@ -868,7 +952,7 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                                     color: AppColors.primary.withValues(
                                       alpha: 0.1,
                                     ),
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(24),
                                   ),
                                   child: Text(
                                     assignment.vocalPart,
@@ -878,7 +962,9 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                                     ),
                                   ),
                                 ),
-                                Row(
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
                                   children: [
                                     if (assignment.isOverdue &&
                                         assignment.status !=
@@ -916,7 +1002,7 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                                                 PracticeStatus.passed
                                             ? AppColors.statusSuccessSoft
                                             : AppColors.surfaceContainerLow,
-                                        borderRadius: BorderRadius.circular(12),
+                                        borderRadius: BorderRadius.circular(24),
                                         border: Border.all(
                                           color:
                                               assignment.status ==
@@ -973,52 +1059,82 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
 
-                    // Instructions Card
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.menu_book_rounded,
-                                  size: 18,
-                                  color: AppColors.primary,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'Hướng dẫn từ Ca trưởng',
-                                    style: AppTypography.titleMedium.copyWith(
-                                      fontWeight: FontWeight.bold,
+                    for (final reference in references)
+                      if (assignment.songId?.isNotEmpty == true) ...[
+                        StitchEntrance(
+                          child: Card(
+                            child: ListTile(
+                              leading: const Icon(Icons.headphones_outlined),
+                              title: Text(
+                                references.length == 1
+                                    ? 'Bè mẫu'
+                                    : reference.title,
+                              ),
+                              subtitle: Text(
+                                references.length == 1
+                                    ? reference.title
+                                    : reference.type.label,
+                              ),
+                              trailing: const Icon(Icons.chevron_right_rounded),
+                              onTap:
+                                  _isRecording ||
+                                      _isSubmitting ||
+                                      _isProcessingAction ||
+                                      _isPlayingDraft
+                                  ? null
+                                  : () => showReferenceAudio(
+                                      context,
+                                      songId: assignment.songId!,
+                                      materialId: reference.id,
+                                      title: reference.title,
+                                      loopControls: true,
                                     ),
-                                  ),
-                                ),
-                              ],
                             ),
-                            const SizedBox(height: 8),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                      ],
+                    if (assignment.instruction.trim().isNotEmpty) ...[
+                      Card(
+                        clipBehavior: Clip.antiAlias,
+                        child: ExpansionTile(
+                          leading: const Icon(
+                            Icons.menu_book_rounded,
+                            color: AppColors.primary,
+                          ),
+                          title: Text(
+                            'Hướng dẫn từ Ca trưởng',
+                            style: AppTypography.titleMedium,
+                          ),
+                          shape: const Border(),
+                          collapsedShape: const Border(),
+                          childrenPadding: const EdgeInsets.fromLTRB(
+                            20,
+                            0,
+                            20,
+                            18,
+                          ),
+                          expandedCrossAxisAlignment: CrossAxisAlignment.start,
+                          expandedAlignment: Alignment.centerLeft,
+                          children: [
                             Text(
                               assignment.instruction,
-                              style: AppTypography.bodyMedium.copyWith(
-                                height: 1.5,
-                              ),
+                              style: AppTypography.bodyMedium,
                             ),
                           ],
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 20),
+                      const SizedBox(height: 14),
+                    ],
 
                     if (!canSubmit) ...[
                       Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
                           color: AppColors.statusWarningSoft,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(24),
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1040,7 +1156,7 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                           ],
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 20),
                     ],
 
                     // Recording Console Card (Stitch Studio design)
@@ -1074,9 +1190,36 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                                     : AppColors.onSurface,
                               ),
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 20),
 
-                            // Audio Visualizer Bar Simulation when recording
+                            if (!_isRecording) ...[
+                              ExcludeSemantics(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    for (var index = 0; index < 15; index++)
+                                      Container(
+                                        width: 4,
+                                        height: 6,
+                                        margin: const EdgeInsets.symmetric(
+                                          horizontal: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Color.lerp(
+                                            AppColors.primary,
+                                            AppColors.primaryLight,
+                                            (index - 7).abs() / 8,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 26),
+                            ],
                             if (_isRecording) ...[
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -1167,10 +1310,13 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                                           ? _startRecording
                                           : null),
                                 child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 250),
+                                  duration:
+                                      MediaQuery.disableAnimationsOf(context)
+                                      ? Duration.zero
+                                      : const Duration(milliseconds: 250),
                                   curve: Curves.easeInOut,
-                                  width: 88,
-                                  height: 88,
+                                  width: 80,
+                                  height: 80,
                                   decoration: BoxDecoration(
                                     color: _isRecording
                                         ? AppColors.error
@@ -1205,7 +1351,7 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 20),
                             Text(
                               _isRecording
                                   ? 'Chạm nút đỏ để dừng thu âm'
@@ -1218,12 +1364,12 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
 
                     if (_recordingDrafts.isNotEmpty) ...[
                       Card(
                         child: Padding(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(20),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -1272,7 +1418,7 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                           ),
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 20),
                     ],
 
                     // Submissions History Card
@@ -1337,7 +1483,7 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                           children: [
                             Card(
                               child: Padding(
-                                padding: const EdgeInsets.all(16),
+                                padding: const EdgeInsets.all(20),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
@@ -1471,7 +1617,7 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 20),
                           ],
                         );
                       },
@@ -1481,7 +1627,7 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                     if (assignment.feedbackComment != null) ...[
                       Card(
                         child: Padding(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(20),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [

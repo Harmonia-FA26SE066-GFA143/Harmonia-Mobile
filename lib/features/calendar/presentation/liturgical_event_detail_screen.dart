@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../app/widgets/app_page_header.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/errors/error_messages.dart';
 import 'participation_prompt.dart';
@@ -22,13 +23,13 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
     final songListAsync = ref.watch(eventApprovedSongListProvider(eventId));
     if (detailState.isLoading) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Chi tiết sự kiện')),
+        appBar: AppPageHeader(title: const Text('Chi tiết sự kiện')),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
     if (detailState.hasError) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Chi tiết sự kiện')),
+        appBar: AppPageHeader(title: const Text('Chi tiết sự kiện')),
         body: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -56,8 +57,12 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
+      appBar: AppPageHeader(
+        centerTitle: true,
         title: const Text('Chi tiết phụng vụ'),
+        gradient: const LinearGradient(
+          colors: [AppColors.primary, Color(0xFFFF3E67)],
+        ),
         actions: [
           IconButton(
             tooltip: 'Tải lại',
@@ -78,7 +83,7 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
               // Event Hero Banner Card
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -94,7 +99,7 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
                               ),
                               decoration: BoxDecoration(
                                 color: AppColors.statusSuccessSoft,
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: BorderRadius.circular(24),
                               ),
                               child: Text(
                                 event.seasonName,
@@ -111,7 +116,7 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
                             ),
                             decoration: BoxDecoration(
                               color: AppColors.primary.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(24),
                             ),
                             child: Text(
                               event.assignedVocalPart.isEmpty
@@ -128,27 +133,24 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
                       const SizedBox(height: 12),
                       Text(
                         event.title,
-                        style: AppTypography.headlineSmall.copyWith(
-                          color: AppColors.primary,
+                        style: AppTypography.headlineMedium.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: 12),
                       Row(
                         children: [
-                          const Icon(
-                            Icons.calendar_month_outlined,
-                            size: 16,
-                            color: AppColors.muted,
-                          ),
+                          const _EventMetaIcon(Icons.calendar_month_outlined),
                           const SizedBox(width: 8),
-                          Text(
-                            DateFormat(
-                              'EEEE, dd/MM/yyyy',
-                              'vi',
-                            ).format(event.date),
-                            style: AppTypography.bodyMedium.copyWith(
-                              fontWeight: FontWeight.w600,
+                          Expanded(
+                            child: Text(
+                              DateFormat(
+                                'EEEE, dd/MM/yyyy',
+                                'vi',
+                              ).format(event.date),
+                              style: AppTypography.bodyMedium.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ],
@@ -156,11 +158,7 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          const Icon(
-                            Icons.access_time_rounded,
-                            size: 16,
-                            color: AppColors.muted,
-                          ),
+                          const _EventMetaIcon(Icons.access_time_rounded),
                           const SizedBox(width: 8),
                           Text(
                             event.timeRange,
@@ -171,25 +169,26 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          const Icon(
-                            Icons.place_outlined,
-                            size: 16,
-                            color: AppColors.muted,
-                          ),
+                          const _EventMetaIcon(Icons.church_outlined),
                           const SizedBox(width: 8),
-                          Text(event.location, style: AppTypography.bodyMedium),
+                          Expanded(
+                            child: Text(
+                              event.location,
+                              style: AppTypography.bodyMedium,
+                            ),
+                          ),
                         ],
                       ),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
               if (detail.specialRequirements?.isNotEmpty == true)
                 Card(
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -205,7 +204,7 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
                 ),
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -220,55 +219,66 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
                           contentPadding: EdgeInsets.zero,
                           leading: const Icon(Icons.assignment_ind),
                           title: Text(assignment.skillName),
-                          subtitle: assignment.songTitle == null
+                          subtitle:
+                              assignment.songTitle == null &&
+                                  assignment.note?.trim().isNotEmpty != true
                               ? null
-                              : Text(assignment.songTitle!),
+                              : Text(
+                                  [
+                                    ?assignment.songTitle,
+                                    if (assignment.note?.trim().isNotEmpty ==
+                                        true)
+                                      assignment.note!,
+                                  ].join('\n'),
+                                ),
                         ),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               // Participation response
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      OverflowBar(
+                        alignment: MainAxisAlignment.spaceBetween,
+                        spacing: 12,
+                        overflowSpacing: 8,
+                        overflowAlignment: OverflowBarAlignment.start,
                         children: [
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    'Xác nhận tham gia',
-                                    style: AppTypography.titleMedium.copyWith(
-                                      fontWeight: FontWeight.bold,
+                          Text(
+                            'Xác nhận tham gia',
+                            style: AppTypography.titleMedium.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.circle,
+                                size: 8,
+                                color: _participationColor(
+                                  event.participationStatus,
+                                ),
+                              ),
+                              const SizedBox(width: 5),
+                              Flexible(
+                                child: Text(
+                                  event.participationStatus.label,
+                                  style: AppTypography.labelSmall.copyWith(
+                                    color: _participationColor(
+                                      event.participationStatus,
                                     ),
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Icon(
-                            Icons.circle,
-                            size: 8,
-                            color: _participationColor(
-                              event.participationStatus,
-                            ),
-                          ),
-                          const SizedBox(width: 5),
-                          Text(
-                            event.participationStatus.label,
-                            style: AppTypography.labelSmall.copyWith(
-                              color: _participationColor(
-                                event.participationStatus,
                               ),
-                              fontWeight: FontWeight.w600,
-                            ),
+                            ],
                           ),
                         ],
                       ),
@@ -311,7 +321,7 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
                           const SizedBox(width: 6),
                           Expanded(
                             child: _ParticipationOption(
-                              label: 'Chưa chắc chắn',
+                              label: 'Chưa chắc',
                               status: ParticipationStatus.unsure,
                               selected:
                                   event.participationStatus ==
@@ -365,15 +375,18 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      OverflowBar(
+                        alignment: MainAxisAlignment.spaceBetween,
+                        spacing: 12,
+                        overflowSpacing: 8,
+                        overflowAlignment: OverflowBarAlignment.start,
                         children: [
                           Text(
                             'Lịch trình tập hát',
@@ -463,6 +476,14 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
                                                       color: AppColors.muted,
                                                     ),
                                               ),
+                                            if (item.rehearsal.note
+                                                    ?.trim()
+                                                    .isNotEmpty ??
+                                                false)
+                                              Text(
+                                                'Ghi chú: ${item.rehearsal.note!.trim()}',
+                                                style: AppTypography.bodySmall,
+                                              ),
                                           ],
                                         ),
                                       ),
@@ -503,8 +524,11 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
               const SizedBox(height: 24),
 
               // Approved Song List Section
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              OverflowBar(
+                alignment: MainAxisAlignment.spaceBetween,
+                spacing: 12,
+                overflowSpacing: 8,
+                overflowAlignment: OverflowBarAlignment.start,
                 children: [
                   Text(
                     'Danh sách bài hát phụng vụ',
@@ -586,7 +610,7 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
                 error: (err, _) => Card(
                   color: AppColors.statusDangerSoft,
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
@@ -746,6 +770,23 @@ Color _participationColor(ParticipationStatus status) => switch (status) {
   ParticipationStatus.unknown || ParticipationStatus.invited => AppColors.muted,
 };
 
+class _EventMetaIcon extends StatelessWidget {
+  const _EventMetaIcon(this.icon);
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 25,
+    height: 25,
+    decoration: BoxDecoration(
+      color: AppColors.primarySoft,
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: const Color(0xFFFFDCE5)),
+    ),
+    child: Icon(icon, size: 15, color: AppColors.primary),
+  );
+}
+
 class _ParticipationOption extends StatelessWidget {
   const _ParticipationOption({
     required this.label,
@@ -775,32 +816,35 @@ class _ParticipationOption extends StatelessWidget {
     return OutlinedButton(
       onPressed: enabled ? onPressed : null,
       style: OutlinedButton.styleFrom(
-        minimumSize: const Size(0, 48),
+        minimumSize: const Size(0, 50),
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-        backgroundColor: selected ? softColor : AppColors.surface,
-        foregroundColor: selected ? color : AppColors.onSurface,
-        disabledForegroundColor: selected ? color : AppColors.muted,
+        backgroundColor: softColor,
+        disabledBackgroundColor: softColor.withValues(alpha: .55),
+        foregroundColor: color,
+        disabledForegroundColor: selected
+            ? color
+            : color.withValues(alpha: .86),
         side: BorderSide(
-          color: selected ? color : AppColors.border,
+          color: selected ? color : color.withValues(alpha: .24),
           width: selected ? 1.4 : 1,
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          if (selected) ...[
-            Icon(Icons.check_rounded, size: 13, color: color),
-            const SizedBox(width: 2),
-          ],
-          Flexible(
-            child: Text(
-              label,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              softWrap: true,
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-            ),
+          Icon(switch (status) {
+            ParticipationStatus.confirmed => Icons.check_rounded,
+            ParticipationStatus.declined => Icons.close_rounded,
+            _ => Icons.question_mark_rounded,
+          }, size: 15),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            softWrap: true,
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
           ),
         ],
       ),

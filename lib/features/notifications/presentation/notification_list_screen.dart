@@ -3,8 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app/router/role_routes.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../app/widgets/app_page_header.dart';
+import '../../../app/widgets/stitch_entrance.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/di/core_providers.dart';
 import '../data/notification_dto.dart';
 import 'notification_notifier.dart';
 
@@ -42,8 +46,13 @@ class _NotificationListScreenState
   IconData _getIconForType(NotificationType type) {
     switch (type) {
       case NotificationType.weekPublished:
-        return Icons.calendar_month_rounded;
+        return Icons.event_available_outlined;
+      case NotificationType.eventCancelled:
+        return Icons.event_busy_outlined;
+      case NotificationType.rehearsalChanged:
+        return Icons.edit_calendar_outlined;
       case NotificationType.songListDecision:
+      case NotificationType.songListSubmitted:
         return Icons.library_music_rounded;
       case NotificationType.participationRequest:
         return Icons.event_available_rounded;
@@ -55,6 +64,10 @@ class _NotificationListScreenState
         return Icons.verified_rounded;
       case NotificationType.directorNote:
         return Icons.notes_rounded;
+      case NotificationType.eventChoirChanged:
+        return Icons.groups_rounded;
+      case NotificationType.unknown:
+        return Icons.notifications_none_rounded;
     }
   }
 
@@ -74,36 +87,13 @@ class _NotificationListScreenState
       ref.read(notificationNotifierProvider.notifier).markAsRead(item.id);
     }
 
-    final refType = item.referenceType?.trim();
-    final refId = item.referenceId?.trim();
-
-    if (refType == 'LiturgicalEvent' && refId != null && refId.isNotEmpty) {
-      context.push('/event-detail/$refId');
-      return;
-    }
-
-    if (refType == 'Rehearsal' && refId != null && refId.isNotEmpty) {
-      context.push('/rehearsal/${Uri.encodeComponent(refId)}');
-      return;
-    }
-
-    if (refType == 'PracticeAssignment' && refId != null && refId.isNotEmpty) {
-      context.push('/practice-detail/$refId');
-      return;
-    }
-
-    if (refType == 'PracticeSubmission' && refId != null && refId.isNotEmpty) {
-      context.push('/practice-submission/$refId');
-      return;
-    }
-
-    if (refType == 'MemberSkill') {
-      context.push('/profile');
-      return;
-    }
-
-    if (refType == 'Song' && refId != null && refId.isNotEmpty) {
-      context.push('/song-detail/$refId');
+    final target = notificationRoute(
+      role: ref.read(sessionManagerProvider).role,
+      referenceType: item.referenceType,
+      referenceId: item.referenceId,
+    );
+    if (target != null) {
+      context.push(target);
       return;
     }
 
@@ -164,22 +154,30 @@ class _NotificationListScreenState
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
+      appBar: AppPageHeader(
+        large: true,
         title: Row(
           children: [
-            Text('Thông báo', style: AppTypography.headlineSmall),
+            Flexible(
+              child: Text(
+                'Thông báo',
+                style: AppTypography.headlineMedium.copyWith(
+                  color: Colors.white,
+                ),
+              ),
+            ),
             if (state.unreadCount > 0) ...[
               const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: AppColors.primary,
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   '${state.unreadCount}',
                   style: AppTypography.labelSmall.copyWith(
-                    color: AppColors.onPrimary,
+                    color: AppColors.primary,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -190,6 +188,9 @@ class _NotificationListScreenState
         actions: [
           if (state.unreadCount > 0)
             IconButton(
+              style: IconButton.styleFrom(
+                backgroundColor: const Color(0x22FFFFFF),
+              ),
               icon: const Icon(Icons.done_all_rounded),
               tooltip: 'Đánh dấu tất cả đã đọc',
               onPressed: () => notifier.markAllAsRead(),
@@ -285,9 +286,9 @@ class _NotificationListScreenState
             child: ListView.separated(
               controller: _scrollController,
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
               itemCount: state.items.length + (state.isLoadingMore ? 1 : 0),
-              separatorBuilder: (context, index) => const SizedBox(height: 8),
+              separatorBuilder: (context, index) => const SizedBox(height: 16),
               itemBuilder: (context, index) {
                 if (index == state.items.length) {
                   return const Padding(
@@ -302,96 +303,109 @@ class _NotificationListScreenState
                 }
 
                 final item = state.items[index];
-                return InkWell(
-                  onTap: () => _handleNotificationTap(item),
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: item.isRead
-                          ? AppColors.surface
-                          : AppColors.primary.withValues(alpha: 0.04),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
+                final tone = switch (item.type) {
+                  NotificationType.eventCancelled => AppColors.statusWarning,
+                  NotificationType.skillReview
+                      when item.title == 'Kỹ năng đã được duyệt' =>
+                    AppColors.statusSuccess,
+                  _ => item.isRead ? AppColors.body : AppColors.primary,
+                };
+                return StitchEntrance(
+                  key: ValueKey(item.id),
+                  child: InkWell(
+                    onTap: () => _handleNotificationTap(item),
+                    borderRadius: BorderRadius.circular(24),
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
                         color: item.isRead
-                            ? AppColors.border
-                            : AppColors.primary.withValues(alpha: 0.25),
+                            ? AppColors.surface
+                            : Color.alphaBlend(
+                                tone.withValues(alpha: .026),
+                                AppColors.surface,
+                              ),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: item.isRead && tone == AppColors.body
+                              ? AppColors.border
+                              : tone.withValues(alpha: .16),
+                        ),
                       ),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Type Icon
-                        Container(
-                          width: 42,
-                          height: 42,
-                          decoration: BoxDecoration(
-                            color: item.isRead
-                                ? AppColors.surfaceContainerLow
-                                : AppColors.primary.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(12),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Type Icon
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: tone.withValues(alpha: .065),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: tone.withValues(alpha: .15),
+                              ),
+                            ),
+                            child: Icon(
+                              _getIconForType(item.type),
+                              color: tone,
+                              size: 22,
+                            ),
                           ),
-                          child: Icon(
-                            _getIconForType(item.type),
-                            color: item.isRead
-                                ? AppColors.muted
-                                : AppColors.primary,
-                            size: 22,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
+                          const SizedBox(width: 12),
 
-                        // Title, Content, Timestamp
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      item.title,
-                                      style: AppTypography.titleMedium.copyWith(
-                                        color: AppColors.onSurface,
-                                        fontWeight: item.isRead
-                                            ? FontWeight.w600
-                                            : FontWeight.w700,
+                          // Title, Content, Timestamp
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        item.title,
+                                        style: AppTypography.titleMedium
+                                            .copyWith(
+                                              color: AppColors.onSurface,
+                                              fontWeight: item.isRead
+                                                  ? FontWeight.w600
+                                                  : FontWeight.w700,
+                                            ),
                                       ),
                                     ),
-                                  ),
-                                  if (!item.isRead) ...[
-                                    const SizedBox(width: 6),
-                                    Container(
-                                      width: 8,
-                                      height: 8,
-                                      decoration: const BoxDecoration(
-                                        color: AppColors.primary,
-                                        shape: BoxShape.circle,
+                                    if (!item.isRead) ...[
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        width: 8,
+                                        height: 8,
+                                        decoration: const BoxDecoration(
+                                          color: AppColors.primary,
+                                          shape: BoxShape.circle,
+                                        ),
                                       ),
-                                    ),
+                                    ],
                                   ],
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                item.content,
-                                style: AppTypography.bodySmall.copyWith(
-                                  color: AppColors.body,
                                 ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                _formatTime(item.createdAt),
-                                style: AppTypography.labelSmall.copyWith(
-                                  color: AppColors.muted,
+                                const SizedBox(height: 4),
+                                Text(
+                                  item.content,
+                                  style: AppTypography.bodyMedium.copyWith(
+                                    color: AppColors.body,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(height: 12),
+                                Text(
+                                  _formatTime(item.createdAt),
+                                  style: AppTypography.labelSmall.copyWith(
+                                    color: AppColors.muted,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 );

@@ -78,6 +78,7 @@ class RehearsalSession {
   final String timeRange;
   final String location;
   final String contentSummary;
+  final String? note;
   final String attendanceStatus; // 'Có mặt', 'Vắng mặt', 'Chưa diễn ra'
 
   const RehearsalSession({
@@ -88,6 +89,7 @@ class RehearsalSession {
     required this.timeRange,
     required this.location,
     required this.contentSummary,
+    this.note,
     required this.attendanceStatus,
   });
 }

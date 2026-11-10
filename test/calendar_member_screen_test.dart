@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:harmonia_mobile/app/theme/app_theme.dart';
 import 'package:harmonia_mobile/core/di/core_providers.dart';
 import 'package:harmonia_mobile/core/errors/app_exceptions.dart';
 import 'package:harmonia_mobile/core/session/session_manager.dart';
@@ -57,6 +58,72 @@ void main() {
     await initializeDateFormatting('vi');
   });
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));
+  testWidgets('rehearsal keeps its note separate from the heading', (
+    tester,
+  ) async {
+    final session = SessionManager(SecureStorageService());
+    addTearDown(session.dispose);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sessionManagerProvider.overrideWithValue(session),
+          calendarRepositoryProvider.overrideWithValue(
+            MemberScreenRepository(),
+          ),
+          rehearsalRecordingsProvider('reh-a')
+              .overrideWith((ref) async => const []),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: const RehearsalDetailScreen(rehearsalId: 'reh-a'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Buổi tập hát'), findsOneWidget);
+    expect(find.text('Ghi chú: Test rehearsal'), findsOneWidget);
+    expect(find.text('Test rehearsal'), findsNothing);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+  for (final width in [360.0, 390.0]) {
+    testWidgets('event song list header fits width $width with large text', (
+      tester,
+    ) async {
+      tester.view.physicalSize = Size(width, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final session = SessionManager(SecureStorageService());
+      addTearDown(session.dispose);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sessionManagerProvider.overrideWithValue(session),
+            calendarRepositoryProvider.overrideWithValue(
+              MemberScreenRepository(),
+            ),
+            eventApprovedSongListProvider(id).overrideWith((ref) async => null),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.lightTheme,
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: TextScaler.linear(1.3)),
+              child: child!,
+            ),
+            home: const LiturgicalEventDetailScreen(eventId: id),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Danh sách bài hát phụng vụ'));
+      await tester.pumpAndSettle();
+      expect(find.text('Chưa có danh sách'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  }
   test(
     'event detail response from an old session cannot replace the next account',
     () async {
@@ -80,7 +147,7 @@ void main() {
       container.read(eventDetailProvider(id));
       await Future<void>.delayed(Duration.zero);
       await session.endSession();
-      await session.markAuthenticated();
+      await session.markAuthenticated(role: 'ChoirMember');
       container.read(eventDetailProvider(id));
       await Future<void>.delayed(Duration.zero);
       expect(repository.eventResponses.length, 2);
@@ -226,7 +293,7 @@ void main() {
       expect(find.text('Phân công của bạn'), findsOneWidget);
       expect(find.text('Test song'), findsOneWidget);
       final yesButton = tester.widget<OutlinedButton>(
-        find.widgetWithText(OutlinedButton, 'Có mặt'),
+        find.widgetWithText(OutlinedButton, 'Xác nhận'),
       );
       expect(yesButton.onPressed, isNull);
       expect(tester.takeException(), isNull);

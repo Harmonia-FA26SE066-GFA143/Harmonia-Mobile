@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../app/widgets/stitch_entrance.dart';
 import '../data/calendar_repository.dart';
 import '../data/liturgical_models.dart';
 import 'liturgical_day_dialog.dart';
@@ -76,7 +77,7 @@ class _LiturgicalMonthCalendarState
             return AlertDialog(
               backgroundColor: AppColors.surface,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(24),
               ),
               titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
               contentPadding: const EdgeInsets.symmetric(horizontal: 16),
@@ -247,156 +248,219 @@ class _LiturgicalMonthCalendarState
     final startOffset = firstWeekday % 7;
     final totalCells = startOffset + daysInMonth;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Month Selector Header matching Image 1: "October 2026 ▾"
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+    final selected = _selectedDate;
+    final isCurrentMonth =
+        selected != null &&
+        selected.year == _currentMonth.year &&
+        selected.month == _currentMonth.month;
+    final selectedEvents = isCurrentMonth
+        ? widget.events
+              .where((event) => DateUtils.isSameDay(event.date, selected))
+              .toList()
+        : <LiturgicalEvent>[];
+    final selectedRehearsals = isCurrentMonth
+        ? rehearsals
+              .where(
+                (rehearsal) => DateUtils.isSameDay(rehearsal.date, selected),
+              )
+              .toList()
+        : <RehearsalSession>[];
+    final titles = [
+      for (final event in selectedEvents) event.title,
+      for (final rehearsal in selectedRehearsals) rehearsal.title,
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.border),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints.tightFor(
-                  width: 32,
-                  height: 32,
-                ),
-                tooltip: 'Tháng trước',
-                icon: const Icon(Icons.chevron_left_rounded, size: 20),
-                onPressed: _previousMonth,
-              ),
-              Flexible(
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(8),
-                  onTap: () => _pickMonthYear(context),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 4,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            'Tháng ${_currentMonth.month}, ${_currentMonth.year}',
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF1E293B),
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(width: 2),
-                        const Icon(
-                          Icons.arrow_drop_down_rounded,
-                          color: Color(0xFFE65100),
-                          size: 20,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints.tightFor(
-                  width: 32,
-                  height: 32,
-                ),
-                tooltip: 'Tháng sau',
-                icon: const Icon(Icons.chevron_right_rounded, size: 20),
-                onPressed: _nextMonth,
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Weekday Labels Row matching Image 1: CN, Th2, Th3, Th4, Th5, Th6, Th7
-          Row(
-            children: const [
-              _WeekdayHeader('CN'),
-              _WeekdayHeader('Th2'),
-              _WeekdayHeader('Th3'),
-              _WeekdayHeader('Th4'),
-              _WeekdayHeader('Th5'),
-              _WeekdayHeader('Th6'),
-              _WeekdayHeader('Th7'),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          if (rehearsalsState.isLoading)
-            const Padding(
-              padding: EdgeInsets.only(bottom: 8),
-              child: LinearProgressIndicator(minHeight: 2),
-            ),
-          if (rehearsalsState.hasError)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
+              // Month Selector Header matching Image 1: "October 2026 ▾"
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Expanded(
-                    child: Text('Không tải được lịch tập tháng này.'),
-                  ),
-                  TextButton(
-                    onPressed: () => ref.invalidate(
-                      rehearsalsForRangeProvider(rehearsalRange),
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints.tightFor(
+                      width: 32,
+                      height: 32,
                     ),
-                    child: const Text('Thử lại'),
+                    tooltip: 'Tháng trước',
+                    icon: const Icon(Icons.chevron_left_rounded, size: 20),
+                    onPressed: _previousMonth,
+                  ),
+                  Flexible(
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(8),
+                      onTap: () => _pickMonthYear(context),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 4,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                'Tháng ${_currentMonth.month}, ${_currentMonth.year}',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF1E293B),
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 2),
+                            const Icon(
+                              Icons.arrow_drop_down_rounded,
+                              color: AppColors.primary,
+                              size: 20,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints.tightFor(
+                      width: 32,
+                      height: 32,
+                    ),
+                    tooltip: 'Tháng sau',
+                    icon: const Icon(Icons.chevron_right_rounded, size: 20),
+                    onPressed: _nextMonth,
                   ),
                 ],
               ),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Divider(),
+              ),
+
+              // Weekday Labels Row matching Image 1: CN, Th2, Th3, Th4, Th5, Th6, Th7
+              Row(
+                children: const [
+                  _WeekdayHeader('CN'),
+                  _WeekdayHeader('Th2'),
+                  _WeekdayHeader('Th3'),
+                  _WeekdayHeader('Th4'),
+                  _WeekdayHeader('Th5'),
+                  _WeekdayHeader('Th6'),
+                  _WeekdayHeader('Th7'),
+                ],
+              ),
+              const SizedBox(height: 8),
+
+              if (rehearsalsState.isLoading)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 8),
+                  child: LinearProgressIndicator(minHeight: 2),
+                ),
+              if (rehearsalsState.hasError)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      const Expanded(
+                        child: Text('Không tải được lịch tập tháng này.'),
+                      ),
+                      TextButton(
+                        onPressed: () => ref.invalidate(
+                          rehearsalsForRangeProvider(rehearsalRange),
+                        ),
+                        child: const Text('Thử lại'),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // Month Days Grid
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: totalCells,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 7,
+                  mainAxisSpacing: 6,
+                  crossAxisSpacing: 4,
+                  childAspectRatio: 1.0,
+                ),
+                itemBuilder: (context, index) {
+                  if (index < startOffset) {
+                    return const SizedBox.shrink();
+                  }
+                  final dayNumber = index - startOffset + 1;
+                  final dayDate = DateTime(
+                    _currentMonth.year,
+                    _currentMonth.month,
+                    dayNumber,
+                  );
+                  final isToday = DateUtils.isSameDay(dayDate, today);
+                  final isSelected =
+                      _selectedDate != null &&
+                      DateUtils.isSameDay(dayDate, _selectedDate!);
+
+                  final hasDot = _hasIndicatorDot(dayDate, rehearsals);
+
+                  return _CalendarDayCell(
+                    dayNumber: dayNumber,
+                    isToday: isToday,
+                    isSelected: isSelected,
+                    hasDot: hasDot,
+                    onTap: () => _onDayTapped(dayDate, rehearsals),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+        if (selected != null && titles.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          StitchEntrance(
+            key: ValueKey(selected),
+            child: Card(
+              child: ListTile(
+                leading: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: AppColors.statusWarningSoft,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Text(
+                      DateFormat('dd').format(selected),
+                      style: AppTypography.titleMedium.copyWith(
+                        color: AppColors.statusWarning,
+                      ),
+                    ),
+                  ),
+                ),
+                title: Text(titles.first, style: AppTypography.titleMedium),
+                subtitle: Text(
+                  titles.length == 1
+                      ? 'Lịch trình đã chọn'
+                      : 'Lịch trình đã chọn • ${titles.length} mục',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => _onDayTapped(selected, rehearsals),
+              ),
             ),
-
-          // Month Days Grid
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: totalCells,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 7,
-              mainAxisSpacing: 6,
-              crossAxisSpacing: 4,
-              childAspectRatio: 1.0,
-            ),
-            itemBuilder: (context, index) {
-              if (index < startOffset) {
-                return const SizedBox.shrink();
-              }
-              final dayNumber = index - startOffset + 1;
-              final dayDate = DateTime(
-                _currentMonth.year,
-                _currentMonth.month,
-                dayNumber,
-              );
-              final isToday = DateUtils.isSameDay(dayDate, today);
-              final isSelected =
-                  _selectedDate != null &&
-                  DateUtils.isSameDay(dayDate, _selectedDate!);
-
-              final hasDot = _hasIndicatorDot(dayDate, rehearsals);
-
-              return _CalendarDayCell(
-                dayNumber: dayNumber,
-                isToday: isToday,
-                isSelected: isSelected,
-                hasDot: hasDot,
-                onTap: () => _onDayTapped(dayDate, rehearsals),
-              );
-            },
           ),
         ],
-      ),
+      ],
     );
   }
 }
@@ -438,11 +502,10 @@ class _CalendarDayCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // In Image 1, today (e.g. 21) is highlighted in orange.
     Color textColor;
-    if (isToday) {
-      textColor = const Color(0xFFE65100);
-    } else if (isSelected) {
+    if (isSelected) {
+      textColor = const Color(0xFFC34A08);
+    } else if (isToday) {
       textColor = AppColors.primary;
     } else {
       textColor = const Color(0xFF1E293B);
@@ -452,15 +515,18 @@ class _CalendarDayCell extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         key: ValueKey('calendar-month-day-$dayNumber'),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(13),
         onTap: onTap,
-        child: Container(
+        child: AnimatedContainer(
+          duration: MediaQuery.disableAnimationsOf(context)
+              ? Duration.zero
+              : const Duration(milliseconds: 160),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(13),
             border: isSelected
-                ? Border.all(color: const Color(0xFFE65100), width: 1.5)
+                ? Border.all(color: const Color(0xFFFC861B), width: 1.6)
                 : null,
-            color: isSelected ? const Color(0xFFFFF7ED) : Colors.transparent,
+            color: isSelected ? const Color(0xFFFFF4E7) : Colors.transparent,
           ),
           alignment: Alignment.center,
           child: Column(
@@ -483,9 +549,7 @@ class _CalendarDayCell extends StatelessWidget {
                 height: 4.5,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: hasDot
-                      ? const Color(0xFF16A34A) // Dark green dot like Image 1
-                      : Colors.transparent,
+                  color: hasDot ? AppColors.statusSuccess : Colors.transparent,
                 ),
               ),
             ],

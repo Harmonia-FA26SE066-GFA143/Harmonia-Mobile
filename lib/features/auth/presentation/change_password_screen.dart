@@ -68,6 +68,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
 
     setState(() => _localError = null);
 
+    final from = GoRouterState.of(context).uri.queryParameters['from'];
     final success = await ref
         .read(authNotifierProvider.notifier)
         .changePassword(currentPassword: currentPw, newPassword: newPw);
@@ -85,7 +86,12 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
           duration: Duration(seconds: 4),
         ),
       );
-      context.go('/login');
+      context.go(
+        Uri(
+          path: '/login',
+          queryParameters: from == null ? null : {'from': from},
+        ).toString(),
+      );
     }
   }
 

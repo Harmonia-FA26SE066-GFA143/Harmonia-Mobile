@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../app/widgets/app_page_header.dart';
+import '../../../app/widgets/stitch_entrance.dart';
 import '../../../app/theme/app_typography.dart';
 import '../data/practice_models.dart';
 import '../data/practice_repository.dart';
@@ -20,8 +22,9 @@ class PracticeHistoryScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: Text('Lịch sử luyện tập', style: AppTypography.headlineSmall),
+      appBar: AppPageHeader(
+        large: true,
+        title: const Text('Lịch sử luyện tập'),
       ),
       body: SafeArea(
         child: RefreshIndicator(
@@ -56,7 +59,7 @@ class PracticeHistoryScreen extends ConsumerWidget {
                 )
               : ListView.separated(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(20),
                   itemCount: state.items.length + (state.hasNextPage ? 1 : 0),
                   separatorBuilder: (_, _) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
@@ -99,105 +102,116 @@ class _PracticeSubmissionCard extends StatelessWidget {
         : submission.feedbacks.last;
     final title = submission.assignmentTitle?.trim();
 
-    return Card(
-      margin: EdgeInsets.zero,
-      color: AppColors.surface,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: AppColors.border),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Text(
-                      title == null || title.isEmpty ? 'Bài luyện tập' : title,
-                      style: AppTypography.titleMedium.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+    return StitchEntrance(
+      child: Card(
+        margin: EdgeInsets.zero,
+        color: AppColors.surface,
+        elevation: .8,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: const BorderSide(color: AppColors.border),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(24),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 7, right: 7),
+                      child: Icon(Icons.circle, size: 8, color: statusColor),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  _StatusPill(label: statusLabel, color: statusColor),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Text(
-                'Lần nộp ${submission.attemptNo}',
-                style: AppTypography.bodySmall.copyWith(color: AppColors.body),
-              ),
-              const SizedBox(height: 8),
-              _HistoryMetadata(
-                icon: Icons.upload_file_outlined,
-                label: 'Ngày nộp',
-                value: DateFormat('dd/MM/yyyy • HH:mm')
-                    .format(submission.submittedAt),
-              ),
-              const SizedBox(height: 6),
-              _HistoryMetadata(
-                icon: Icons.event_outlined,
-                label: 'Hạn nộp',
-                value: submission.assignmentDueDate == null
-                    ? 'Chưa có thông tin'
-                    : DateFormat('dd/MM/yyyy • HH:mm')
-                          .format(submission.assignmentDueDate!),
-              ),
-              if (latestFeedback != null &&
-                  (latestFeedback.comment?.trim().isNotEmpty ?? false)) ...[
-                const SizedBox(height: 12),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.06),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        latestFeedback.reviewerName == null ||
-                                latestFeedback.reviewerName!.isEmpty
-                            ? 'Nhận xét của ca trưởng'
-                            : 'Ca trưởng ${latestFeedback.reviewerName}',
-                        style: AppTypography.labelMedium.copyWith(
-                          color: AppColors.primary,
+                    Expanded(
+                      child: Text(
+                        title == null || title.isEmpty
+                            ? 'Bài luyện tập'
+                            : title,
+                        style: AppTypography.titleMedium.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        latestFeedback.comment!,
-                        style: AppTypography.bodySmall.copyWith(
-                          color: AppColors.onSurface,
+                    ),
+                    const SizedBox(width: 8),
+                    _StatusPill(label: statusLabel, color: statusColor),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Lần nộp ${submission.attemptNo}',
+                  style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.body,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _HistoryMetadata(
+                  icon: Icons.mic_none_rounded,
+                  label: 'Ngày nộp',
+                  value: DateFormat('dd/MM/yyyy • HH:mm')
+                      .format(submission.submittedAt),
+                ),
+                const SizedBox(height: 6),
+                _HistoryMetadata(
+                  icon: Icons.schedule_rounded,
+                  label: 'Hạn nộp',
+                  value: submission.assignmentDueDate == null
+                      ? 'Chưa có thông tin'
+                      : DateFormat('dd/MM/yyyy • HH:mm')
+                            .format(submission.assignmentDueDate!),
+                ),
+                if (latestFeedback != null &&
+                    (latestFeedback.comment?.trim().isNotEmpty ?? false)) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          latestFeedback.reviewerName == null ||
+                                  latestFeedback.reviewerName!.isEmpty
+                              ? 'Nhận xét của ca trưởng'
+                              : 'Ca trưởng ${latestFeedback.reviewerName}',
+                          style: AppTypography.labelMedium.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 4),
+                        Text(
+                          latestFeedback.comment!,
+                          style: AppTypography.bodySmall.copyWith(
+                            color: AppColors.onSurface,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: onTap,
+                    icon: const Icon(Icons.chevron_right_rounded, size: 18),
+                    iconAlignment: IconAlignment.end,
+                    label: const Text('Xem bản thu'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      minimumSize: const Size(48, 40),
+                    ),
                   ),
                 ),
               ],
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: onTap,
-                  icon: const Icon(Icons.chevron_right_rounded, size: 18),
-                  label: const Text('Xem bản thu'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    minimumSize: const Size(48, 40),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -336,7 +350,7 @@ class _LoadMoreButton extends StatelessWidget {
 
 (String, Color) _submissionStatus(String status) => switch (status) {
   'Passed' => ('Đạt yêu cầu', AppColors.statusSuccess),
-  'NeedsRevision' => ('Cần luyện thêm', AppColors.statusDanger),
+  'NeedsRevision' => ('Cần luyện thêm', AppColors.statusWarning),
   'Overdue' => ('Quá hạn', AppColors.statusDanger),
   'Submitted' => ('Chờ ca trưởng duyệt', AppColors.statusInfo),
   _ => (status.isEmpty ? 'Chưa rõ trạng thái' : status, AppColors.muted),

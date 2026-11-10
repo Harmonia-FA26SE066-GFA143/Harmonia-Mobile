@@ -135,63 +135,65 @@ void main() {
       expect(sessionManager.isAuthenticated, false);
     });
 
-    test('Google Sign-In success with ChoirMember: session established and tokens saved', () async {
-      final fakeGoogleService = MockGoogleAuthService(
-        mockToken: 'valid-google-id-token',
-      );
-      final storage = SecureStorageService();
-      final sessionManager = SessionManager(storage);
-      final fakeApiService =
-          FakeAuthApiService(storage: storage, sessionManager: sessionManager)
-            ..mockLoginResponse = const LoginResponse(
-              accessToken: 'choir-access-token',
-              accessTokenExpiresAt: '2026-12-31T00:00:00Z',
-              refreshToken: 'choir-refresh-token',
-              user: UserDto(
-                id: 'member-1',
-                email: 'ca.vien@harmonia.org',
-                fullName: 'Ca Viên Test',
-                roleName: 'ChoirMember',
-              ),
-            );
-      final repository = AuthRepositoryImpl(
-        apiService: fakeApiService,
-        storage: storage,
-        sessionManager: sessionManager,
-      );
+    for (final role in MobileRole.values) {
+      test('Google Sign-In uses the backend role ${role.wireName}', () async {
+        final fakeGoogleService = MockGoogleAuthService(
+          mockToken: 'valid-google-id-token',
+        );
+        final storage = SecureStorageService();
+        final sessionManager = SessionManager(storage);
+        final fakeApiService =
+            FakeAuthApiService(storage: storage, sessionManager: sessionManager)
+              ..mockLoginResponse = LoginResponse(
+                accessToken: 'choir-access-token',
+                accessTokenExpiresAt: '2026-12-31T00:00:00Z',
+                refreshToken: 'choir-refresh-token',
+                user: UserDto(
+                  id: 'member-1',
+                  email: 'ca.vien@harmonia.org',
+                  fullName: 'Ca Viên Test',
+                  roleName: role.wireName,
+                ),
+              );
+        final repository = AuthRepositoryImpl(
+          apiService: fakeApiService,
+          storage: storage,
+          sessionManager: sessionManager,
+        );
 
-      final container = ProviderContainer(
-        overrides: [
-          googleAuthServiceProvider.overrideWithValue(fakeGoogleService),
-          authRepositoryProvider.overrideWithValue(repository),
-        ],
-      );
-      addTearDown(container.dispose);
+        final container = ProviderContainer(
+          overrides: [
+            googleAuthServiceProvider.overrideWithValue(fakeGoogleService),
+            authRepositoryProvider.overrideWithValue(repository),
+          ],
+        );
+        addTearDown(container.dispose);
 
-      final notifier = container.read(authNotifierProvider.notifier);
-      final success = await notifier.signInWithGoogle(
-        platform: DevicePlatform.android,
-      );
+        final notifier = container.read(authNotifierProvider.notifier);
+        final success = await notifier.signInWithGoogle(
+          platform: DevicePlatform.android,
+        );
 
-      expect(success, true);
-      expect(fakeApiService.loginWithGoogleCalled, true);
-      expect(
-        fakeApiService.capturedGoogleRequest?.idToken,
-        'valid-google-id-token',
-      );
-      expect(fakeApiService.capturedGoogleRequest?.platform, 'Android');
+        expect(success, true);
+        expect(fakeApiService.loginWithGoogleCalled, true);
+        expect(
+          fakeApiService.capturedGoogleRequest?.idToken,
+          'valid-google-id-token',
+        );
+        expect(fakeApiService.capturedGoogleRequest?.platform, 'Android');
 
-      // Verify tokens stored
-      expect(await storage.getAccessToken(), 'choir-access-token');
-      expect(await storage.getRefreshToken(), 'choir-refresh-token');
-      expect(sessionManager.isAuthenticated, true);
-      expect(sessionManager.userRole, 'ChoirMember');
+        // Verify tokens stored
+        expect(await storage.getAccessToken(), 'choir-access-token');
+        expect(await storage.getRefreshToken(), 'choir-refresh-token');
+        expect(sessionManager.isAuthenticated, true);
+        expect(sessionManager.role, role);
 
-      final state = container.read(authNotifierProvider);
-      expect(state.isLoading, false);
-      expect(state.errorMessage, isNull);
-      expect(state.user?.email, 'ca.vien@harmonia.org');
-    });
+        final state = container.read(authNotifierProvider);
+        expect(state.isLoading, false);
+        expect(state.errorMessage, isNull);
+        expect(state.user?.email, 'ca.vien@harmonia.org');
+      });
+    }
 
     test('Google Sign-In with Admin: authenticated by backend but blocked from mobile and revoked', () async {
       final fakeGoogleService = MockGoogleAuthService(
@@ -249,7 +251,7 @@ void main() {
       expect(state.isLoading, false);
       expect(
         state.errorMessage,
-        'Xác thực Google thành công. Tài khoản này có quyền Admin. Harmonia Mobile dành cho ca viên; vui lòng dùng tài khoản ca viên.',
+        'Vai trò này không dùng được trên Harmonia Mobile. Vui lòng đăng nhập trên Harmonia Web.',
       );
     });
 

@@ -1,3 +1,7 @@
+import '../../music/data/music_dto.dart' show MaterialType;
+
+typedef PracticeMaterial = ({String id, String title, MaterialType type});
+
 enum PracticeStatus {
   pending('Chưa nộp'),
   submitted('Đang chờ duyệt'),
@@ -12,6 +16,8 @@ class PracticeAssignment {
   final String id;
   final String title;
   final String songTitle;
+  final String? songId;
+  final List<PracticeMaterial> materials;
   final String instruction;
   final DateTime dueDate;
   final String vocalPart;
@@ -29,6 +35,8 @@ class PracticeAssignment {
     required this.id,
     required this.title,
     required this.songTitle,
+    this.songId,
+    this.materials = const [],
     required this.instruction,
     required this.dueDate,
     required this.vocalPart,
@@ -54,6 +62,8 @@ class PracticeAssignment {
       id: id,
       title: title,
       songTitle: songTitle,
+      songId: songId,
+      materials: materials,
       instruction: instruction,
       dueDate: dueDate,
       vocalPart: vocalPart,

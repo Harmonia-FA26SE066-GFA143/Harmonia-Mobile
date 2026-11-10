@@ -59,47 +59,9 @@ class AuthRepositoryImpl implements AuthRepository {
       platform: platform?.wireName,
     );
 
+    final epoch = sessionManager.sessionEpoch;
     final response = await apiService.login(request);
-
-    // Verify role belongs to mobile ChoirMember scope per Rule 04
-    if (response.user.roleName != 'ChoirMember') {
-      try {
-        await apiService.logout(
-          response.refreshToken,
-          accessToken: response.accessToken,
-        );
-      } catch (_) {
-        // If revoke fails, still do not maintain local session
-      }
-      throw AppException(
-        code: 'FORBIDDEN_ROLE',
-        message:
-            'Tài khoản của bạn có vai trò ${response.user.roleName}. Harmonia Mobile chỉ dành cho ca viên (ChoirMember).',
-      );
-    }
-
-    // Save tokens and user info securely
-    await storage.saveTokens(
-      accessToken: response.accessToken,
-      refreshToken: response.refreshToken,
-      expiresAt: response.accessTokenExpiresAt,
-    );
-
-    await storage.saveUser(
-      id: response.user.id,
-      email: response.user.email,
-      roleName: response.user.roleName,
-      fullName: response.user.fullName,
-    );
-    await storage.savePasswordChangeRequired(
-      response.user.isPasswordChangeRequired,
-    );
-
-    sessionManager.markAuthenticated(
-      role: response.user.roleName,
-      isPasswordChangeRequired: response.user.isPasswordChangeRequired,
-    );
-    return response.user;
+    return _startSession(response, epoch);
   }
 
   @override
@@ -113,27 +75,46 @@ class AuthRepositoryImpl implements AuthRepository {
       deviceId: deviceId,
       platform: platform?.wireName,
     );
-
+    final epoch = sessionManager.sessionEpoch;
     final response = await apiService.loginWithGoogle(request);
+    return _startSession(response, epoch);
+  }
 
-    if (response.user.roleName != 'ChoirMember') {
-      // Immediately revoke the newly created session on backend per Requirement 5
+  static const _sessionChanged = AppException(
+    code: 'SESSION_CHANGED',
+    message: 'Phiên đăng nhập đã thay đổi.',
+  );
+
+  AppException? _accessError(UserDto user) {
+    if (!user.isActive) {
+      return const AppException(
+        code: 'AUTH_ACCOUNT_INACTIVE',
+        message: 'Tài khoản của bạn đã bị vô hiệu hoá.',
+      );
+    }
+    if (MobileRole.fromWire(user.roleName) == null) {
+      return const AppException(
+        code: 'FORBIDDEN_ROLE',
+        message: 'Vai trò này không dùng được trên Harmonia Mobile.',
+      );
+    }
+    return null;
+  }
+
+  Future<UserDto> _startSession(LoginResponse response, int epoch) async {
+    if (sessionManager.sessionEpoch != epoch) throw _sessionChanged;
+    final user = response.user;
+    final error = _accessError(user);
+    if (error != null) {
       try {
         await apiService.logout(
           response.refreshToken,
           accessToken: response.accessToken,
         );
       } catch (_) {
-        // If revoking fails, still do not maintain local session
+        // The rejected session is never saved locally.
       }
-
-      final isRoleAdmin =
-          response.user.roleName.trim().toLowerCase() == 'admin';
-      final message = isRoleAdmin
-          ? 'Xác thực Google thành công. Tài khoản này có quyền Admin. Harmonia Mobile dành cho ca viên; vui lòng dùng tài khoản ca viên.'
-          : 'Xác thực Google thành công. Tài khoản này có vai trò ${response.user.roleName}. Harmonia Mobile dành cho ca viên; vui lòng dùng tài khoản ca viên.';
-
-      throw AppException(code: 'FORBIDDEN_ROLE', message: message);
+      throw error;
     }
 
     await storage.saveTokens(
@@ -141,23 +122,22 @@ class AuthRepositoryImpl implements AuthRepository {
       refreshToken: response.refreshToken,
       expiresAt: response.accessTokenExpiresAt,
     );
-
-    await storage.saveUser(
-      id: response.user.id,
-      email: response.user.email,
-      roleName: response.user.roleName,
-      fullName: response.user.fullName,
+    if (sessionManager.sessionEpoch != epoch) throw _sessionChanged;
+    await _saveUser(user);
+    if (sessionManager.sessionEpoch != epoch) throw _sessionChanged;
+    await sessionManager.markAuthenticated(
+      role: user.roleName,
+      isPasswordChangeRequired: user.isPasswordChangeRequired,
     );
-    await storage.savePasswordChangeRequired(
-      response.user.isPasswordChangeRequired,
-    );
-
-    sessionManager.markAuthenticated(
-      role: response.user.roleName,
-      isPasswordChangeRequired: response.user.isPasswordChangeRequired,
-    );
-    return response.user;
+    return user;
   }
+
+  Future<void> _saveUser(UserDto user) => storage.saveUser(
+    id: user.id,
+    email: user.email,
+    roleName: user.roleName,
+    fullName: user.fullName,
+  );
 
   @override
   Future<void> changePassword({
@@ -243,21 +223,20 @@ class AuthRepositoryImpl implements AuthRepository {
       if (user.id.isEmpty || user.email.isEmpty || user.roleName.isEmpty) {
         throw const FormatException('Incomplete account response.');
       }
-      if (!user.isActive || user.roleName != 'ChoirMember') {
+      final error = _accessError(user);
+      if (error != null) {
         await sessionManager.endSession();
-        throw AppException(
-          code: !user.isActive ? 'AUTH_ACCOUNT_INACTIVE' : 'FORBIDDEN_ROLE',
-          message: !user.isActive
-              ? 'Tài khoản ca viên đã bị vô hiệu hoá.'
-              : 'Tài khoản hiện không còn quyền truy cập ứng dụng ca viên.',
+        throw error;
+      }
+      final verifiedRole = MobileRole.fromWire(user.roleName)!;
+      if (sessionManager.role != verifiedRole) {
+        await sessionManager.endSession();
+        throw const AppException(
+          code: 'AUTH_ROLE_CHANGED',
+          message: 'Vai trò tài khoản đã thay đổi. Vui lòng đăng nhập lại.',
         );
       }
-      await storage.saveUser(
-        id: user.id,
-        email: user.email,
-        roleName: user.roleName,
-        fullName: user.fullName,
-      );
+      await _saveUser(user);
       if (!current()) {
         throw const AppException(
           code: 'SESSION_CHANGED',
@@ -274,7 +253,7 @@ class AuthRepositoryImpl implements AuthRepository {
           message: 'Phiên đăng nhập đã thay đổi.',
         );
       }
-      sessionManager.completeRestoration(epoch);
+      sessionManager.completeRestoration(epoch, verifiedRole);
       return user;
     } on AppException catch (error) {
       if (current() &&

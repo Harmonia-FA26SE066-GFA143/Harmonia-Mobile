@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../app/widgets/app_page_header.dart';
+import '../../../app/widgets/stitch_entrance.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/errors/error_messages.dart';
 import '../data/calendar_repository.dart';
@@ -84,8 +86,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       });
 
   DateTime _eventStart(LiturgicalEvent event) {
+    // Match the UTC-marked parish wall clock returned by _parishTime.
     final time = RegExp(r'(\d{1,2}):(\d{2})').firstMatch(event.timeRange);
-    return DateTime(
+    return DateTime.utc(
       event.date.year,
       event.date.month,
       event.date.day,
@@ -134,20 +137,33 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
+      appBar: AppPageHeader(
         automaticallyImplyLeading: false,
-        toolbarHeight: 72,
-        titleSpacing: 16,
+        large: true,
         title: Row(
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.asset(
-                'assets/images/harmonia_logo.png',
-                width: 36,
-                height: 36,
-                excludeFromSemantics: true,
+            Container(
+              width: 48,
+              height: 48,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: _tab == 1
+                    ? Colors.white
+                    : Colors.white.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
               ),
+              child: _tab == 1
+                  ? const Icon(
+                      Icons.music_note_rounded,
+                      color: AppColors.primary,
+                    )
+                  : Text(
+                      'H',
+                      style: AppTypography.headlineMedium.copyWith(
+                        color: Colors.white,
+                      ),
+                    ),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -161,10 +177,15 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: AppTypography.labelSmall.copyWith(
-                      color: AppColors.muted,
+                      color: Colors.white70,
                     ),
                   ),
-                  Text('Lịch của tôi', style: AppTypography.headlineSmall),
+                  Text(
+                    'Lịch của tôi',
+                    style: AppTypography.headlineMedium.copyWith(
+                      color: Colors.white,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -181,14 +202,13 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
             children: [
-              _tabs(),
+              StitchEntrance(distance: 4, child: _tabs()),
               const SizedBox(height: 16),
               if (_tab == 0) ...[
                 _weekNavigator(today),
                 const SizedBox(height: 16),
                 _daySelector(today, events, rehearsals),
-                const SizedBox(height: 16),
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
                 if (isPastDay)
                   _notice(
                     'Chưa có lịch phục vụ hoặc lịch tập trong ngày đã qua.',
@@ -238,8 +258,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   Widget _tabs() => Container(
     padding: const EdgeInsets.all(4),
     decoration: BoxDecoration(
-      color: _softSurface,
-      borderRadius: BorderRadius.circular(12),
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(26),
       border: Border.all(color: AppColors.border),
     ),
     child: Row(
@@ -251,15 +271,22 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               child: TextButton(
                 onPressed: () => setState(() => _tab = index),
                 style: TextButton.styleFrom(
-                  minimumSize: const Size(44, 44),
+                  minimumSize: const Size(44, 48),
                   backgroundColor: _tab == index
-                      ? AppColors.surface
+                      ? index == 0
+                            ? AppColors.primary
+                            : AppColors.primarySoft
                       : Colors.transparent,
                   foregroundColor: _tab == index
-                      ? AppColors.primary
+                      ? index == 0
+                            ? AppColors.onPrimary
+                            : AppColors.primary
                       : AppColors.muted,
+                  side: _tab == 1 && index == 1
+                      ? const BorderSide(color: Color(0xFFFFBACB))
+                      : null,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(9),
+                    borderRadius: BorderRadius.circular(24),
                   ),
                 ),
                 child: Text(
@@ -287,7 +314,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         Expanded(
           child: Text(
             '${DateFormat('dd/MM/yyyy').format(_weekStart)} – ${DateFormat('dd/MM/yyyy').format(_addDays(_weekStart, 6))}',
-            style: AppTypography.labelMedium.copyWith(
+            style: AppTypography.bodyMedium.copyWith(
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -358,12 +385,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       selected: selected,
       button: true,
       child: Material(
-        color: selected ? AppColors.primary : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
+        color: selected ? const Color(0xFF842539) : Colors.transparent,
+        borderRadius: BorderRadius.circular(24),
         child: InkWell(
           key: ValueKey('calendar-day-${_dateKey(day)}'),
           onTap: () => setState(() => _selectedDay = day),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(24),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Column(
@@ -497,7 +524,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         padding: padding,
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(24),
           border: Border.all(color: AppColors.border),
         ),
         child: child,
