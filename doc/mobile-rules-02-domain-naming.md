@@ -79,10 +79,9 @@ mapping API phải giữ đúng nghĩa nghiệp vụ.
 
 ## Phạm vi mobile
 
-- Mobile phục vụ ca viên `ChoirMember`.
-- Không tự thêm màn hình quản trị tài khoản, duyệt kỹ năng hoặc duyệt
-  danh sách bài hát.
-- Hệ thống có một ca đoàn; không có `Choir`, `ChoirId` hoặc màn hình chọn ca đoàn.
+- Mobile phục vụ `ChoirMember`, `ChoirDirector` và `ParishPriest` theo phạm vi được giao.
+- Quản trị tài khoản thuộc `Admin` trên Web.
+- Backend xác định ca đoàn và sự kiện mà tài khoản có quyền truy cập.
 - Một tài khoản có một role.
 - `User` và `MemberProfile` khác nhau; không lấy `user.id` làm `memberId`.
 - Không có đăng ký công khai.

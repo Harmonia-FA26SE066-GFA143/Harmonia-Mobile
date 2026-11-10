@@ -1,6 +1,6 @@
 # Harmonia Mobile — Flutter
 
-Ứng dụng mobile dành cho ca viên (`ChoirMember`) thuộc đồ án Harmonia FA26SE066: xem lịch phụng vụ và lịch tập, khai báo kỹ năng, xác nhận tham gia, xem phân công, học tài liệu và nộp bản thu tập hát.
+Ứng dụng mobile Harmonia FA26SE066 phục vụ ca viên, ca trưởng và cha xứ. Giao diện và dữ liệu được điều hướng theo vai trò do backend trả về.
 
 Trả lời bằng tiếng Việt. Trong Dart, tên class, biến, method, comment và log dùng tiếng Anh. Chuỗi hiển thị dùng tiếng Việt qua cơ chế localization của dự án.
 
@@ -23,8 +23,8 @@ Nếu repo Flutter đã có `CLAUDE.md`, đọc và hợp nhất thay vì ghi đ
 
 ## Phạm vi và nghiệp vụ
 
-- Hệ thống phục vụ **một ca đoàn**; không có `Choir`, `ChoirId` hoặc chọn ca đoàn.
-- Mobile phục vụ `ChoirMember`. `Admin`, `ParishPriest`, `ChoirDirector` dùng web theo phạm vi hiện tại; không tự thêm màn hình quản trị vào app.
+- Phạm vi ca đoàn và sự kiện do API xác định. Ca trưởng xem các ca đoàn mình phụ trách.
+- Mobile phục vụ `ChoirMember`, `ChoirDirector` và `ParishPriest`. `Admin` dùng Web. Các API `/mine` của ca viên chỉ dùng trong luồng ca viên.
 - Một tài khoản có một role. Nhạc công là ca viên có kỹ năng nhạc cụ, không có role `Instrumentalist`.
 - `User` khác `MemberProfile`; không dùng `user.id` thay `memberId`.
 - ID backend là Guid, biểu diễn bằng chuỗi trong Dart. Giữ nguyên thuật ngữ nghiệp vụ và nullable theo DTO.

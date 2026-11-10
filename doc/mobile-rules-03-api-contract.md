@@ -43,7 +43,7 @@ Không dùng snapshot cũ cho rằng response chỉ có id/email/roleName.
 DevicePlatform gửi chuỗi **Android**, **iOS**, **Web** theo DTO hiện tại.
 Google đăng nhập bằng SDK native và ID token, không gửi mật khẩu Gmail.
 
-Chỉ ChoirMember được vào ứng dụng. Backend vẫn là nơi quyết định quyền.
+`ChoirMember`, `ChoirDirector` và `ParishPriest` được vào ứng dụng. Khi khôi phục phiên, dùng vai trò do `GET /api/auth/me` xác minh để điều hướng. Backend vẫn là nơi quyết định quyền.
 AUTH_PASSWORD_CHANGE_REQUIRED chuyển sang đổi mật khẩu; không refresh để vượt 403.
 Đổi/reset mật khẩu yêu cầu đăng nhập lại theo hành vi thu hồi phiên của BE.
 Refresh thay cả cặp token, tối đa một lần retry phù hợp; xử lý đồng thời và epoch theo Rule 04.
