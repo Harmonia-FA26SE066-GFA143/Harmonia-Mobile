@@ -818,6 +818,11 @@ void main() {
                 'items': [event],
               });
             }
+            if (path == '/api/member-skills/pending' ||
+                path == '/api/practice-submissions') {
+              expect(request.queryParameters['pageSize'], 1);
+              return jsonResponse(200, {'items': [], 'totalCount': 2});
+            }
             if (path == eventApi) return jsonResponse(200, event);
             if (path == '/api/liturgical-events/event/choirs') {
               return jsonResponse(200, [
@@ -924,6 +929,17 @@ void main() {
         expect(session.status, AuthStatus.authenticated);
         expect(router.routeInformationProvider.value.uri.path, '/home');
         expect(find.text(role.label), findsOneWidget);
+        if (director) {
+          expect(
+            find.widgetWithText(ListTile, 'Kỹ năng chờ duyệt'),
+            findsOneWidget,
+          );
+          expect(
+            find.widgetWithText(ListTile, 'Bản thu chờ chấm'),
+            findsOneWidget,
+          );
+          expect(find.text('2'), findsNWidgets(2));
+        }
         await tester.tap(find.text(label));
         await tester.pumpAndSettle();
         expect(router.routeInformationProvider.value.uri.path, workspace);

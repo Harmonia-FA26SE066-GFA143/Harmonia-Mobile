@@ -24,7 +24,15 @@ import '../../features/profile/presentation/participation_history_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/music/presentation/interactive_score_screen.dart';
 import '../../features/staff_workspace/presentation/staff_chat_screen.dart';
+import '../../features/staff_workspace/presentation/director_nominations_screen.dart';
+import '../../features/staff_workspace/presentation/nomination_forms.dart';
+import '../../features/staff_workspace/presentation/staff_director_dashboard.dart';
+import '../../features/staff_workspace/presentation/staff_library_screen.dart';
+import '../../features/staff_workspace/presentation/staff_member_profile_screen.dart';
+import '../../features/staff_workspace/presentation/staff_members_screen.dart';
+import '../../features/staff_workspace/presentation/staff_skill_approval_screen.dart';
 import '../../features/staff_workspace/presentation/staff_practice_screen.dart';
+import '../../features/staff_workspace/presentation/staff_practice_workspace.dart';
 import '../../features/staff_workspace/presentation/staff_rehearsals.dart';
 import '../../features/staff_workspace/presentation/staff_reports_screen.dart';
 import '../../features/staff_workspace/presentation/staff_roster_screen.dart';
@@ -191,10 +199,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/home',
-                builder: (context, state) =>
-                    sessionManager.role == MobileRole.choirMember
-                    ? const HomeScreen()
-                    : StaffHomeScreen(role: sessionManager.role!),
+                builder: (context, state) => switch (sessionManager.role!) {
+                  MobileRole.choirMember => const HomeScreen(),
+                  MobileRole.choirDirector => const StaffDirectorDashboard(),
+                  MobileRole.parishPriest => const StaffHomeScreen(
+                    role: MobileRole.parishPriest,
+                  ),
+                },
               ),
             ],
           ),
@@ -260,6 +271,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => RehearsalDetailScreen(
           rehearsalId: state.pathParameters['id'] ?? '',
           showOwnAttendance: sessionManager.role == MobileRole.choirMember,
+          manageRecordings: sessionManager.role == MobileRole.choirDirector,
         ),
       ),
       GoRoute(
@@ -286,10 +298,39 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
-          return sessionManager.role == MobileRole.choirMember
-              ? SongDetailScreen(songId: id)
-              : StaffSongScreen(songId: id);
+          return switch (sessionManager.role!) {
+            MobileRole.choirMember => SongDetailScreen(songId: id),
+            MobileRole.choirDirector => StaffLibrarySongScreen(songId: id),
+            MobileRole.parishPriest => StaffSongScreen(songId: id),
+          };
         },
+      ),
+      GoRoute(
+        path: '/staff-library',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const StaffLibraryScreen(),
+      ),
+      GoRoute(
+        path: '/staff-members',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const StaffMembersScreen(),
+      ),
+      GoRoute(
+        path: '/staff-member/:id',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) =>
+            StaffMemberProfileScreen(memberId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/staff-choir/:id',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) =>
+            StaffChoirMembersScreen(choirId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/staff-skill-approval',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const StaffSkillApprovalScreen(),
       ),
       GoRoute(
         path: '/staff-rehearsals',
@@ -325,9 +366,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
+        path: '/staff-practice',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => StaffPracticeWorkspace(
+          eventId: state.uri.queryParameters['eventId'],
+        ),
+      ),
+      GoRoute(
         path: '/staff-submissions',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const StaffSubmissionsScreen(),
+        builder: (context, state) => StaffSubmissionsScreen(
+          assignmentId: state.uri.queryParameters['assignmentId'],
+          assignmentTitle: state.uri.queryParameters['title'],
+        ),
       ),
       GoRoute(
         path: '/staff-submission/:id',
@@ -371,6 +422,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) =>
             InteractiveScoreScreen(id: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: nominationsPath,
+        builder: (context, state) => const DirectorNominationsScreen(),
+        routes: [
+          GoRoute(
+            path: 'new',
+            builder: (context, state) => const CreateDirectorNominationScreen(),
+          ),
+          GoRoute(
+            path: ':id',
+            builder: (context, state) =>
+                DirectorNominationDetailScreen(id: state.pathParameters['id']!),
+          ),
+        ],
       ),
       GoRoute(
         path: '/program-new',

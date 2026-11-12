@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="vi">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- WebKit before iOS 15.4 needs unsafe-eval for the bundled WebAssembly toolkit. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' file: 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Khuông nhạc</title>
+<style>
+  body { margin: 0; background: white; color: #261d21; font: 14px system-ui, sans-serif; }
+  #sheet { min-height: 4rem; }
+  #sheet svg { display: block; width: 100%; height: auto; max-height: calc(100vh - 3.5rem); }
+  #sheet .active-note, #sheet .active-note * { fill: #9c244a; stroke: #9c244a; }
+  nav { display: flex; align-items: center; justify-content: center; gap: 1rem; padding: .4rem; }
+  button { padding: .5rem 1rem; color: #751b37; background: white; border: 1px solid #d6c4ca; border-radius: .4rem; }
+  button:disabled { opacity: .4; }
+  #state { padding: 1rem; }
+  [hidden] { display: none; }
+</style>
+<div id="state" role="status">Đang dựng khuông nhạc…</div>
+<div id="sheet" role="region" aria-label="Khuông nhạc"></div>
+<nav id="pages" aria-label="Trang khuông nhạc" hidden>
+  <button id="previous" aria-label="Trang trước">‹</button>
+  <span id="pageNumber"></span>
+  <button id="next" aria-label="Trang sau">›</button>
+</nav>
+<script src="verovio-toolkit-wasm.js"></script>
+<script src="score.js"></script>
+</html>

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../app/widgets/harmonia_logo.dart';
 import '../../../app/widgets/stitch_entrance.dart';
 import '../data/auth_dto.dart';
 import 'auth_notifier.dart';
@@ -143,9 +144,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      Color(0xFFFF174E),
+                      AppColors.headerWine,
                       AppColors.primary,
-                      AppColors.primaryDark,
+                      AppColors.primaryHover,
                     ],
                   ),
                   borderRadius: BorderRadius.vertical(
@@ -194,15 +195,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Image.asset(
-                                'assets/images/harmonia_logo.png',
-                                width: 44,
-                                height: 44,
-                                excludeFromSemantics: true,
-                              ),
-                            ),
+                            const HarmoniaLogo(size: 44),
                             const SizedBox(width: 10),
                             Flexible(
                               child: Text(
@@ -233,7 +226,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           'Đăng nhập tài khoản Harmonia',
                           textAlign: TextAlign.center,
                           style: type.bodyMedium?.copyWith(
-                            color: const Color(0xFFFFE4EB),
+                            color: AppColors.onPrimaryContainer,
                           ),
                         ),
                         const SizedBox(height: 20),

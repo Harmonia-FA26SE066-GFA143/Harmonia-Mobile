@@ -23,6 +23,7 @@ class MusicLibraryState {
   final List<SongDto> songs;
   final List<MusicMaterialDetailDto> materials;
   final int page;
+  final int totalCount;
   final bool hasMore;
   final bool loading;
   final bool loadingMore;
@@ -44,6 +45,7 @@ class MusicLibraryState {
     this.songs = const [],
     this.materials = const [],
     this.page = 0,
+    this.totalCount = 0,
     this.hasMore = false,
     this.loading = false,
     this.loadingMore = false,
@@ -127,6 +129,7 @@ class MusicLibraryNotifier extends StateNotifier<MusicLibraryState> {
           : (tab == old.materialsTab ? old.missingMaterialType : null),
       songs: changed ? const [] : old.songs,
       materials: changed ? const [] : old.materials,
+      totalCount: changed ? 0 : old.totalCount,
       loading: true,
     );
     if (!canLoad()) {
@@ -157,6 +160,7 @@ class MusicLibraryNotifier extends StateNotifier<MusicLibraryState> {
       songs: old.songs,
       materials: old.materials,
       page: old.page,
+      totalCount: old.totalCount,
       hasMore: old.hasMore,
       loadingMore: true,
     );
@@ -169,6 +173,7 @@ class MusicLibraryNotifier extends StateNotifier<MusicLibraryState> {
       var songs = query.songs;
       var materials = query.materials;
       late int currentPage;
+      late int totalCount;
       late bool hasMore;
       if (query.materialsTab) {
         final result = await _repository.getMyMaterialsPage(
@@ -186,6 +191,7 @@ class MusicLibraryNotifier extends StateNotifier<MusicLibraryState> {
           for (final item in result.items) item.id: item,
         }.values.toList();
         currentPage = result.pageNumber;
+        totalCount = result.totalCount;
         hasMore = result.hasNextPage;
       } else {
         final result = await _repository.getSongsPage(
@@ -208,6 +214,7 @@ class MusicLibraryNotifier extends StateNotifier<MusicLibraryState> {
           for (final item in result.items) item.id: item,
         }.values.toList();
         currentPage = result.pageNumber;
+        totalCount = result.totalCount;
         hasMore = result.hasNextPage;
       }
       if (!mounted || request != _generation || !canLoad()) return;
@@ -227,6 +234,7 @@ class MusicLibraryNotifier extends StateNotifier<MusicLibraryState> {
         songs: songs,
         materials: materials,
         page: currentPage,
+        totalCount: totalCount,
         hasMore: hasMore,
       );
     } catch (error) {
@@ -247,6 +255,7 @@ class MusicLibraryNotifier extends StateNotifier<MusicLibraryState> {
         songs: query.songs,
         materials: query.materials,
         page: query.page,
+        totalCount: query.totalCount,
         hasMore: query.hasMore,
         error: ErrorMessages.forException(error),
       );

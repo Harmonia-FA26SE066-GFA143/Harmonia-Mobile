@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart' hide MaterialType;
 
-import '../../../app/theme/app_colors.dart';
+import '../../../app/widgets/member_choir_visuals.dart';
 import '../data/music_dto.dart';
 
 class MusicTileIcon extends StatelessWidget {
@@ -13,24 +13,29 @@ class MusicTileIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     final (icon, color, background) = switch (materialType) {
       MaterialType.sampleAudio => (
-        Icons.music_note_rounded,
-        AppColors.primary,
-        AppColors.primarySoft,
+        Icons.headphones_rounded,
+        const Color(0xFF775A00),
+        const Color(0xFFFFFBEB),
       ),
       MaterialType.lyrics => (
         Icons.article_outlined,
-        AppColors.statusWarning,
-        AppColors.statusWarningSoft,
+        const Color(0xFF15803D),
+        const Color(0xFFECFDF5),
       ),
       MaterialType.interactiveScore => (
         Icons.piano_outlined,
-        AppColors.navyPrimary,
-        AppColors.surfaceContainerLow,
+        const Color(0xFF1B2541),
+        const Color(0xFFF0F3FF),
+      ),
+      MaterialType.rehearsalMaterial => (
+        Icons.record_voice_over_outlined,
+        const Color(0xFF15803D),
+        const Color(0xFFECFDF5),
       ),
       _ => (
-        Icons.description_outlined,
-        AppColors.primary,
-        AppColors.primarySoft,
+        Icons.picture_as_pdf_outlined,
+        MemberChoirStyle.wine,
+        MemberChoirStyle.blush,
       ),
     };
     return Container(

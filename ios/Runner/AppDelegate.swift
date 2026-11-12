@@ -2,6 +2,7 @@ import Flutter
 import PhotosUI
 import UniformTypeIdentifiers
 import UIKit
+import WebKit
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
@@ -16,6 +17,8 @@ import UIKit
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
     let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "AvatarImagePickerPlugin")
     AvatarImagePickerPlugin.register(with: registrar)
+    let scoreRegistrar = engineBridge.pluginRegistry.registrar(forPlugin: "HarmoniaScoreEngraving")
+    scoreRegistrar.register(ScoreEngravingFactory(registrar: scoreRegistrar), withId: "harmonia/score_engraving")
   }
 }
 
@@ -29,6 +32,8 @@ private final class AvatarImagePickerPlugin: NSObject, FlutterPlugin, PHPickerVi
 
   private weak var presenter: UIViewController?
   private var pendingResult: FlutterResult?
+  private var staffExtensions: Set<String>?
+  private var exportingReport = false
 
   private init(presenter: UIViewController?) {
     self.presenter = presenter
@@ -41,7 +46,7 @@ private final class AvatarImagePickerPlugin: NSObject, FlutterPlugin, PHPickerVi
   }
 
   func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-    guard call.method == "pickImage" || call.method == "pickEvidence" else {
+    guard ["pickImage", "pickEvidence", "pickStaffFile", "saveReport"].contains(call.method) else {
       result(FlutterMethodNotImplemented)
       return
     }
@@ -51,6 +56,25 @@ private final class AvatarImagePickerPlugin: NSObject, FlutterPlugin, PHPickerVi
     }
 
     pendingResult = result
+    if call.method == "saveReport" {
+      guard let arguments = call.arguments as? [String: Any], let path = arguments["path"] as? String else {
+        complete(FlutterError(code: "REPORT_SAVE_FAILED", message: nil, details: nil))
+        return
+      }
+      exportingReport = true
+      let picker = UIDocumentPickerViewController(forExporting: [URL(fileURLWithPath: path)], asCopy: true)
+      picker.delegate = self
+      presenter.present(picker, animated: true)
+      return
+    }
+    if call.method == "pickStaffFile" {
+      let arguments = call.arguments as? [String: Any]
+      staffExtensions = Set(arguments?["extensions"] as? [String] ?? [])
+      let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.data], asCopy: true)
+      picker.delegate = self
+      presenter.present(picker, animated: true)
+      return
+    }
     if call.method == "pickEvidence" {
       let picker = UIDocumentPickerViewController(
         forOpeningContentTypes: [.audio, .movie],
@@ -122,8 +146,26 @@ private final class AvatarImagePickerPlugin: NSObject, FlutterPlugin, PHPickerVi
       return
     }
 
+    if exportingReport {
+      complete(true)
+      return
+    }
+
     do {
       let ext = url.pathExtension.lowercased()
+      if let allowed = staffExtensions {
+        guard allowed.contains(ext) else { throw PickerError(code: "STAFF_FILE_TYPE_NOT_ALLOWED") }
+        let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+        let size = (attributes[.size] as? NSNumber)?.intValue ?? 0
+        guard size > 0 else { throw PickerError(code: "STAFF_FILE_REQUIRED") }
+        guard size <= Self.maxVoiceBytes else { throw PickerError(code: "STAFF_FILE_TOO_LARGE") }
+
+        let destination = FileManager.default.temporaryDirectory
+          .appendingPathComponent("staff-\(UUID().uuidString).\(ext)")
+        try FileManager.default.copyItem(at: url, to: destination)
+        complete(["path": destination.path, "name": url.lastPathComponent])
+        return
+      }
       guard Self.evidenceExtensions.contains(ext) else {
         throw PickerError(code: "MEMBER_SKILL_EVIDENCE_TYPE_NOT_ALLOWED")
       }
@@ -158,7 +200,100 @@ private final class AvatarImagePickerPlugin: NSObject, FlutterPlugin, PHPickerVi
     DispatchQueue.main.async {
       guard let result = self.pendingResult else { return }
       self.pendingResult = nil
+      self.staffExtensions = nil
+      self.exportingReport = false
       result(value)
     }
+  }
+}
+
+private final class ScoreEngravingFactory: NSObject, FlutterPlatformViewFactory {
+  private let registrar: FlutterPluginRegistrar
+
+  init(registrar: FlutterPluginRegistrar) {
+    self.registrar = registrar
+  }
+
+  func create(withFrame frame: CGRect, viewIdentifier viewId: Int64, arguments args: Any?)
+      -> FlutterPlatformView {
+    ScoreEngravingView(
+      frame: frame,
+      assetKey: registrar.lookupKey(forAsset: "assets/score/index.html"),
+      channel: FlutterMethodChannel(
+        name: "harmonia/score_engraving/\(viewId)", binaryMessenger: registrar.messenger()
+      )
+    )
+  }
+}
+
+private final class ScoreStatusHandler: NSObject, WKScriptMessageHandler {
+  private let channel: FlutterMethodChannel
+
+  init(channel: FlutterMethodChannel) {
+    self.channel = channel
+  }
+
+  func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+    if message.frameInfo.isMainFrame, let status = message.body as? String {
+      channel.invokeMethod("status", arguments: status)
+    }
+  }
+}
+
+private final class ScoreEngravingView: NSObject, FlutterPlatformView, WKNavigationDelegate {
+  private let web: WKWebView
+  private let channel: FlutterMethodChannel
+  private let asset: URL?
+
+  init(frame: CGRect, assetKey: String, channel: FlutterMethodChannel) {
+    self.channel = channel
+    asset = Bundle.main.url(forResource: assetKey, withExtension: nil)
+    let config = WKWebViewConfiguration()
+    config.websiteDataStore = .nonPersistent()
+    config.userContentController.add(ScoreStatusHandler(channel: channel), name: "scoreStatus")
+    web = WKWebView(frame: frame, configuration: config)
+    super.init()
+    web.navigationDelegate = self
+    channel.setMethodCallHandler { [weak self] call, result in
+      guard let self else {
+        result(FlutterError(code: "SCORE_VIEW_CLOSED", message: nil, details: nil))
+        return
+      }
+      switch call.method {
+      case "start":
+        guard let asset else {
+          result(FlutterError(code: "SCORE_ASSET_MISSING", message: nil, details: nil))
+          return
+        }
+        web.loadFileURL(asset, allowingReadAccessTo: asset.deletingLastPathComponent())
+        result(nil)
+      case "evaluate":
+        guard let script = call.arguments as? String else {
+          result(FlutterMethodNotImplemented)
+          return
+        }
+        web.evaluateJavaScript(script) { _, error in
+          result(error == nil ? nil : FlutterError(code: "SCORE_RENDER_FAILED", message: nil, details: nil))
+        }
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+  }
+
+  func webView(
+    _ webView: WKWebView, decidePolicyFor action: WKNavigationAction,
+    decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
+  ) {
+    let allowed = action.request.url?.standardizedFileURL == asset?.standardizedFileURL
+    decisionHandler(allowed ? .allow : .cancel)
+  }
+
+  func view() -> UIView { web }
+
+  deinit {
+    channel.setMethodCallHandler(nil)
+    web.configuration.userContentController.removeScriptMessageHandler(forName: "scoreStatus")
+    web.stopLoading()
   }
 }

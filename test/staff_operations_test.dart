@@ -63,6 +63,55 @@ void main() {
     expect(roleAllowsRoute(null, Uri.parse('/interactive-score/s')), isFalse);
   });
 
+  test('nomination routes follow the three mobile roles', () {
+    final create = Uri.parse('/director-nominations/new');
+    final detail = Uri.parse('/director-nominations/nomination');
+    expect(roleAllowsRoute(null, detail), isFalse);
+    expect(roleAllowsRoute(MobileRole.choirMember, create), isFalse);
+    expect(roleAllowsRoute(MobileRole.choirMember, detail), isTrue);
+    expect(roleAllowsRoute(MobileRole.choirDirector, create), isTrue);
+    expect(roleAllowsRoute(MobileRole.parishPriest, create), isTrue);
+    expect(
+      notificationRoute(
+        role: MobileRole.choirMember,
+        referenceType: 'DirectorNomination',
+        referenceId: 'nomination',
+      ),
+      detail.path,
+    );
+  });
+
+  test(
+    'eligibility reads null attendance and keeps unmet thresholds advisory',
+    () async {
+      final api = makeApi((request) {
+        expect(request.path, '/api/director-nominations/eligibility');
+        expect(request.queryParameters, {'memberId': 'candidate'});
+        return jsonResponse(200, {
+          'tenureMonths': 4,
+          'minTenureMonths': 24,
+          'meetsTenure': false,
+          'attendancePresent': 0,
+          'attendanceRecorded': 0,
+          'attendancePercent': null,
+          'minAttendancePercent': 80,
+          'meetsAttendance': false,
+          'servedEventCount': 1,
+          'minServedEvents': 20,
+          'meetsServedEvents': false,
+          'hasConductingSkill': false,
+          'isConductingSkillRequired': false,
+          'meetsConductingSkill': true,
+          'meetsAll': false,
+        });
+      });
+      final stats = await api.nominationEligibility('candidate');
+      expect(stats.meetsAll, isFalse);
+      expect(stats.criteria[1].value, contains('Chưa có điểm danh'));
+      expect(stats.criteria.last.met, isTrue);
+    },
+  );
+
   test(
     'rehearsal creation uses UTC and keeps song notes out of the title',
     () async {

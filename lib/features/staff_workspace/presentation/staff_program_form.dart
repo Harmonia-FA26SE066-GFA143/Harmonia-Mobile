@@ -121,7 +121,7 @@ class _StaffProgramFormState extends ConsumerState<StaffProgramForm> {
             padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: ListTile(
               dense: true,
-              tileColor: Color(0x30800025),
+              tileColor: Color(0x306D2636),
               leading: Icon(Icons.info_outline, color: Color(0xFFFFD369)),
               title: Text(
                 'Thiết lập phụng vụ và chọn ca đoàn phụ trách.',

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app/widgets/member_choir_visuals.dart';
 import '../../../core/errors/error_messages.dart';
 import '../../calendar/data/calendar_repository.dart';
 
@@ -80,7 +81,10 @@ class MemberAssignmentsCard extends ConsumerWidget {
                     Card(
                       margin: const EdgeInsets.only(bottom: 12),
                       child: ListTile(
-                        leading: const Icon(Icons.assignment_ind),
+                        leading: const Icon(
+                          Icons.assignment_ind,
+                          color: MemberChoirStyle.accent,
+                        ),
                         title: Text(
                           event.title,
                           style: Theme.of(context).textTheme.titleMedium,
@@ -89,7 +93,10 @@ class MemberAssignmentsCard extends ConsumerWidget {
                           '${DateFormat('dd/MM/yyyy').format(event.date)} • ${event.assignedVocalPart}',
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
-                        trailing: const Icon(Icons.chevron_right),
+                        trailing: const Icon(
+                          Icons.chevron_right,
+                          color: Color(0xFF76767E),
+                        ),
                         onTap: () => context.push(
                           '/event-detail/${Uri.encodeComponent(event.id)}',
                         ),
@@ -115,6 +122,11 @@ class UpcomingRehearsalCard extends ConsumerWidget {
             title: Text(ErrorMessages.forException(error)),
             trailing: IconButton(
               tooltip: 'Thử lại',
+              style: IconButton.styleFrom(
+                foregroundColor: MemberChoirStyle.accent,
+                hoverColor: MemberChoirStyle.accent.withValues(alpha: 0.10),
+                highlightColor: MemberChoirStyle.accent.withValues(alpha: 0.12),
+              ),
               icon: const Icon(Icons.refresh),
               onPressed: () => ref.invalidate(rehearsalsProvider),
             ),
@@ -132,7 +144,10 @@ class UpcomingRehearsalCard extends ConsumerWidget {
           final rehearsal = items.first;
           return Card(
             child: ListTile(
-              leading: const Icon(Icons.event_note),
+              leading: const Icon(
+                Icons.event_note,
+                color: MemberChoirStyle.accent,
+              ),
               title: Text(
                 rehearsal.title,
                 maxLines: 2,
@@ -148,7 +163,10 @@ class UpcomingRehearsalCard extends ConsumerWidget {
                     rehearsal.contentSummary,
                 ].join('\n'),
               ),
-              trailing: const Icon(Icons.chevron_right),
+              trailing: const Icon(
+                Icons.chevron_right,
+                color: Color(0xFF76767E),
+              ),
               onTap: () => context.push(
                 '/rehearsal/${Uri.encodeComponent(rehearsal.id)}',
               ),

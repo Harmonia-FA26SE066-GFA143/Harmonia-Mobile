@@ -14,6 +14,13 @@ enum NotificationType {
   songListSubmitted(8, 'Danh sách bài hát chờ duyệt', 'SongListSubmitted'),
   rehearsalChanged(9, 'Thay đổi lịch tập', 'RehearsalChanged'),
   eventChoirChanged(10, 'Thay đổi ca đoàn phục vụ', 'EventChoirChanged'),
+  memberRegistrationSubmitted(
+    11,
+    'Đơn xin gia nhập ca đoàn',
+    'MemberRegistrationSubmitted',
+  ),
+  directorNomination(12, 'Đề cử ca trưởng', 'DirectorNomination'),
+  choirChanged(13, 'Thay đổi ca đoàn', 'ChoirChanged'),
   unknown(-1, 'Thông báo', 'Unknown');
 
   final int value;

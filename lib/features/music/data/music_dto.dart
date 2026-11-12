@@ -118,6 +118,10 @@ class SongDto {
   final String? musicalKey;
   final String? tempo;
   final String? notes;
+  final Map<MaterialType, int> materialCounts;
+
+  int? get interactiveScoreCount =>
+      materialCounts[MaterialType.interactiveScore];
 
   const SongDto({
     required this.id,
@@ -127,9 +131,11 @@ class SongDto {
     this.musicalKey,
     this.tempo,
     this.notes,
+    this.materialCounts = const {},
   });
 
   factory SongDto.fromJson(Map<String, dynamic> json) {
+    final counts = json['materialCounts'];
     return SongDto(
       id: json['id']?.toString() ?? '',
       title: json['title']?.toString() ?? '',
@@ -138,6 +144,13 @@ class SongDto {
       musicalKey: json['musicalKey']?.toString(),
       tempo: json['tempo']?.toString(),
       notes: json['notes']?.toString(),
+      materialCounts: {
+        if (counts is Map<String, dynamic>)
+          for (final entry in counts.entries)
+            if (entry.value is int &&
+                MaterialType.fromWire(entry.key) != MaterialType.unknown)
+              MaterialType.fromWire(entry.key): entry.value as int,
+      },
     );
   }
 
@@ -149,6 +162,11 @@ class SongDto {
     'musicalKey': musicalKey,
     'tempo': tempo,
     'notes': notes,
+    if (materialCounts.isNotEmpty)
+      'materialCounts': {
+        for (final entry in materialCounts.entries)
+          entry.key.wireName: entry.value,
+      },
   };
 }
 
@@ -172,11 +190,13 @@ class SongVocalRequirementDto {
   final String skillId;
   final String skillName;
   final bool isMandatory;
+  final int requiredCount;
 
   const SongVocalRequirementDto({
     required this.skillId,
     required this.skillName,
     required this.isMandatory,
+    this.requiredCount = 1,
   });
 
   factory SongVocalRequirementDto.fromJson(Map<String, dynamic> json) {
@@ -184,6 +204,7 @@ class SongVocalRequirementDto {
       skillId: json['skillId']?.toString() ?? '',
       skillName: json['skillName']?.toString() ?? '',
       isMandatory: json['isMandatory'] == true,
+      requiredCount: (json['requiredCount'] as num?)?.toInt() ?? 1,
     );
   }
 
@@ -198,11 +219,13 @@ class SongInstrumentRequirementDto {
   final String skillId;
   final String skillName;
   final bool isMandatory;
+  final int requiredCount;
 
   const SongInstrumentRequirementDto({
     required this.skillId,
     required this.skillName,
     required this.isMandatory,
+    this.requiredCount = 1,
   });
 
   factory SongInstrumentRequirementDto.fromJson(Map<String, dynamic> json) {
@@ -210,6 +233,7 @@ class SongInstrumentRequirementDto {
       skillId: json['skillId']?.toString() ?? '',
       skillName: json['skillName']?.toString() ?? '',
       isMandatory: json['isMandatory'] == true,
+      requiredCount: (json['requiredCount'] as num?)?.toInt() ?? 1,
     );
   }
 
@@ -226,6 +250,7 @@ class SongClassificationDto {
   final List<SongClassificationSummaryDto> massTypes;
   final List<SongClassificationSummaryDto> ceremonyTypes;
   final List<SongClassificationSummaryDto> songThemes;
+  final List<SongClassificationSummaryDto> liturgicalSlots;
   final List<SongVocalRequirementDto> vocalRequirements;
   final List<SongInstrumentRequirementDto> instrumentRequirements;
 
@@ -235,6 +260,7 @@ class SongClassificationDto {
     this.massTypes = const [],
     this.ceremonyTypes = const [],
     this.songThemes = const [],
+    this.liturgicalSlots = const [],
     this.vocalRequirements = const [],
     this.instrumentRequirements = const [],
   });
@@ -264,6 +290,13 @@ class SongClassificationDto {
           )
           .toList(),
       songThemes: (json['songThemes'] as List<dynamic>? ?? [])
+          .map(
+            (e) => SongClassificationSummaryDto.fromJson(
+              e as Map<String, dynamic>,
+            ),
+          )
+          .toList(),
+      liturgicalSlots: (json['liturgicalSlots'] as List<dynamic>? ?? [])
           .map(
             (e) => SongClassificationSummaryDto.fromJson(
               e as Map<String, dynamic>,

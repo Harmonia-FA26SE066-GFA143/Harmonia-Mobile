@@ -18,6 +18,7 @@ typedef StaffEvent = ({
   String? status,
   String? requirements,
 });
+typedef StaffProgramTask = ({StaffEvent event, String? songListStatus});
 typedef StaffChoir = ({
   String id,
   String name,
@@ -33,6 +34,7 @@ typedef ServingChoir = ({
   String? directorName,
   String? substituteId,
   String? substituteName,
+  String? reason,
 });
 typedef ProgramDraft = ({
   String date,
@@ -122,6 +124,30 @@ class StaffWorkspaceRepository {
     _event,
   );
 
+  Future<PagedList<StaffProgramTask>> upcomingProgramTasks(
+    String fromDate,
+    int page,
+  ) async => PagedList.fromJson(
+    await _get<Map<String, dynamic>>(
+      ApiEndpoints.liturgicalEvents,
+      query: {
+        'status': 'Published',
+        'fromDate': fromDate,
+        'pageNumber': page,
+        'pageSize': 100,
+      },
+    ),
+    (row) => (
+      event: _event(row),
+      songListStatus: row['latestSongListStatus'] as String?,
+    ),
+  );
+
+  Future<List<StaffEvent>> upcomingPrograms() async => [
+    for (final row in await _get<List<dynamic>>(ApiEndpoints.scheduleEvents))
+      _event(row as Map<String, dynamic>, fallbackStatus: 'Published'),
+  ];
+
   Future<StaffEvent> event(MobileRole role, String id) async {
     final encoded = Uri.encodeComponent(id);
     final path = role == MobileRole.parishPriest
@@ -181,6 +207,7 @@ class StaffWorkspaceRepository {
         directorName: json['directorFullName'] as String?,
         substituteId: json['substituteDirectorId'] as String?,
         substituteName: json['substituteDirectorFullName'] as String?,
+        reason: (json['reason'] as String?)?.trim(),
       ),
   ];
 
@@ -311,6 +338,10 @@ class StaffWorkspaceRepository {
     );
   }
 }
+
+final staffChoirsProvider = FutureProvider.autoDispose(
+  (ref) => ref.watch(staffWorkspaceRepositoryProvider).choirs(),
+);
 
 final staffWorkspaceRepositoryProvider = Provider<StaffWorkspaceRepository>((
   ref,

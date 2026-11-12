@@ -64,7 +64,7 @@ class AppTheme {
         color: AppColors.surface,
         surfaceTintColor: Colors.transparent,
         elevation: 0.6,
-        shadowColor: AppColors.primaryDark.withValues(alpha: 0.12),
+        shadowColor: AppColors.headerWine.withValues(alpha: 0.12),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
           side: const BorderSide(color: AppColors.border, width: 1),
@@ -72,40 +72,118 @@ class AppTheme {
         margin: EdgeInsets.zero,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: AppColors.onPrimary,
-          minimumSize: const Size.fromHeight(48),
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          textStyle: AppTypography.labelLarge.copyWith(
-            color: AppColors.onPrimary,
-          ),
-        ),
+        style:
+            ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.onPrimary,
+              minimumSize: const Size.fromHeight(48),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              textStyle: AppTypography.labelLarge.copyWith(
+                color: AppColors.onPrimary,
+              ),
+            ).copyWith(
+              backgroundColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.disabled)) {
+                  return AppColors.surfaceContainerHigh;
+                }
+                if (states.contains(WidgetState.hovered) ||
+                    states.contains(WidgetState.pressed)) {
+                  return AppColors.primaryHover;
+                }
+                return AppColors.primary;
+              }),
+              foregroundColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.disabled)) {
+                  return AppColors.disabled;
+                }
+                return AppColors.onPrimary;
+              }),
+              iconColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.disabled)) {
+                  return AppColors.disabled;
+                }
+                return AppColors.onPrimary;
+              }),
+            ),
       ),
       filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          minimumSize: const Size.fromHeight(52),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          textStyle: AppTypography.labelLarge,
-        ),
+        style:
+            FilledButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.onPrimary,
+              minimumSize: const Size.fromHeight(52),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              textStyle: AppTypography.labelLarge.copyWith(
+                color: AppColors.onPrimary,
+              ),
+            ).copyWith(
+              backgroundColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.disabled)) {
+                  return AppColors.surfaceContainerHigh;
+                }
+                if (states.contains(WidgetState.hovered) ||
+                    states.contains(WidgetState.pressed)) {
+                  return AppColors.primaryHover;
+                }
+                return AppColors.primary;
+              }),
+              foregroundColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.disabled)) {
+                  return AppColors.disabled;
+                }
+                return AppColors.onPrimary;
+              }),
+              iconColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.disabled)) {
+                  return AppColors.disabled;
+                }
+                return AppColors.onPrimary;
+              }),
+            ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.primary,
-          minimumSize: const Size.fromHeight(48),
-          side: const BorderSide(color: AppColors.border),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          textStyle: AppTypography.labelLarge.copyWith(
-            color: AppColors.primary,
-          ),
-        ),
+        style:
+            OutlinedButton.styleFrom(
+              foregroundColor: AppColors.primary,
+              minimumSize: const Size.fromHeight(48),
+              side: const BorderSide(color: AppColors.border),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              textStyle: AppTypography.labelLarge.copyWith(
+                color: AppColors.primary,
+              ),
+            ).copyWith(
+              backgroundColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.hovered) ||
+                    states.contains(WidgetState.pressed)) {
+                  return AppColors.primarySoft;
+                }
+                return null;
+              }),
+              overlayColor: const WidgetStatePropertyAll(AppColors.primarySoft),
+            ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(foregroundColor: AppColors.primary)
+            .copyWith(
+              foregroundColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.disabled)) {
+                  return AppColors.disabled;
+                }
+                if (states.contains(WidgetState.hovered) ||
+                    states.contains(WidgetState.pressed)) {
+                  return AppColors.primaryHover;
+                }
+                return AppColors.primary;
+              }),
+              overlayColor: const WidgetStatePropertyAll(AppColors.primarySoft),
+            ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,

@@ -7,12 +7,14 @@ import 'package:audioplayers/audioplayers.dart';
 
 import '../../music/data/music_file_loader.dart';
 import '../data/staff_operations_api.dart';
+import '../data/staff_dashboard_providers.dart';
+import '../data/staff_practice_providers.dart';
 import 'staff_ops_widgets.dart';
 
 final _submissions = FutureProvider.autoDispose.family(
-  (ref, (int, String?) filter) => ref
+  (ref, (int, String?, String?) filter) => ref
       .watch(staffOperationsApiProvider)
-      .submissions(filter.$1, filter.$2, null),
+      .submissions(filter.$1, filter.$2, filter.$3),
 );
 final _submission = FutureProvider.autoDispose.family(
   (ref, String id) => ref.watch(staffOperationsApiProvider).submission(id),
@@ -52,87 +54,106 @@ Future<void> showAudioScore(BuildContext context, AudioScore score) =>
       ),
     );
 
-class StaffSubmissionsScreen extends ConsumerStatefulWidget {
-  const StaffSubmissionsScreen({super.key});
+class StaffSubmissionsScreen extends StatelessWidget {
+  const StaffSubmissionsScreen({
+    super.key,
+    this.assignmentId,
+    this.assignmentTitle,
+  });
+
+  final String? assignmentId;
+  final String? assignmentTitle;
+
   @override
-  ConsumerState<StaffSubmissionsScreen> createState() =>
-      _StaffSubmissionsScreenState();
+  Widget build(BuildContext context) => OpsPage(
+    title: assignmentTitle ?? 'Chấm bản thu',
+    child: StaffSubmissionList(assignmentId: assignmentId),
+  );
 }
 
-class _StaffSubmissionsScreenState
-    extends ConsumerState<StaffSubmissionsScreen> {
+class StaffSubmissionList extends ConsumerStatefulWidget {
+  const StaffSubmissionList({super.key, this.assignmentId, this.initialStatus});
+  final String? assignmentId;
+  final String? initialStatus;
+
+  @override
+  ConsumerState<StaffSubmissionList> createState() =>
+      _StaffSubmissionListState();
+}
+
+class _StaffSubmissionListState extends ConsumerState<StaffSubmissionList> {
   int _page = 1;
-  String? _statusFilter;
+  late String? _statusFilter = widget.initialStatus;
 
   @override
   Widget build(BuildContext context) {
-    final provider = _submissions((_page, _statusFilter));
-    return OpsPage(
-      title: 'Chấm bản thu',
-      actions: [
-        IconButton(
-          tooltip: 'Tải lại',
-          onPressed: () => ref.invalidate(provider),
-          icon: const Icon(Icons.refresh),
+    final provider = _submissions((_page, _statusFilter, widget.assignmentId));
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: OpsChoiceField(
+                  label: 'Trạng thái',
+                  value: _statusFilter,
+                  optional: true,
+                  emptyLabel: 'Tất cả',
+                  options: [
+                    for (final status in [
+                      'Submitted',
+                      'Passed',
+                      'NeedsRevision',
+                      'Overdue',
+                    ])
+                      (id: status, name: _status(status)),
+                  ],
+                  onChanged: (status) => setState(() {
+                    _page = 1;
+                    _statusFilter = status;
+                  }),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Tải lại bản thu',
+                onPressed: () => ref.invalidate(provider),
+                icon: const Icon(Icons.refresh),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: OpsAsync(
+            value: ref.watch(provider),
+            onRetry: () => ref.invalidate(provider),
+            data: (page) => ListView(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              children: [
+                if (page.items.isEmpty)
+                  const Center(child: Text('Chưa có bản thu phù hợp.')),
+                for (final row in page.items)
+                  OpsTile(
+                    icon: Icons.mic_none,
+                    title: row.title,
+                    subtitle:
+                        '${row.member} • Lần ${row.attempt}\n${_status(row.status)} • ${opsTime(row.date)}',
+                    onTap: () async {
+                      await context.push(opsPath('staff-submission', row.id));
+                      if (mounted) ref.invalidate(provider);
+                    },
+                  ),
+                OpsPaging(
+                  page: _page,
+                  previous: _page > 1 ? () => setState(() => _page--) : null,
+                  next: page.hasNextPage ? () => setState(() => _page++) : null,
+                ),
+              ],
+            ),
+          ),
         ),
       ],
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: OpsChoiceField(
-              label: 'Trạng thái',
-              value: _statusFilter,
-              optional: true,
-              emptyLabel: 'Tất cả',
-              options: [
-                for (final status in [
-                  'Submitted',
-                  'Passed',
-                  'NeedsRevision',
-                  'Overdue',
-                ])
-                  (id: status, name: _status(status)),
-              ],
-              onChanged: (status) => setState(() {
-                _page = 1;
-                _statusFilter = status;
-              }),
-            ),
-          ),
-          Expanded(
-            child: OpsAsync(
-              value: ref.watch(provider),
-              onRetry: () => ref.invalidate(provider),
-              data: (page) => ListView(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                children: [
-                  if (page.items.isEmpty)
-                    const Center(child: Text('Chưa có bản thu phù hợp.')),
-                  for (final row in page.items)
-                    OpsTile(
-                      icon: Icons.mic_none,
-                      title: row.title,
-                      subtitle:
-                          '${row.member} • Lần ${row.attempt}\n${_status(row.status)} • ${opsTime(row.date)}',
-                      onTap: () async {
-                        await context.push(opsPath('staff-submission', row.id));
-                        if (mounted) ref.invalidate(provider);
-                      },
-                    ),
-                  OpsPaging(
-                    page: _page,
-                    previous: _page > 1 ? () => setState(() => _page--) : null,
-                    next: page.hasNextPage
-                        ? () => setState(() => _page++)
-                        : null,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -270,6 +291,8 @@ class _StaffSubmissionScreenState extends ConsumerState<StaffSubmissionScreen>
         ) &&
         mounted) {
       ref.invalidate(_submission(widget.id));
+      ref.invalidate(staffPreparationProgressProvider);
+      ref.invalidate(staffPendingSubmissionsCountProvider);
     }
   }
 

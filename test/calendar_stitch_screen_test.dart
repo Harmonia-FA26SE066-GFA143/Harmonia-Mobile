@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:harmonia_mobile/app/theme/app_theme.dart';
+import 'package:harmonia_mobile/app/widgets/harmonia_logo.dart';
 import 'package:harmonia_mobile/core/di/core_providers.dart';
 import 'package:harmonia_mobile/core/errors/app_exceptions.dart';
 import 'package:harmonia_mobile/core/session/session_manager.dart';
@@ -32,6 +33,7 @@ class StitchCalendarRepository extends MockCalendarRepositoryImpl {
   String rehearsalTimeRange = '18:00 – 18:45';
   int eventOffsetDays = 0;
   DateTime? rehearsalInstant;
+  String? rehearsalNote;
   bool failEvents = false;
   bool failAttendance = false;
   int eventCalls = 0;
@@ -55,6 +57,7 @@ class StitchCalendarRepository extends MockCalendarRepositoryImpl {
     timeRange: rehearsalTimeRange,
     location: 'Phòng tập API',
     contentSummary: 'Bài luyện thật',
+    note: rehearsalNote,
     attendanceStatus: 'Chưa có dữ liệu điểm danh',
   );
   @override
@@ -180,7 +183,10 @@ void main() {
         return const StandardMessageCodec().encodeMessage(assets);
       }
       if (key.startsWith('fonts/PlusJakartaSans-')) return ByteData(0);
-      return null;
+      return binding.defaultBinaryMessenger.delegate.send(
+        'flutter/assets',
+        message,
+      );
     });
   });
   tearDown(() {
@@ -280,15 +286,47 @@ void main() {
     tester,
   ) async {
     await open(tester);
-    expect(find.text('Lịch của tôi'), findsOneWidget);
-    expect(find.text('Ca đoàn API'), findsOneWidget);
+    expect(find.text('Lịch Tuần Phụng Vụ'), findsOneWidget);
+    expect(find.byType(HarmoniaLogo), findsOneWidget);
+    expect(find.text('CA ĐOÀN API'), findsOneWidget);
+    expect(
+      find.text('Lịch lễ, phiên tập dượt & trực hát cộng đoàn'),
+      findsOneWidget,
+    );
     expect(find.text('Lịch tuần'), findsOneWidget);
     expect(find.text('Lịch tháng'), findsOneWidget);
+    expect(find.text('KHOẢNG THỜI GIAN PHỤNG VỤ'), findsOneWidget);
+    expect(find.text('MÙA THƯỜNG NIÊN'), findsOneWidget);
     expect(find.text('Điểm danh'), findsNothing);
     expect(find.byTooltip('Tuần sau'), findsOneWidget);
     expect(find.text('Hôm nay'), findsOneWidget);
     expect(find.textContaining('hoạt động trong ngày'), findsNothing);
     expect(find.text('Lịch lễ 7 ngày tới'), findsNothing);
+    // Selected day pill uses #8E3B4B and its activity dot uses #FECE57.
+    final selectedDayFinder = find.byKey(
+      ValueKey('calendar-day-${dateKey(repo.day)}'),
+    );
+    final selectedDayMaterial = tester.widget<Material>(
+      find
+          .ancestor(of: selectedDayFinder, matching: find.byType(Material))
+          .first,
+    );
+    expect(selectedDayMaterial.color, const Color(0xFF8E3B4B));
+    final activityDot = tester.widget<Container>(
+      find.descendant(
+        of: selectedDayFinder,
+        matching: find.byWidgetPredicate(
+          (w) =>
+              w is Container &&
+              w.decoration is BoxDecoration &&
+              (w.decoration! as BoxDecoration).shape == BoxShape.circle,
+        ),
+      ),
+    );
+    expect(
+      (activityDot.decoration! as BoxDecoration).color,
+      const Color(0xFFFECE57),
+    );
     // Reload and notification icons are removed
     expect(find.byIcon(Icons.refresh_rounded), findsNothing);
     expect(find.byIcon(Icons.notifications_none_rounded), findsNothing);
@@ -441,6 +479,9 @@ void main() {
       expect(find.text('BUỔI TẬP ĐƯỢC GIAO'), findsOneWidget);
       expect(find.textContaining('Mùa phụng vụ'), findsNothing);
       expect(find.text('Đóng'), findsNothing);
+      await tester.tap(find.text('Chi tiết sự kiện'));
+      await tester.pumpAndSettle();
+      expect(find.text('EVENT event-api'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
@@ -485,6 +526,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Tháng 12'), findsWidgets);
+
+    await tester.tap(find.byTooltip('Hôm nay'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Tháng ${repo.day.month}, ${repo.day.year}'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('attendance failure is retryable without inventing an absence', (
@@ -500,7 +548,7 @@ void main() {
     expect(find.textContaining('Có mặt'), findsOneWidget);
   });
 
-  for (final width in [360.0, 430.0]) {
+  for (final width in [360.0, 390.0, 430.0]) {
     testWidgets('calendar remains usable at width $width and large text', (
       tester,
     ) async {
@@ -510,4 +558,167 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets(
+    'month view Stitch layout supports navigation, note display, and detail routes without 360px overflow',
+    (tester) async {
+      repo.rehearsalNote = 'Mang áo lễ dài và tập trước bè';
+      await open(tester, width: 360, height: 800, scale: 1.3);
+      await tester.tap(find.text('Lịch tháng'));
+      await tester.pumpAndSettle();
+
+      // Month view header matches the week header frame (title next to logo, plain Today pill).
+      expect(find.text('Lịch Tháng Phụng Vụ'), findsOneWidget);
+      expect(
+        find.text('Lịch lễ, phiên tập dượt & trực hát cộng đoàn'),
+        findsOneWidget,
+      );
+      expect(find.byIcon(Icons.today_rounded), findsNothing);
+      final headerRow = find.ancestor(
+        of: find.text('Lịch Tháng Phụng Vụ'),
+        matching: find.byType(Row),
+      );
+      expect(
+        find.descendant(of: headerRow, matching: find.byType(HarmoniaLogo)),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: headerRow, matching: find.text('Hôm nay')),
+        findsOneWidget,
+      );
+
+      // Legend and selected-day cards display title & rehearsal note from API data.
+      expect(find.text('Lịch phục vụ'), findsOneWidget);
+      expect(find.text('Lịch tập'), findsOneWidget);
+      expect(find.text('MÙA THƯỜNG NIÊN'), findsOneWidget);
+      expect(find.text('Thánh lễ từ API'), findsOneWidget);
+      expect(find.text('Buổi tập từ API'), findsOneWidget);
+      expect(
+        find.text('Ghi chú: Mang áo lễ dài và tập trước bè'),
+        findsOneWidget,
+      );
+
+      // Navigate next / previous month with chevron controls and reset via "Hôm nay".
+      final nextMonthDate = DateTime(repo.day.year, repo.day.month + 1, 1);
+      final prevMonthDate = DateTime(repo.day.year, repo.day.month - 1, 1);
+
+      await tester.tap(find.byTooltip('Tháng sau'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Tháng ${nextMonthDate.month}, ${nextMonthDate.year}'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byTooltip('Tháng trước'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Tháng trước'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Tháng ${prevMonthDate.month}, ${prevMonthDate.year}'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byTooltip('Hôm nay'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Tháng ${repo.day.month}, ${repo.day.year}'),
+        findsOneWidget,
+      );
+
+      // Selecting an empty day opens the day dialog and updates the selected day below.
+      final emptyDay = repo.day.day == 15 ? 16 : 15;
+      await tester.tap(find.byKey(ValueKey('calendar-month-day-$emptyDay')));
+      await tester.pumpAndSettle();
+      expect(find.byType(LiturgicalDayDialog), findsOneWidget);
+      Navigator.of(tester.element(find.byType(LiturgicalDayDialog))).pop();
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          'Chưa có lịch phục vụ hoặc buổi tập được công bố cho ngày này.',
+        ),
+        findsOneWidget,
+      );
+
+      // Verify distinct visual states: unselected today has soft gold tint vs selected wine border.
+      final todayMaterial = tester.widget<Material>(
+        find
+            .ancestor(
+              of: find.byKey(ValueKey('calendar-month-day-${repo.day.day}')),
+              matching: find.byType(Material),
+            )
+            .first,
+      );
+      final selectedMaterial = tester.widget<Material>(
+        find
+            .ancestor(
+              of: find.byKey(ValueKey('calendar-month-day-$emptyDay')),
+              matching: find.byType(Material),
+            )
+            .first,
+      );
+      expect(todayMaterial.color, const Color(0x33FECE57));
+      expect(selectedMaterial.color, const Color(0x66FFDF98));
+
+      // Tap "Hôm nay" to restore today's selection and activities.
+      await tester.tap(find.byTooltip('Hôm nay'));
+      await tester.pumpAndSettle();
+      expect(find.text('Thánh lễ từ API'), findsOneWidget);
+
+      // Verify scrolling down in 360px width + 1.3x text scale has no overflow.
+      await tester.drag(find.byType(ListView).first, const Offset(0, -900));
+      await tester.pumpAndSettle();
+      expect(find.text('HOẠT ĐỘNG THÁNG ${repo.day.month}'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      // Open rehearsal detail from the selected-day rehearsal card.
+      final detailButtons = find.text('Xem chi tiết');
+      expect(detailButtons, findsNWidgets(2));
+      await tester.dragUntilVisible(
+        detailButtons.last,
+        find.byType(ListView).first,
+        const Offset(0, 200),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(detailButtons.last);
+      await tester.pumpAndSettle();
+      expect(find.text('REHEARSAL rehearsal-api'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'week timeline keeps rehearsal note on note line and opens event and rehearsal details',
+    (tester) async {
+      repo.rehearsalNote = 'Bắt đầu tập';
+      await open(tester, width: 390, height: 844);
+
+      expect(find.text('Buổi tập từ API'), findsOneWidget);
+      expect(find.text('Ghi chú: Bắt đầu tập'), findsOneWidget);
+      expect(find.text('Bắt đầu tập'), findsNothing);
+      expect(find.text('Hoạt động tuần này'), findsOneWidget);
+
+      final eventDetailButton = find.text('Xem chi tiết phụng vụ & bài hát');
+      await tester.ensureVisible(eventDetailButton);
+      await tester.pumpAndSettle();
+      await tester.tap(eventDetailButton);
+      await tester.pumpAndSettle();
+      expect(find.text('EVENT event-api'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('week rehearsal card button opens rehearsal detail route', (
+    tester,
+  ) async {
+    repo.rehearsalNote = 'Bắt đầu tập';
+    await open(tester, width: 360, height: 800, scale: 1.3);
+
+    final rehearsalDetailButton = find.text('Xem chi tiết');
+    await tester.ensureVisible(rehearsalDetailButton);
+    await tester.pumpAndSettle();
+    await tester.tap(rehearsalDetailButton);
+    await tester.pumpAndSettle();
+    expect(find.text('REHEARSAL rehearsal-api'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }

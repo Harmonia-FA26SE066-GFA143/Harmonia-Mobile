@@ -13,13 +13,15 @@ class ApiEndpoints {
   static const String forgotPassword = '/api/auth/forgot-password';
   static const String resetPassword = '/api/auth/reset-password';
 
-  // Member profile endpoints (ChoirMember /me)
-  static const String memberProfileMe = '/api/member-profiles/me';
+  // Member profile endpoints
+  static const String memberProfiles = '/api/member-profiles';
+  static const String memberProfileMe = '$memberProfiles/me';
   static const String memberProfileHistory = '/api/member-profiles/me/history';
 
-  // Member skills endpoints (ChoirMember)
+  // Member skills endpoints
   static const String memberSkills = '/api/member-skills';
-  static const String memberSkillsMine = '/api/member-skills/mine';
+  static const String memberSkillsMine = '$memberSkills/mine';
+  static const String pendingMemberSkills = '$memberSkills/pending';
   static String memberSkillById(String id) => '/api/member-skills/$id';
   static String memberSkillEvidence(String id) =>
       '/api/member-skills/$id/evidence';
@@ -46,6 +48,7 @@ class ApiEndpoints {
   static String substituteDirector(String id, String choirId) =>
       '${eventChoirs(id)}/$choirId/substitute-director';
   static const String choirs = '/api/choirs';
+  static String choirMembers(String choirId) => '$choirs/$choirId/members';
   static const String directorRecipients = '/api/director-notes/recipients';
   static const String songLists = '/api/song-lists';
   static String latestSongList(String eventId) =>
@@ -70,10 +73,15 @@ class ApiEndpoints {
   static const String musicMaterialsMine = '/api/music-materials/mine';
   static String musicMaterialPlayback(String id) =>
       '/api/music-materials/$id/playback';
+  static String musicMaterialScore(String id) =>
+      '/api/music-materials/${Uri.encodeComponent(id)}/score';
   static String materialLearningProgress(String id) =>
       '/api/music-materials/$id/learning-progress';
 
   // Practice assignments & submissions (ChoirMember)
+  static const String practiceAssignments = '/api/practice-assignments';
+  static String eventPreparationProgress(String id) =>
+      '${liturgicalEvent(id)}/preparation-progress';
   static const String practiceAssignmentsMine =
       '/api/practice-assignments/mine';
   static const String practiceAssignmentsMineCounts =

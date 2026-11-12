@@ -11,6 +11,7 @@ import '../../music/data/music_dto.dart'
     show SearchSongsRequest, SongDto, SongListDto;
 import '../../music/data/music_repository.dart';
 import '../data/staff_workspace_repository.dart';
+import '../data/staff_dashboard_providers.dart';
 import 'staff_workflow_title.dart';
 
 final _slots = FutureProvider.autoDispose((ref) {
@@ -124,7 +125,11 @@ class _StaffSongProposalState extends ConsumerState<StaffSongProposal> {
       ]);
       _draftId = saved.id;
       if (!mounted) return;
-      if (submit) await repo.submitProposal(saved.id);
+      if (mounted) ref.invalidate(staffDirectorProgramsProvider);
+      if (submit) {
+        await repo.submitProposal(saved.id);
+        if (mounted) ref.invalidate(staffDirectorProgramsProvider);
+      }
       if (mounted) Navigator.of(context).pop(submit);
     } catch (error) {
       if (mounted) setState(() => _error = ErrorMessages.forException(error));

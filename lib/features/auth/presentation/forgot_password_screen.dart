@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../app/widgets/harmonia_logo.dart';
 import '../data/auth_dto.dart';
 import 'auth_notifier.dart';
 
@@ -106,21 +107,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 constraints: const BoxConstraints(maxWidth: 460),
                 child: Column(
                   children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Image.asset(
-                        'assets/images/harmonia_logo.png',
-                        width: 48,
-                        height: 48,
-                        excludeFromSemantics: true,
-                      ),
-                    ),
+                    const HarmoniaLogo(size: 48),
                     const SizedBox(height: 10),
                     Text(
                       'Harmonia',

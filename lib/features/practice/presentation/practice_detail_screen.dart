@@ -12,6 +12,7 @@ import 'package:record/record.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/widgets/app_page_header.dart';
+import '../../../app/widgets/member_choir_visuals.dart';
 import '../../../app/widgets/stitch_entrance.dart';
 import '../../music/data/music_dto.dart' show MaterialType;
 import '../../music/presentation/reference_audio_panel.dart';
@@ -51,6 +52,10 @@ class _PracticeRecordingDraft {
 
 class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
     with WidgetsBindingObserver {
+  static const _minRecordingSeconds = 5;
+  static const _shortRecordingMessage =
+      'Bản thu phải dài ít nhất $_minRecordingSeconds giây. Vui lòng thu âm lại.';
+
   final AudioRecorder _audioRecorder = AudioRecorder();
   late final AudioPlayer _audioPlayer;
 
@@ -65,13 +70,14 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
   double _currentAmplitudeDb = -160.0;
   double _maxRecordedAmplitudeDb = -160.0;
   bool _amplitudeQueried = false;
+  final _recordingLevels = <double>[];
 
   String? _recordedFilePath;
   PracticeAssignment? _draftAssignment;
   final List<_PracticeRecordingDraft> _recordingDrafts = [];
   String? _playingDraftPath;
   int _recordingSeconds = 0;
-  DateTime? _recordingStartTime;
+  final _recordingClock = Stopwatch();
   Timer? _recordTimer;
   StreamSubscription? _playerCompleteSubscription;
 
@@ -211,10 +217,11 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
         await _audioRecorder.stop();
         return;
       }
-      final startTime = DateTime.now();
+      _recordingClock
+        ..reset()
+        ..start();
       setState(() {
         _isRecording = true;
-        _recordingStartTime = startTime;
         _recordingSeconds = 0;
         _isPlayingDraft = false;
         _recordedFilePath = filePath;
@@ -222,32 +229,38 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
         _currentAmplitudeDb = -160.0;
         _maxRecordedAmplitudeDb = -160.0;
         _amplitudeQueried = false;
+        _recordingLevels.clear();
       });
 
       _recordTimer?.cancel();
       _recordTimer = Timer.periodic(const Duration(milliseconds: 250), (
         timer,
       ) async {
-        if (mounted && _recordingStartTime != null) {
-          final seconds = DateTime.now()
-              .difference(_recordingStartTime!)
-              .inSeconds;
+        if (mounted && _recordingClock.isRunning) {
           try {
             final amp = await _audioRecorder.getAmplitude();
-            if (mounted) {
+            if (mounted && timer.isActive) {
               setState(() {
-                _recordingSeconds = seconds;
+                _recordingSeconds = _recordingClock.elapsed.inSeconds;
                 _currentAmplitudeDb = amp.current;
                 _amplitudeQueried = true;
+                if (amp.current.isFinite) {
+                  if (_recordingLevels.length == 40) {
+                    _recordingLevels.removeAt(0);
+                  }
+                  _recordingLevels.add(
+                    ((amp.current + 60) / 60).clamp(0.0, 1.0),
+                  );
+                }
                 if (amp.max > _maxRecordedAmplitudeDb) {
                   _maxRecordedAmplitudeDb = amp.max;
                 }
               });
             }
           } catch (_) {
-            if (mounted) {
+            if (mounted && timer.isActive) {
               setState(() {
-                _recordingSeconds = seconds;
+                _recordingSeconds = _recordingClock.elapsed.inSeconds;
               });
             }
           }
@@ -274,21 +287,28 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
     if (_isSubmitting || !_isRecording || _isProcessingAction) return;
     _isProcessingAction = true;
     _recordTimer?.cancel();
+    _recordingClock.stop();
+    final actualSeconds = _recordingClock.elapsed.inSeconds;
+    final isTooShort = actualSeconds < _minRecordingSeconds;
 
     try {
       final path = await _audioRecorder.stop();
       final finalPath = path ?? _recordedFilePath;
       final fileExists = finalPath != null && File(finalPath).existsSync();
-      final actualSeconds = _recordingStartTime != null
-          ? DateTime.now().difference(_recordingStartTime!).inSeconds
-          : _recordingSeconds;
+      if (fileExists && isTooShort) {
+        try {
+          await File(finalPath).delete();
+        } on FileSystemException {
+          // The rejected recording stays in the system temporary directory.
+        }
+      }
 
       final isSilent = _amplitudeQueried && _maxRecordedAmplitudeDb < -50.0;
 
       if (!mounted) return;
       setState(() {
         _isRecording = false;
-        if (fileExists) {
+        if (fileExists && !isTooShort) {
           _recordingDrafts.insert(
             0,
             _PracticeRecordingDraft(
@@ -301,8 +321,15 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
         }
         _recordingSeconds = 0;
         _recordedFilePath = null;
-        _recordingStartTime = null;
       });
+      if (isTooShort) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(_shortRecordingMessage),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     } catch (_) {
       if (mounted) {
         setState(() {
@@ -561,13 +588,13 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
         return;
       }
 
-      if (submitDuration < 1 || submitDuration > 3600) {
+      if (submitDuration < _minRecordingSeconds || submitDuration > 3600) {
         if (mounted) {
           setState(() => _isSubmitting = false);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
-                'Thời lượng bản thu phải từ 1 giây đến 60 phút. Vui lòng thu âm lại.',
+                'Thời lượng bản thu phải từ $_minRecordingSeconds giây đến 60 phút. Vui lòng thu âm lại.',
               ),
               backgroundColor: AppColors.error,
             ),
@@ -656,7 +683,6 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
 
   Widget _buildRecordingDraftCard(
     _PracticeRecordingDraft draft,
-    int index,
     PracticeAssignment assignment,
   ) {
     final isPlaying = _isPlayingDraft && _playingDraftPath == draft.filePath;
@@ -664,8 +690,7 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
     final hasPreviousSubmission =
         assignment.status == PracticeStatus.submitted ||
         assignment.status == PracticeStatus.needsRevision;
-    const waveformColor = Color(0xFF6E88A8);
-    const playerBlue = Color(0xFF0969E8);
+    const playerColor = MemberChoirStyle.accent;
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -694,7 +719,7 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
               IconButton.filled(
                 tooltip: isPlaying ? 'Tạm dừng bản thu' : 'Nghe bản thu',
                 style: IconButton.styleFrom(
-                  backgroundColor: playerBlue,
+                  backgroundColor: playerColor,
                   minimumSize: const Size(48, 48),
                 ),
                 onPressed: _isSubmitting
@@ -711,22 +736,12 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(
-                      height: 32,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: List.generate(29, (bar) {
-                          final height = 7.0 + ((bar * 17 + index * 5) % 22);
-                          return Container(
-                            width: 3,
-                            height: height,
-                            decoration: BoxDecoration(
-                              color: waveformColor,
-                              borderRadius: BorderRadius.circular(3),
-                            ),
-                          );
-                        }),
+                    Text(
+                      isPlaying
+                          ? 'Đang phát bản nháp'
+                          : 'Nghe lại trước khi gửi',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: Colors.white70,
                       ),
                     ),
                     const SizedBox(height: 3),
@@ -844,7 +859,7 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
   Widget build(BuildContext context) {
     final detailAsync = ref.watch(practiceDetailProvider(widget.assignmentId));
 
-    return PopScope(
+    final screen = PopScope(
       canPop: !_isRecording && _recordingDrafts.isEmpty && !_isSubmitting,
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) unawaited(_confirmExit());
@@ -853,15 +868,25 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
         // Keep the local draft accessible when a permission refresh fails.
         skipError: true,
         loading: () => Scaffold(
-          backgroundColor: AppColors.background,
-          appBar: AppPageHeader(title: const Text('Thu âm & Luyện tập')),
+          backgroundColor: MemberChoirStyle.paper,
+          appBar: const AppPageHeader(
+            gradient: MemberChoirStyle.header,
+            titleFontFamily: MemberChoirStyle.displayFont,
+            roundedBottom: true,
+            title: Text('Thu âm & Luyện tập'),
+          ),
           body: const Center(
             child: CircularProgressIndicator(color: AppColors.primary),
           ),
         ),
         error: (err, _) => Scaffold(
-          backgroundColor: AppColors.background,
-          appBar: AppPageHeader(title: const Text('Thu âm & Luyện tập')),
+          backgroundColor: MemberChoirStyle.paper,
+          appBar: const AppPageHeader(
+            gradient: MemberChoirStyle.header,
+            titleFontFamily: MemberChoirStyle.displayFont,
+            roundedBottom: true,
+            title: Text('Thu âm & Luyện tập'),
+          ),
           body: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -899,8 +924,13 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                   : null);
           if (assignment == null) {
             return Scaffold(
-              backgroundColor: AppColors.background,
-              appBar: AppPageHeader(title: const Text('Thu âm & Luyện tập')),
+              backgroundColor: MemberChoirStyle.paper,
+              appBar: const AppPageHeader(
+                gradient: MemberChoirStyle.header,
+                titleFontFamily: MemberChoirStyle.displayFont,
+                roundedBottom: true,
+                title: Text('Thu âm & Luyện tập'),
+              ),
               body: const Center(
                 child: Text(
                   'Không tìm thấy bài tập hoặc bạn không có quyền truy cập.',
@@ -920,12 +950,19 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
               .where(
                 (item) =>
                     item.type == MaterialType.sampleAudio ||
-                    item.type == MaterialType.interactiveScore,
+                    item.type == MaterialType.interactiveScore ||
+                    item.type == MaterialType.sheetMusic ||
+                    item.type == MaterialType.lyrics,
               )
               .toList();
           return Scaffold(
-            backgroundColor: AppColors.background,
-            appBar: AppPageHeader(title: const Text('Thu âm & Luyện tập')),
+            backgroundColor: MemberChoirStyle.paper,
+            appBar: const AppPageHeader(
+              gradient: MemberChoirStyle.header,
+              titleFontFamily: MemberChoirStyle.displayFont,
+              roundedBottom: true,
+              title: Text('Thu âm & Luyện tập'),
+            ),
             body: SafeArea(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
@@ -1033,6 +1070,8 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                               assignment.title,
                               style: AppTypography.titleLarge.copyWith(
                                 fontWeight: FontWeight.bold,
+                                color: MemberChoirStyle.ink,
+                                fontFamily: MemberChoirStyle.displayFont,
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -1049,9 +1088,11 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                                   color: AppColors.muted,
                                 ),
                                 const SizedBox(width: 6),
-                                Text(
-                                  'Hạn nộp: ${DateFormat('dd/MM/yyyy HH:mm').format(assignment.dueDate)}',
-                                  style: AppTypography.labelSmall,
+                                Expanded(
+                                  child: Text(
+                                    'Hạn nộp: ${DateFormat('dd/MM/yyyy HH:mm').format(assignment.dueDate)}',
+                                    style: AppTypography.labelSmall,
+                                  ),
                                 ),
                               ],
                             ),
@@ -1061,41 +1102,94 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                     ),
                     const SizedBox(height: 20),
 
-                    for (final reference in references)
-                      if (assignment.songId?.isNotEmpty == true) ...[
-                        StitchEntrance(
-                          child: Card(
-                            child: ListTile(
-                              leading: const Icon(Icons.headphones_outlined),
-                              title: Text(
-                                references.length == 1
-                                    ? 'Bè mẫu'
-                                    : reference.title,
-                              ),
-                              subtitle: Text(
-                                references.length == 1
-                                    ? reference.title
-                                    : reference.type.label,
-                              ),
-                              trailing: const Icon(Icons.chevron_right_rounded),
-                              onTap:
-                                  _isRecording ||
-                                      _isSubmitting ||
-                                      _isProcessingAction ||
-                                      _isPlayingDraft
-                                  ? null
-                                  : () => showReferenceAudio(
-                                      context,
-                                      songId: assignment.songId!,
-                                      materialId: reference.id,
-                                      title: reference.title,
-                                      loopControls: true,
+                    if (references.isNotEmpty &&
+                        assignment.songId?.isNotEmpty == true) ...[
+                      StitchEntrance(
+                        child: Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              spacing: 6,
+                              children: [
+                                Row(
+                                  spacing: 8,
+                                  children: [
+                                    const Icon(
+                                      Icons.tune_rounded,
+                                      color: MemberChoirStyle.wine,
                                     ),
+                                    Expanded(
+                                      child: Text(
+                                        'Kênh đồng hành',
+                                        style: AppTypography.titleMedium,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                for (final reference in references)
+                                  ListTile(
+                                    tileColor: MemberChoirStyle.paper,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    leading: Icon(
+                                      reference.type ==
+                                                  MaterialType.sampleAudio ||
+                                              reference.type ==
+                                                  MaterialType.interactiveScore
+                                          ? Icons.headphones_outlined
+                                          : Icons.menu_book_outlined,
+                                      color: MemberChoirStyle.wine,
+                                    ),
+                                    title: Text(reference.title),
+                                    subtitle: Text(reference.type.label),
+                                    trailing: const Icon(
+                                      Icons.chevron_right_rounded,
+                                    ),
+                                    onTap:
+                                        _isRecording ||
+                                            _isSubmitting ||
+                                            _isProcessingAction ||
+                                            _isPlayingDraft
+                                        ? null
+                                        : () {
+                                            if (reference.type ==
+                                                    MaterialType.sampleAudio ||
+                                                reference.type ==
+                                                    MaterialType
+                                                        .interactiveScore) {
+                                              showReferenceAudio(
+                                                context,
+                                                songId: assignment.songId!,
+                                                materialId: reference.id,
+                                                title: reference.title,
+                                                loopControls: true,
+                                              );
+                                            } else {
+                                              context.push(
+                                                Uri(
+                                                  pathSegments: [
+                                                    '',
+                                                    'music-material',
+                                                    reference.id,
+                                                  ],
+                                                  queryParameters: {
+                                                    'songId':
+                                                        assignment.songId!,
+                                                  },
+                                                ).toString(),
+                                              );
+                                            }
+                                          },
+                                  ),
+                              ],
                             ),
                           ),
                         ),
-                        const SizedBox(height: 14),
-                      ],
+                      ),
+                      const SizedBox(height: 14),
+                    ],
                     if (assignment.instruction.trim().isNotEmpty) ...[
                       Card(
                         clipBehavior: Clip.antiAlias,
@@ -1159,206 +1253,152 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                       const SizedBox(height: 20),
                     ],
 
-                    // Recording Console Card (Stitch Studio design)
                     Card(
+                      margin: EdgeInsets.zero,
+                      color: MemberChoirStyle.ink,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 24,
-                        ),
+                        padding: const EdgeInsets.all(16),
                         child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          spacing: 12,
                           children: [
-                            Text(
-                              _isRecording
-                                  ? 'Đang thu âm...'
-                                  : 'Phòng thu âm cá nhân',
-                              style: AppTypography.titleMedium.copyWith(
-                                color: _isRecording
-                                    ? AppColors.error
-                                    : AppColors.onSurface,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-
-                            // Timer Display with tabular figures (Principle N1 - no layout jitter)
-                            Text(
-                              _formatTime(_isRecording ? _recordingSeconds : 0),
-                              style: AppTypography.tabularCounter.copyWith(
-                                color: _isRecording
-                                    ? AppColors.error
-                                    : AppColors.onSurface,
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-
-                            if (!_isRecording) ...[
-                              ExcludeSemantics(
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    for (var index = 0; index < 15; index++)
-                                      Container(
-                                        width: 4,
-                                        height: 6,
-                                        margin: const EdgeInsets.symmetric(
-                                          horizontal: 2,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Color.lerp(
-                                            AppColors.primary,
-                                            AppColors.primaryLight,
-                                            (index - 7).abs() / 8,
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            4,
-                                          ),
-                                        ),
-                                      ),
-                                  ],
+                            Row(
+                              spacing: 8,
+                              children: [
+                                Icon(
+                                  Icons.circle,
+                                  size: 9,
+                                  color: _isRecording
+                                      ? const Color(0xFFFF7982)
+                                      : MemberChoirStyle.gold,
                                 ),
-                              ),
-                              const SizedBox(height: 26),
-                            ],
-                            if (_isRecording) ...[
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: List.generate(15, (index) {
-                                  final heights = [
-                                    12.0,
-                                    24.0,
-                                    18.0,
-                                    36.0,
-                                    28.0,
-                                    44.0,
-                                    20.0,
-                                    48.0,
-                                    32.0,
-                                    40.0,
-                                    22.0,
-                                    34.0,
-                                    16.0,
-                                    26.0,
-                                    14.0,
-                                  ];
-                                  final h = heights[index % heights.length];
-                                  final ampFactor =
-                                      _amplitudeQueried &&
-                                          _currentAmplitudeDb > -60.0
-                                      ? ((_currentAmplitudeDb + 60.0) / 60.0)
-                                            .clamp(0.2, 1.0)
-                                      : 0.2;
-                                  final barHeight = (_recordingSeconds % 2 == 0)
-                                      ? (h * ampFactor).clamp(6.0, 48.0)
-                                      : (h * 0.6 * ampFactor).clamp(4.0, 48.0);
-                                  return Container(
-                                    margin: const EdgeInsets.symmetric(
-                                      horizontal: 2,
-                                    ),
-                                    width: 3.5,
-                                    height: barHeight,
-                                    decoration: BoxDecoration(
-                                      color: AppColors.error.withValues(
-                                        alpha: 0.8,
-                                      ),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                  );
-                                }),
-                              ),
-                              if (_amplitudeQueried &&
-                                  _currentAmplitudeDb <= -50.0 &&
-                                  _recordingSeconds >= 2) ...[
-                                const SizedBox(height: 10),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.statusWarningSoft,
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
+                                Expanded(
                                   child: Text(
-                                    'Micro đang không nhận âm thanh. Hãy kiểm tra lại micro!',
-                                    style: AppTypography.bodySmall.copyWith(
-                                      color: AppColors.statusWarning,
-                                      fontSize: 11,
+                                    _isRecording
+                                        ? 'Đang thu âm...'
+                                        : 'Phòng thu âm cá nhân',
+                                    style: AppTypography.labelLarge.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
                                     ),
+                                  ),
+                                ),
+                                Text(
+                                  _formatTime(
+                                    _isRecording ? _recordingSeconds : 0,
+                                  ),
+                                  style: AppTypography.tabularCounter.copyWith(
+                                    color: Colors.white,
+                                    fontSize: 26,
                                   ),
                                 ),
                               ],
-                              const SizedBox(height: 20),
-                            ],
-
-                            // Animated Mic Button with accessible touch target
-                            Semantics(
-                              button: true,
-                              enabled:
-                                  !_isSubmitting &&
-                                  !_isProcessingAction &&
-                                  (_isRecording || canSubmit),
-                              label: _isRecording
-                                  ? 'Dừng thu âm'
-                                  : 'Bắt đầu thu âm',
-                              child: GestureDetector(
-                                onTap: _isSubmitting || _isProcessingAction
-                                    ? null
-                                    : (_isRecording
-                                          ? _stopRecording
-                                          : canSubmit
-                                          ? _startRecording
-                                          : null),
-                                child: AnimatedContainer(
-                                  duration:
-                                      MediaQuery.disableAnimationsOf(context)
-                                      ? Duration.zero
-                                      : const Duration(milliseconds: 250),
-                                  curve: Curves.easeInOut,
-                                  width: 80,
-                                  height: 80,
-                                  decoration: BoxDecoration(
-                                    color: _isRecording
-                                        ? AppColors.error
-                                        : canSubmit
-                                        ? AppColors.primary
-                                        : AppColors.muted,
-                                    shape: BoxShape.circle,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color:
-                                            (_isRecording
-                                                    ? AppColors.error
-                                                    : AppColors.primary)
-                                                .withValues(
-                                                  alpha: _isRecording
-                                                      ? 0.45
-                                                      : 0.25,
-                                                ),
-                                        blurRadius: _isRecording ? 24 : 16,
-                                        spreadRadius: _isRecording ? 3 : 0,
-                                        offset: const Offset(0, 6),
+                            ),
+                            DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: .07),
+                                border: Border.all(color: Colors.white24),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(8),
+                                child:
+                                    _isRecording && _recordingLevels.isNotEmpty
+                                    ? Semantics(
+                                        label: 'Mức tín hiệu micro',
+                                        child: SizedBox(
+                                          height: 48,
+                                          width: double.infinity,
+                                          child: CustomPaint(
+                                            painter: _RecordingLevelPainter(
+                                              List.of(_recordingLevels),
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                    : const SizedBox(
+                                        height: 48,
+                                        child: Center(
+                                          child: Icon(
+                                            Icons.graphic_eq_rounded,
+                                            color: MemberChoirStyle.gold,
+                                          ),
+                                        ),
                                       ),
-                                    ],
-                                  ),
-                                  child: Icon(
-                                    _isRecording
-                                        ? Icons.stop_rounded
-                                        : Icons.mic_rounded,
-                                    color: Colors.white,
-                                    size: 42,
+                              ),
+                            ),
+                            if (_isRecording &&
+                                _amplitudeQueried &&
+                                _currentAmplitudeDb <= -50.0 &&
+                                _recordingSeconds >= 2)
+                              Text(
+                                'Micro đang không nhận âm thanh. Hãy kiểm tra lại micro!',
+                                style: AppTypography.bodySmall.copyWith(
+                                  color: MemberChoirStyle.softGold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            Center(
+                              child: Semantics(
+                                button: true,
+                                enabled:
+                                    !_isSubmitting &&
+                                    !_isProcessingAction &&
+                                    (_isRecording || canSubmit),
+                                label: _isRecording
+                                    ? 'Dừng thu âm'
+                                    : 'Bắt đầu thu âm',
+                                child: GestureDetector(
+                                  onTap: _isSubmitting || _isProcessingAction
+                                      ? null
+                                      : _isRecording
+                                      ? _stopRecording
+                                      : canSubmit
+                                      ? _startRecording
+                                      : null,
+                                  child: AnimatedContainer(
+                                    duration:
+                                        MediaQuery.disableAnimationsOf(context)
+                                        ? Duration.zero
+                                        : const Duration(milliseconds: 200),
+                                    width: 78,
+                                    height: 78,
+                                    decoration: BoxDecoration(
+                                      color: _isRecording
+                                          ? MemberChoirStyle.accent
+                                          : canSubmit
+                                          ? MemberChoirStyle.wine
+                                          : AppColors.muted,
+                                      border: Border.all(
+                                        color: MemberChoirStyle.gold,
+                                        width: 2,
+                                      ),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      _isRecording
+                                          ? Icons.stop_rounded
+                                          : Icons.mic_rounded,
+                                      color: Colors.white,
+                                      size: 36,
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 20),
                             Text(
                               _isRecording
                                   ? 'Chạm nút đỏ để dừng thu âm'
                                   : !canSubmit
                                   ? 'Thu âm đang tạm khóa'
-                                  : 'Thu nhiều bản, nghe lại và chọn bản tốt nhất để gửi',
-                              style: AppTypography.bodySmall,
+                                  : 'Thu ít nhất $_minRecordingSeconds giây, sau đó nghe lại và chọn bản để gửi',
+                              style: AppTypography.bodySmall.copyWith(
+                                color: Colors.white70,
+                              ),
+                              textAlign: TextAlign.center,
                             ),
                           ],
                         ),
@@ -1397,7 +1437,6 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                                   ),
                                   child: _buildRecordingDraftCard(
                                     entry.$2,
-                                    entry.$1,
                                     assignment,
                                   ),
                                 ),
@@ -1665,5 +1704,35 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
         },
       ),
     );
+    return Theme(data: MemberChoirStyle.theme(context), child: screen);
   }
+}
+
+class _RecordingLevelPainter extends CustomPainter {
+  const _RecordingLevelPainter(this.levels);
+
+  final List<double> levels;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final step = size.width / 40;
+    final paint = Paint()
+      ..color = MemberChoirStyle.gold
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = (step * .36).clamp(1.0, 4.0);
+    final first = 40 - levels.length;
+    for (final (index, level) in levels.indexed) {
+      final x = (first + index + .5) * step;
+      final halfHeight = 1 + level * (size.height / 2 - 2);
+      canvas.drawLine(
+        Offset(x, size.height / 2 - halfHeight),
+        Offset(x, size.height / 2 + halfHeight),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _RecordingLevelPainter oldDelegate) =>
+      oldDelegate.levels != levels;
 }

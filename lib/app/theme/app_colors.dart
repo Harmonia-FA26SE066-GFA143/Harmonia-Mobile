@@ -4,18 +4,20 @@ import 'package:flutter/material.dart';
 class AppColors {
   AppColors._();
 
-  // Brand colors.
-  static const Color primary = Color(0xFFE40035);
-  static const Color primaryDark = Color(0xFFB5002B);
-  static const Color primaryLight = Color(0xFFF36B97);
-  static const Color primarySoft = Color(0xFFFFEDF2);
+  // Brand colors (aligned with Harmonia Web).
+  static const Color primary = Color(0xFF8E3B4B);
+  static const Color primaryHover = Color(0xFF762E3D);
+  static const Color headerWine = Color(0xFF6D2636);
+  static const Color primaryDark = primaryHover;
+  static const Color primaryLight = Color(0xFFB35F70);
+  static const Color primarySoft = Color(0x148E3B4B);
   static const Color primaryContainer = primary;
   static const Color onPrimary = Color(0xFFFFFFFF);
-  static const Color onPrimaryContainer = Color(0xFFFFDCE5);
+  static const Color onPrimaryContainer = Color(0xFFF3E4DE);
   static const LinearGradient brandGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [primary, primaryDark],
+    colors: [headerWine, primary],
   );
 
   // Liturgical Navy Palette (Alternative liturgical theme from Stitch)
