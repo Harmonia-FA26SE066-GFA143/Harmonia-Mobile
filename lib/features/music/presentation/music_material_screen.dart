@@ -9,15 +9,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../app/theme/app_typography.dart';
 import '../../../app/widgets/app_page_header.dart';
+import '../../../app/widgets/member_choir_visuals.dart';
 import '../../../app/widgets/stitch_entrance.dart';
 import '../../../core/di/core_providers.dart';
 import '../../../core/errors/app_exceptions.dart';
 import '../../../core/errors/error_messages.dart';
+import '../../practice/data/practice_repository.dart'
+    show practiceListNotifierProvider;
 import '../data/music_dto.dart';
 import '../data/music_file_loader.dart';
 import '../data/music_repository.dart';
 import 'music_library_notifier.dart';
+import 'music_tile_icon.dart';
 
 class MusicMaterialScreen extends ConsumerStatefulWidget {
   final String materialId;
@@ -38,6 +43,8 @@ class _MusicMaterialScreenState extends ConsumerState<MusicMaterialScreen> {
   final List<StreamSubscription<dynamic>> _subscriptions = [];
   CancelToken? _download;
   CachedMusicPdf? _pdf;
+  int _pdfPage = 0;
+  bool _readingMode = false;
   bool _busy = false;
   bool _saving = false;
   bool _playing = false;
@@ -82,6 +89,8 @@ class _MusicMaterialScreenState extends ConsumerState<MusicMaterialScreen> {
     _player?.stop();
     final pdf = _pdf;
     _pdf = null;
+    _pdfPage = 0;
+    _readingMode = false;
     if (pdf != null) unawaited(pdf.dispose());
     _busy = false;
     _saving = false;
@@ -163,7 +172,10 @@ class _MusicMaterialScreenState extends ConsumerState<MusicMaterialScreen> {
           return;
         }
         final old = _pdf;
-        setState(() => _pdf = pdf);
+        setState(() {
+          _pdf = pdf;
+          _pdfPage = 0;
+        });
         if (old != null) await old.dispose();
       } else if (const [
         'mp3',
@@ -266,8 +278,6 @@ class _MusicMaterialScreenState extends ConsumerState<MusicMaterialScreen> {
         : '${value.inMinutes}:$seconds';
   }
 
-  String _durationLabel(Duration value) => _time(value);
-
   Future<void> _seekAudio(Duration position) async {
     final player = _player;
     if (player == null || _busy) return;
@@ -293,30 +303,51 @@ class _MusicMaterialScreenState extends ConsumerState<MusicMaterialScreen> {
       _clearMedia();
       setState(() {});
     });
-    final detail = ref.watch(memberMaterialProvider(_identity));
-    return Scaffold(
-      backgroundColor: AppColors.background,
+    final provider = memberMaterialProvider(_identity);
+    final detail = ref.watch(provider);
+    final pdf = _pdf;
+    final scaffold = Scaffold(
+      backgroundColor: MemberChoirStyle.paper,
       appBar: AppPageHeader(
-        centerTitle: true,
-        title: const Text('Tài liệu học'),
+        gradient: MemberChoirStyle.header,
+        titleFontFamily: MemberChoirStyle.displayFont,
+        title: Text(_readingMode ? 'Chế độ đọc nốt' : 'Tài liệu học'),
+        leading: _readingMode
+            ? IconButton(
+                tooltip: 'Thoát chế độ đọc nốt',
+                icon: const Icon(Icons.fullscreen_exit_rounded),
+                onPressed: () => setState(() => _readingMode = false),
+              )
+            : null,
+        actions: [
+          if (pdf != null && !_readingMode)
+            IconButton(
+              tooltip: 'Đọc nốt toàn màn hình',
+              icon: const Icon(Icons.fullscreen_rounded),
+              onPressed: () => setState(() => _readingMode = true),
+            ),
+        ],
       ),
       body: SafeArea(
+        top: false,
         child: detail.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, _) => Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(ErrorMessages.forException(error)),
-                ),
-                TextButton(
-                  onPressed: () =>
-                      ref.invalidate(memberMaterialProvider(_identity)),
-                  child: const Text('Thử lại'),
-                ),
-              ],
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    ErrorMessages.forException(error),
+                    textAlign: TextAlign.center,
+                  ),
+                  TextButton(
+                    onPressed: () => ref.invalidate(provider),
+                    child: const Text('Thử lại'),
+                  ),
+                ],
+              ),
             ),
           ),
           data: (material) {
@@ -327,163 +358,263 @@ class _MusicMaterialScreenState extends ConsumerState<MusicMaterialScreen> {
                 ),
               );
             }
-            final extension = material.fileName.split('.').last.toLowerCase();
-            final isMidiMaterial = extension == 'mid' || extension == 'midi';
-            final isInteractiveScore =
-                material.materialType == MaterialType.interactiveScore;
-            final openLabel = isInteractiveScore
-                ? 'Phát bản nhạc'
-                : isMidiMaterial
-                ? 'Phát MIDI'
-                : 'Mở tài liệu';
-            final isAudioMaterial = const [
-              'mp3',
-              'm4a',
-              'wav',
-              'aac',
-              'ogg',
-            ].contains(extension);
-            final lyrics = material.lyricsText?.trim();
-            final content = Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                StitchEntrance(
-                  distance: 3,
-                  child: Card(
-                    margin: const EdgeInsets.all(16),
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Text(
-                            material.title,
-                            style: Theme.of(context).textTheme.headlineSmall,
+            if (pdf != null && _readingMode) {
+              return _pdfReader(pdf, material);
+            }
+            return _materialContents(material, pdf);
+          },
+        ),
+      ),
+    );
+    return Theme(
+      data: MemberChoirStyle.theme(context),
+      child: PopScope(
+        canPop: !_readingMode,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop && _readingMode) setState(() => _readingMode = false);
+        },
+        child: scaffold,
+      ),
+    );
+  }
+
+  Widget _pdfReader(CachedMusicPdf pdf, MusicMaterialDetailDto material) =>
+      _MaterialPdfReader(
+        key: ObjectKey(pdf),
+        filePath: pdf.file.path,
+        initialPage: _pdfPage,
+        busy: _busy,
+        onPageChanged: (page) => _pdfPage = page,
+        onReload: () => _open(material),
+      );
+
+  Widget _materialContents(
+    MusicMaterialDetailDto material,
+    CachedMusicPdf? pdf,
+  ) {
+    final extension = material.fileName.split('.').last.toLowerCase();
+    final isMidi = extension == 'mid' || extension == 'midi';
+    final interactive = material.materialType == MaterialType.interactiveScore;
+    final isAudio = const [
+      'mp3',
+      'm4a',
+      'wav',
+      'aac',
+      'ogg',
+    ].contains(extension);
+    final isPdf = extension == 'pdf';
+    final lyrics = material.lyricsText?.trim();
+    final hasLyrics = lyrics?.isNotEmpty == true;
+    final canOpen =
+        material.materialType != MaterialType.unknown &&
+        (isPdf || isAudio || interactive || isMidi);
+    final openLabel = interactive
+        ? 'Phát bản nhạc'
+        : isMidi
+        ? 'Phát MIDI'
+        : isAudio
+        ? 'Phát audio mẫu'
+        : 'Mở bản phổ';
+    final assignment = ref
+        .watch(practiceListNotifierProvider)
+        .asData
+        ?.value
+        .items
+        .where((item) => item.songId == material.songId)
+        .firstOrNull;
+    final progress = material.learningStatus;
+    final progressFill = switch (progress) {
+      LearningStatus.learned => AppColors.statusSuccessSoft,
+      LearningStatus.needsPractice => MemberChoirStyle.softGold,
+      LearningStatus.notStarted => MemberChoirStyle.paper,
+    };
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        StitchEntrance(
+          distance: 3,
+          child: Card(
+            margin: EdgeInsets.zero,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                spacing: 12,
+                children: [
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: MemberChoirStyle.blush,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 5,
+                        ),
+                        child: Text(
+                          material.materialType.label,
+                          style: AppTypography.labelSmall.copyWith(
+                            color: MemberChoirStyle.wine,
+                            fontWeight: FontWeight.w700,
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '${material.materialType.label} • ${material.targetSkillName ?? "Dành cho mọi ca viên"}',
-                          ),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 20),
-                            child: Divider(),
-                          ),
-                          Text(
-                            'Tiến độ học',
-                            style: Theme.of(context).textTheme.labelLarge,
-                          ),
-                          const SizedBox(height: 8),
-                          DropdownButtonFormField<LearningStatus>(
-                            key: ValueKey((
-                              material.learningStatus,
-                              material.learningUpdatedAt,
-                              _progressRevision,
-                            )),
-                            initialValue: material.learningStatus,
-                            decoration: const InputDecoration(
-                              fillColor: AppColors.surfaceContainerLow,
-                            ),
-                            items: [
-                              for (final status in LearningStatus.values)
-                                DropdownMenuItem(
-                                  value: status,
-                                  enabled: status != LearningStatus.notStarted,
-                                  child: Text(status.label),
-                                ),
-                            ],
-                            onChanged: _saving
-                                ? null
-                                : (value) {
-                                    if (value != null &&
-                                        value != material.learningStatus) {
-                                      _updateProgress(value);
-                                    }
-                                  },
-                          ),
-                          if (_saving) const LinearProgressIndicator(),
-                          const SizedBox(height: 24),
-                          if (lyrics != null && lyrics.isNotEmpty)
-                            SelectableText(
-                              lyrics,
-                              style: Theme.of(context).textTheme.bodyLarge,
-                            )
-                          else if (material.materialType ==
-                              MaterialType.unknown)
-                            const Text(
-                              'Định dạng này chưa hỗ trợ xem trong ứng dụng.',
-                            )
-                          else if (!isAudioMaterial || _player == null)
-                            FilledButton.icon(
-                              onPressed: _busy ? null : () => _open(material),
-                              icon: _busy
-                                  ? const SizedBox.square(
-                                      dimension: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  : Icon(
-                                      _playing
-                                          ? Icons.pause
-                                          : isMidiMaterial || isInteractiveScore
-                                          ? Icons.music_note_rounded
-                                          : Icons.open_in_new,
-                                    ),
-                              label: Text(_playing ? 'Tạm dừng' : openLabel),
-                            ),
-                          if (isInteractiveScore)
-                            TextButton.icon(
-                              onPressed: _busy
-                                  ? null
-                                  : () async {
-                                      if (_playing) await _player?.pause();
-                                      if (!context.mounted) return;
-                                      context.push(
-                                        Uri(
-                                          pathSegments: [
-                                            '',
-                                            'interactive-score',
-                                            material.id,
-                                          ],
-                                        ).toString(),
-                                      );
-                                    },
-                              icon: const Icon(Icons.piano_outlined),
-                              label: const Text('Xem cao độ tương tác'),
-                            ),
-                          if (_playbackInstrument != null) ...[
-                            const SizedBox(height: 8),
-                            Card(
-                              child: ListTile(
-                                leading: const Icon(
-                                  Icons.piano_rounded,
-                                  color: AppColors.primary,
-                                ),
-                                title: Text(_playbackInstrument!.label),
-                                subtitle: Text(
-                                  'Thời lượng: ${_durationLabel(_duration)}',
-                                ),
-                              ),
-                            ),
-                          ],
-                          if (_fileError != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8),
-                              child: Text(
-                                _fileError!,
-                                style: const TextStyle(color: AppColors.error),
-                              ),
-                            ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-                if (_player != null && _pdf == null)
-                  if (isAudioMaterial)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                      child: _AudioWaveformPlayer(
+                  Text(
+                    material.title,
+                    style: AppTypography.headlineMedium.copyWith(
+                      color: MemberChoirStyle.ink,
+                      fontFamily: MemberChoirStyle.displayFont,
+                    ),
+                  ),
+                  ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 3,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: const BorderSide(color: MemberChoirStyle.border),
+                    ),
+                    tileColor: MemberChoirStyle.paper,
+                    leading: MusicTileIcon(
+                      materialType: material.materialType,
+                      size: 38,
+                    ),
+                    title: Text(
+                      material.targetSkillName?.trim().isNotEmpty == true
+                          ? material.targetSkillName!
+                          : 'Dành cho mọi ca viên',
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  DropdownButtonFormField<LearningStatus>(
+                    key: ValueKey((
+                      progress,
+                      material.learningUpdatedAt,
+                      _progressRevision,
+                    )),
+                    initialValue: progress,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      labelText: 'Tiến độ học',
+                      prefixIcon: const Icon(
+                        Icons.fact_check_outlined,
+                        color: MemberChoirStyle.wine,
+                      ),
+                      filled: true,
+                      fillColor: progressFill,
+                    ),
+                    items: [
+                      for (final status in LearningStatus.values)
+                        DropdownMenuItem(
+                          value: status,
+                          enabled: status != LearningStatus.notStarted,
+                          child: Text(
+                            status.label,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                    ],
+                    onChanged: _saving
+                        ? null
+                        : (value) {
+                            if (value != null && value != progress) {
+                              _updateProgress(value);
+                            }
+                          },
+                  ),
+                  if (_saving) const LinearProgressIndicator(),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        if (canOpen || !hasLyrics || _fileError != null)
+          Card(
+            margin: EdgeInsets.zero,
+            clipBehavior: Clip.antiAlias,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                spacing: 8,
+                children: [
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(
+                      isPdf
+                          ? Icons.menu_book_outlined
+                          : Icons.graphic_eq_rounded,
+                      color: MemberChoirStyle.wine,
+                    ),
+                    title: Text(
+                      isPdf ? 'Bản phổ & đọc nốt' : 'Tệp tài liệu',
+                      style: AppTypography.titleMedium,
+                    ),
+                    subtitle: material.fileName.isEmpty
+                        ? null
+                        : Text(material.fileName),
+                  ),
+                  if (isPdf && pdf != null)
+                    SizedBox(
+                      height: (MediaQuery.sizeOf(context).height * .62).clamp(
+                        260.0,
+                        620.0,
+                      ),
+                      child: _pdfReader(pdf, material),
+                    )
+                  else if (!canOpen && !hasLyrics)
+                    const Text('Định dạng này chưa hỗ trợ xem trong ứng dụng.')
+                  else if (canOpen && (!isAudio || _player == null))
+                    FilledButton.icon(
+                      onPressed: _busy ? null : () => _open(material),
+                      icon: _busy
+                          ? const SizedBox.square(
+                              dimension: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Icon(
+                              _playing
+                                  ? Icons.pause_rounded
+                                  : isPdf
+                                  ? Icons.menu_book_outlined
+                                  : Icons.play_arrow_rounded,
+                            ),
+                      label: Text(_playing ? 'Tạm dừng' : openLabel),
+                    ),
+                  if (interactive)
+                    TextButton.icon(
+                      onPressed: _busy
+                          ? null
+                          : () async {
+                              if (_playing) await _player?.pause();
+                              if (!mounted) return;
+                              context.push(
+                                '/interactive-score/${Uri.encodeComponent(material.id)}',
+                              );
+                            },
+                      icon: const Icon(Icons.piano_outlined),
+                      label: const Text('Xem cao độ tương tác'),
+                    ),
+                  if (_playbackInstrument case final instrument?)
+                    Text(
+                      '${instrument.label} · ${_time(_duration)}',
+                      style: AppTypography.bodySmall,
+                    ),
+                  if (_fileError case final message?)
+                    Text(
+                      message,
+                      style: const TextStyle(color: AppColors.error),
+                    ),
+                  if (_player != null && pdf == null)
+                    if (isAudio)
+                      _AudioWaveformPlayer(
                         position: _position,
                         duration: _duration,
                         isPlaying: _playing,
@@ -491,58 +622,197 @@ class _MusicMaterialScreenState extends ConsumerState<MusicMaterialScreen> {
                         formatTime: _time,
                         onTogglePlayback: () => _open(material),
                         onSeek: _seekAudio,
+                      )
+                    else ...[
+                      Slider(
+                        value: _position.inMilliseconds.toDouble().clamp(
+                          0,
+                          _duration.inMilliseconds.toDouble(),
+                        ),
+                        max: _duration.inMilliseconds > 0
+                            ? _duration.inMilliseconds.toDouble()
+                            : 1,
+                        onChanged: _busy || _duration == Duration.zero
+                            ? null
+                            : (value) => _seekAudio(
+                                Duration(milliseconds: value.round()),
+                              ),
                       ),
-                    )
-                  else ...[
-                    Slider(
-                      value: _position.inMilliseconds.toDouble().clamp(
-                        0,
-                        _duration.inMilliseconds.toDouble(),
-                      ),
-                      max: _duration.inMilliseconds > 0
-                          ? _duration.inMilliseconds.toDouble()
-                          : 1,
-                      onChanged: _busy || _duration == Duration.zero
-                          ? null
-                          : (value) => _player?.seek(
-                              Duration(milliseconds: value.round()),
-                            ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Text('${_time(_position)} / ${_time(_duration)}'),
-                    ),
-                  ],
-                if (_pdf != null)
-                  Expanded(
-                    child: PDFView(
-                      key: ValueKey(_pdf!.file.path),
-                      filePath: _pdf!.file.path,
-                      onError: (_) {
-                        if (mounted) {
-                          setState(
-                            () => _fileError = 'Không thể hiển thị PDF. Vui lòng mở lại tài liệu.',
-                          );
-                        }
-                      },
-                      onPageError: (_, _) {
-                        if (mounted) {
-                          setState(
-                            () => _fileError =
-                                'Không thể hiển thị trang PDF này.',
-                          );
-                        }
-                      },
-                    ),
+                      Text('${_time(_position)} / ${_time(_duration)}'),
+                    ],
+                ],
+              ),
+            ),
+          ),
+        if (hasLyrics) ...[
+          const SizedBox(height: 16),
+          Card(
+            margin: EdgeInsets.zero,
+            child: ExpansionTile(
+              initiallyExpanded: true,
+              leading: const Icon(
+                Icons.lyrics_outlined,
+                color: MemberChoirStyle.wine,
+              ),
+              title: const Text('Toàn bộ lời ca'),
+              childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              children: [
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: SelectableText(
+                    lyrics!,
+                    style: AppTypography.bodyLarge,
                   ),
+                ),
               ],
-            );
-            return _pdf == null
-                ? SingleChildScrollView(child: content)
-                : content;
-          },
+            ),
+          ),
+        ],
+        if (assignment != null) ...[
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: () => context.push(
+              '/practice-detail/${Uri.encodeComponent(assignment.id)}',
+            ),
+            icon: const Icon(Icons.mic_none_rounded),
+            label: const Text('Tập hát & Thu âm'),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _MaterialPdfReader extends StatefulWidget {
+  const _MaterialPdfReader({
+    super.key,
+    required this.filePath,
+    required this.initialPage,
+    required this.busy,
+    required this.onPageChanged,
+    required this.onReload,
+  });
+
+  final String filePath;
+  final int initialPage;
+  final bool busy;
+  final ValueChanged<int> onPageChanged;
+  final VoidCallback onReload;
+
+  @override
+  State<_MaterialPdfReader> createState() => _MaterialPdfReaderState();
+}
+
+class _MaterialPdfReaderState extends State<_MaterialPdfReader> {
+  PDFViewController? _controller;
+  late int _page = widget.initialPage;
+  int? _pages;
+  bool _turning = false;
+  String? _error;
+
+  Future<void> _goToPage(int page) async {
+    final controller = _controller;
+    if (controller == null || _turning) return;
+    setState(() => _turning = true);
+    try {
+      await controller.setPage(page);
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Không thể chuyển trang PDF.');
+    } finally {
+      if (mounted) setState(() => _turning = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pageCount = _pages;
+    return Column(
+      children: [
+        Material(
+          color: MemberChoirStyle.paper,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                tooltip: 'Trang trước',
+                onPressed: _turning || _controller == null || _page <= 0
+                    ? null
+                    : () => _goToPage(_page - 1),
+                icon: const Icon(Icons.chevron_left_rounded),
+              ),
+              Flexible(
+                child: Text(
+                  pageCount == null
+                      ? 'Trang ${_page + 1}'
+                      : 'Trang ${_page + 1} / $pageCount',
+                  style: AppTypography.labelLarge,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              IconButton(
+                tooltip: 'Trang sau',
+                onPressed:
+                    _turning ||
+                        _controller == null ||
+                        pageCount == null ||
+                        _page + 1 >= pageCount
+                    ? null
+                    : () => _goToPage(_page + 1),
+                icon: const Icon(Icons.chevron_right_rounded),
+              ),
+            ],
+          ),
         ),
-      ),
+        const Divider(height: 1),
+        Expanded(
+          child: PDFView(
+            filePath: widget.filePath,
+            defaultPage: widget.initialPage,
+            swipeHorizontal: true,
+            onViewCreated: (controller) {
+              if (mounted) setState(() => _controller = controller);
+            },
+            onRender: (pages) {
+              if (mounted) setState(() => _pages = pages);
+            },
+            onPageChanged: (page, pages) {
+              if (!mounted || page == null) return;
+              setState(() {
+                _page = page;
+                _pages = pages ?? _pages;
+                _error = null;
+              });
+              widget.onPageChanged(page);
+            },
+            onError: (_) {
+              if (mounted) setState(() => _error = 'Không thể hiển thị PDF.');
+            },
+            onPageError: (_, _) {
+              if (mounted) {
+                setState(() => _error = 'Không thể hiển thị trang PDF này.');
+              }
+            },
+          ),
+        ),
+        if (_error case final message?)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    message,
+                    style: const TextStyle(color: AppColors.error),
+                  ),
+                ),
+                TextButton(
+                  onPressed: widget.busy ? null : widget.onReload,
+                  child: const Text('Tải lại'),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }

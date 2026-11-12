@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/api_endpoints.dart';
 import '../../../core/di/core_providers.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/errors/app_exceptions.dart';
 import '../../notifications/data/notification_dto.dart';
 import 'music_dto.dart';
+import 'score_package.dart';
 
 final musicApiServiceProvider = Provider<MusicApiService>((ref) {
   final client = ref.watch(apiClientProvider);
@@ -139,6 +141,26 @@ class MusicApiService {
       );
     } on DioException catch (error) {
       throw ApiClient.parseDioException(error);
+    }
+  }
+
+  Future<ScorePackageDto> getMaterialScore(
+    String id,
+    CancelToken cancel,
+  ) async {
+    try {
+      final response = await _client.dio.get(
+        ApiEndpoints.musicMaterialScore(id),
+        cancelToken: cancel,
+      );
+      return ScorePackageDto.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (error) {
+      throw ApiClient.parseDioException(error);
+    } on FormatException {
+      throw const AppException(
+        code: 'MATERIAL_SCORE_INVALID',
+        message: 'Không thể đọc dữ liệu bản nhạc từ máy chủ.',
+      );
     }
   }
 

@@ -10,10 +10,17 @@ import 'package:harmonia_mobile/core/di/core_providers.dart';
 import 'package:harmonia_mobile/core/realtime/signalr_service.dart';
 import 'package:harmonia_mobile/core/session/session_manager.dart';
 import 'package:harmonia_mobile/core/storage/secure_storage_service.dart';
+import 'package:harmonia_mobile/features/calendar/data/calendar_dto.dart'
+    show PublicAppSettings;
+import 'package:harmonia_mobile/features/calendar/data/calendar_repository.dart'
+    show publicAppSettingsProvider;
+import 'package:harmonia_mobile/features/lookups/data/lookup_dto.dart';
+import 'package:harmonia_mobile/features/lookups/data/lookups_api_service.dart';
 import 'package:harmonia_mobile/features/notifications/data/notification_dto.dart';
 import 'package:harmonia_mobile/features/profile/data/profile_models.dart';
 import 'package:harmonia_mobile/features/profile/data/profile_repository.dart';
 
+import 'package:harmonia_mobile/app/theme/app_theme.dart';
 import 'package:harmonia_mobile/features/profile/presentation/profile_screen.dart';
 
 import 'support/fake_profile_repository.dart';
@@ -36,7 +43,34 @@ class _SignalR extends SignalRService {
   }
 }
 
+class _SkillLookups extends LookupsApiService {
+  _SkillLookups(super.client);
+
+  @override
+  Future<List<SkillDto>> getSkills({String? categoryId}) async => const [
+    SkillDto(id: 'singing', categoryId: 'voice', name: 'Xướng đáp ca'),
+    SkillDto(id: 'organ', categoryId: 'instrument', name: 'Đàn organ'),
+  ];
+}
+
 class _Profiles extends MockProfileRepositoryImpl {
+  @override
+  Future<MemberSkill> declareNewSkill({
+    required String skillId,
+    String? level,
+    String? name,
+    String? categoryName,
+    String? note,
+  }) async {
+    final result = await super.declareNewSkill(
+      skillId: skillId,
+      level: level,
+      name: name,
+    );
+    skills = [...skills, result];
+    return result;
+  }
+
   @override
   Future<MemberSkill?> getSkillById(String id) async =>
       skills.where((s) => s.id == id).firstOrNull;
@@ -151,6 +185,12 @@ void main() {
         sessionManagerProvider.overrideWithValue(session),
         signalRServiceProvider.overrideWithValue(signalR),
         profileRepositoryProvider.overrideWithValue(profiles),
+        publicAppSettingsProvider.overrideWith(
+          (ref) async => const PublicAppSettings(choirName: 'Ca đoàn kiểm thử'),
+        ),
+        lookupsApiServiceProvider.overrideWith(
+          (ref) => _SkillLookups(ref.watch(apiClientProvider)),
+        ),
       ],
     );
   });
@@ -300,6 +340,53 @@ void main() {
       signalR.events.add(_review());
       await tester.pumpAndSettle();
       expect(find.text('Cần luyện thêm'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  testWidgets(
+    'the skill sheet submits the selected catalog skill on a narrow phone',
+    (tester) async {
+      tester.view.physicalSize = const Size(360, 720);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            theme: AppTheme.lightTheme,
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: const TextScaler.linear(1.3)),
+              child: child!,
+            ),
+            home: const ProfileScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final declare = find.text('Khai báo');
+      await tester.scrollUntilVisible(declare, 150);
+      await tester.pumpAndSettle();
+      await tester.tap(declare);
+      await tester.pumpAndSettle();
+      expect(find.text('Khai báo kỹ năng mới'), findsOneWidget);
+
+      final organ = find.text('Đàn organ');
+      await tester.ensureVisible(organ);
+      await tester.pumpAndSettle();
+      await tester.tap(organ);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Gửi bản khai kỹ năng'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Khai báo kỹ năng mới'), findsNothing);
+      expect(profiles.skills.last.skillId, 'organ');
+      expect(profiles.skills.last.level, SkillLevel.intermediate.wireName);
+      expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
     },
   );

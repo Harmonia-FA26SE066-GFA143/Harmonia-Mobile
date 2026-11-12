@@ -48,7 +48,7 @@ class AppPageHeader extends StatelessWidget implements PreferredSizeWidget {
       automaticallyImplyLeading: automaticallyImplyLeading,
       centerTitle: centerTitle,
       toolbarHeight: large ? 96 : 72,
-      backgroundColor: AppColors.primary,
+      backgroundColor: AppColors.headerWine,
       foregroundColor: AppColors.onPrimary,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
@@ -70,6 +70,7 @@ class AppPageHeader extends StatelessWidget implements PreferredSizeWidget {
       clipBehavior: Clip.antiAlias,
       flexibleSpace: DecoratedBox(
         decoration: BoxDecoration(gradient: gradient, borderRadius: shape),
+        child: const SizedBox.expand(),
       ),
     );
   }

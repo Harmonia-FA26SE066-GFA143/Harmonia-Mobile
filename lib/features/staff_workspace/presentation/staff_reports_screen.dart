@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/di/core_providers.dart';
 import '../../../core/session/session_manager.dart';
+import '../data/staff_documents.dart';
 import '../data/staff_operations_api.dart';
 import '../data/staff_workspace_repository.dart';
 import 'staff_ops_widgets.dart';
@@ -26,6 +27,19 @@ const _priestReports = [
   (type: 'ServiceHistory', path: 'service-history', label: 'Lịch sử phục vụ'),
   (type: 'SongUsage', path: 'song-usage', label: 'Tần suất sử dụng bài hát'),
 ];
+const _exportFormats = [
+  (name: 'Csv', extension: 'csv', mime: 'text/csv'),
+  (
+    name: 'Xlsx',
+    extension: 'xlsx',
+    mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  ),
+  (name: 'Pdf', extension: 'pdf', mime: 'application/pdf'),
+  (name: 'Xml', extension: 'xml', mime: 'application/xml'),
+  (name: 'Json', extension: 'json', mime: 'application/json'),
+];
+
+typedef _ExportFormat = ({String name, String extension, String mime});
 typedef _Query = ({
   String type,
   String path,
@@ -120,14 +134,39 @@ class _StaffReportsScreenState extends ConsumerState<StaffReportsScreen>
 
   Future<void> _export(_Query query) async {
     final api = ref.read(staffOperationsApiProvider);
-    if (await runAction(() async {
-          final csv = await api.exportCsv(query.type, _filters(query));
-          if (mounted) await Clipboard.setData(ClipboardData(text: csv));
-        }) &&
-        mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã sao chép nội dung CSV.')),
+    final session = ref.read(sessionManagerProvider);
+    final epoch = session.sessionEpoch;
+    final format = await showDialog<_ExportFormat>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Định dạng báo cáo'),
+        children: [
+          for (final format in _exportFormats)
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(context).pop(format),
+              child: Text(format.extension.toUpperCase()),
+            ),
+        ],
+      ),
+    );
+    if (!mounted || format == null || session.sessionEpoch != epoch) return;
+
+    final filters = _filters(query);
+    var saved = false;
+    await runAction(() async {
+      final bytes = await api.exportReport(query.type, format.name, filters);
+      if (!mounted || session.sessionEpoch != epoch) return;
+      saved = await StaffDocuments.saveReport(
+        bytes: bytes,
+        name:
+            'bao-cao-${query.path}-${filters['fromDate']}-${filters['toDate']}.${format.extension}',
+        mime: format.mime,
+        canPresent: () => mounted && session.sessionEpoch == epoch,
       );
+    });
+    if (saved && mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Đã lưu tệp báo cáo.')));
     }
   }
 
@@ -215,8 +254,8 @@ class _StaffReportsScreenState extends ConsumerState<StaffReportsScreen>
                 if (director && report.type != 'Trend')
                   TextButton.icon(
                     onPressed: busy ? null : () => _export(query),
-                    icon: const Icon(Icons.content_copy),
-                    label: const Text('Sao chép CSV'),
+                    icon: const Icon(Icons.download_outlined),
+                    label: const Text('Xuất báo cáo'),
                   ),
               ],
             ),

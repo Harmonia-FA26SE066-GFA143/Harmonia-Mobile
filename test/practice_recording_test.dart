@@ -307,18 +307,29 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
   }
 
-  Future<void> draft(WidgetTester tester) async {
-    await start(tester);
+  Future<void> waitForValidRecording(WidgetTester tester) async {
     await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 1100)),
+      () => Future<void>.delayed(const Duration(seconds: 5)),
     );
+  }
+
+  Future<void> stop(WidgetTester tester) async {
     await tester.tap(
       find.byWidgetPredicate(
         (widget) =>
             widget is Semantics && widget.properties.label == 'Dừng thu âm',
       ),
     );
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
+    );
     await tester.pumpAndSettle();
+  }
+
+  Future<void> draft(WidgetTester tester) async {
+    await start(tester);
+    await waitForValidRecording(tester);
+    await stop(tester);
     expect(find.text('Bản thu nháp'), findsOneWidget);
   }
 
@@ -328,12 +339,31 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets('stopping before five seconds rejects the recording', (
+    tester,
+  ) async {
+    await open(tester);
+    await start(tester);
+    await stop(tester);
+
+    expect(recordCalls, contains('stop'));
+    expect(find.text('Bản thu nháp'), findsNothing);
+    expect(
+      find.text('Bản thu phải dài ít nhất 5 giây. Vui lòng thu âm lại.'),
+      findsOneWidget,
+    );
+    expect(File(recordingPath!).existsSync(), isFalse);
+    expect(repository.uploads, 0);
+    await close(tester);
+  });
+
   testWidgets('backgrounding stops recording and retains a draft', (
     tester,
   ) async {
     await open(tester);
     await start(tester);
     expect(find.text('Đang thu âm...'), findsOneWidget);
+    await waitForValidRecording(tester);
     binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
     await tester.pumpAndSettle();
     expect(recordCalls, contains('stop'));
@@ -607,6 +637,7 @@ void main() {
   ) async {
     await open(tester);
     await start(tester);
+    await waitForValidRecording(tester);
     repository.assignment = recordingAssignment(
       canSubmit: false,
       reason: 'PRACTICE_SUBMISSION_PAST_DUE',
@@ -725,16 +756,8 @@ void main() {
     final firstPath = recordingPath!;
 
     await start(tester);
-    await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 1100)),
-    );
-    await tester.tap(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is Semantics && widget.properties.label == 'Dừng thu âm',
-      ),
-    );
-    await tester.pumpAndSettle();
+    await waitForValidRecording(tester);
+    await stop(tester);
     final secondPath = recordingPath!;
 
     expect(find.text('Bản thu nháp'), findsNWidgets(2));

@@ -22,9 +22,6 @@ import 'staff_song_proposal.dart';
 final _programs = FutureProvider.autoDispose.family<PagedList<StaffEvent>, int>(
   (ref, page) => ref.watch(staffWorkspaceRepositoryProvider).programs(page),
 );
-final _choirs = FutureProvider.autoDispose(
-  (ref) => ref.watch(staffWorkspaceRepositoryProvider).choirs(),
-);
 final _approvals = FutureProvider.autoDispose(
   (ref) => ref.watch(staffWorkspaceRepositoryProvider).approvals(),
 );
@@ -99,6 +96,12 @@ class StaffHomeScreen extends ConsumerWidget {
           icon: isDirector ? Icons.groups_outlined : Icons.fact_check_outlined,
           title: isDirector ? 'Ca đoàn của tôi' : 'Danh sách chờ phê duyệt',
           onTap: () => context.go(workspacePath(role)),
+        ),
+        _Tile(
+          icon: Icons.workspace_premium_outlined,
+          title: 'Đề cử ca trưởng',
+          subtitle: 'Duyệt đề cử và theo dõi đào tạo',
+          onTap: () => context.push('/director-nominations'),
         ),
         _Tile(
           icon: Icons.chat_bubble_outline,
@@ -241,9 +244,24 @@ class StaffChoirsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return _DataPage(
       title: 'Ca đoàn của tôi',
-      data: ref.watch(_choirs),
-      onRefresh: () => ref.refresh(_choirs.future),
+      data: ref.watch(staffChoirsProvider),
+      onRefresh: () => ref.refresh(staffChoirsProvider.future),
       rows: (choirs) => [
+        _Tile(
+          icon: Icons.people_outline,
+          title: 'Danh sách ca viên',
+          onTap: () => context.push('/staff-members'),
+        ),
+        _Tile(
+          icon: Icons.fact_check_outlined,
+          title: 'Duyệt kỹ năng',
+          onTap: () => context.push('/staff-skill-approval'),
+        ),
+        _Tile(
+          icon: Icons.library_music_outlined,
+          title: 'Kho bài hát',
+          onTap: () => context.push('/staff-library'),
+        ),
         _Tile(
           icon: Icons.event_outlined,
           title: 'Lịch tập và điểm danh',
@@ -251,14 +269,16 @@ class StaffChoirsScreen extends ConsumerWidget {
         ),
         _Tile(
           icon: Icons.mic_none,
-          title: 'Chấm bản thu',
-          onTap: () => context.push('/staff-submissions'),
+          title: 'Luyện tập',
+          subtitle: 'Giao bài, chấm bản thu và theo dõi tiến độ',
+          onTap: () => context.push('/staff-practice'),
         ),
         if (choirs.isEmpty) const Text('Bạn chưa được giao phụ trách ca đoàn.'),
         for (final choir in choirs)
           _Tile(
             icon: Icons.groups_outlined,
             title: choir.name,
+            onTap: () => context.push(_detailPath('staff-choir', choir.id)),
             subtitle: [
               if (!choir.isActive) 'Ngừng hoạt động',
               if (choir.description?.trim().isNotEmpty == true)
@@ -724,6 +744,9 @@ class _EventWorkflowState extends ConsumerState<_EventWorkflow> {
                             'Ca trưởng: ${choir.directorName}',
                           if (choir.substituteName != null)
                             'Người thay: ${choir.substituteName}',
+                          if (choir.substituteName != null &&
+                              choir.reason?.isNotEmpty == true)
+                            'Lý do thay thế: ${choir.reason}',
                         ].join('\n'),
                       ),
                       trailing: priest && editable
@@ -759,6 +782,16 @@ class _EventWorkflowState extends ConsumerState<_EventWorkflow> {
                     icon: Icons.assignment_ind_outlined,
                     title: 'Phân công phục vụ',
                     onTap: () => context.push(_detailPath('staff-roster', _id)),
+                  ),
+                  _Tile(
+                    icon: Icons.mic_none,
+                    title: 'Luyện tập và tiến độ',
+                    onTap: () => context.push(
+                      Uri(
+                        path: '/staff-practice',
+                        queryParameters: {'eventId': _id},
+                      ).toString(),
+                    ),
                   ),
                 ],
               ],
@@ -1050,7 +1083,8 @@ class _ServingChoirDialogState extends State<_ServingChoirDialog> {
           if (removing) ...[
             const SizedBox(height: 12),
             const Text(
-              'Lời mời và phân công của ca viên không còn ca đoàn phục vụ sẽ bị gỡ.',
+              'Ca viên không còn thuộc ca đoàn nào phục vụ sẽ mất lời mời '
+              'và dòng phân công. Phân công đã chốt sẽ mở lại ở trạng thái Bản nháp (Draft).',
             ),
             TextField(
               decoration: const InputDecoration(labelText: 'Lý do gỡ ca đoàn'),

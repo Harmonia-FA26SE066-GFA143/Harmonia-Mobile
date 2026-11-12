@@ -10,14 +10,22 @@ String workspacePath(MobileRole role) => switch (role) {
 bool roleAllowsRoute(MobileRole? role, Uri uri) {
   return switch (uri.pathSegments.firstOrNull?.toLowerCase()) {
     'manage' ||
+    'staff-library' ||
+    'staff-members' ||
+    'staff-member' ||
+    'staff-choir' ||
+    'staff-skill-approval' ||
     'staff-rehearsals' ||
     'staff-attendance' ||
     'staff-roster' ||
     'staff-participation' ||
+    'staff-practice' ||
     'staff-submissions' ||
     'staff-submission' => role == MobileRole.choirDirector,
     'staff-demo' => role == MobileRole.choirDirector && AppEnv.demoToolsEnabled,
-    'interactive-score' => role != null,
+    'director-nominations' when uri.pathSegments.elementAtOrNull(1) == 'new' =>
+      role == MobileRole.choirDirector || role == MobileRole.parishPriest,
+    'interactive-score' || 'director-nominations' => role != null,
     'approvals' || 'program-new' => role == MobileRole.parishPriest,
     'song-list' ||
     'director-note' ||
@@ -50,7 +58,11 @@ String? notificationRoute({
   }
   final id = referenceId?.trim();
   if (id == null || id.isEmpty) return null;
+  if (type == 'Choir') {
+    return role == MobileRole.choirDirector ? '/manage' : null;
+  }
   final segment = switch (type) {
+    'DirectorNomination' => 'director-nominations',
     'LiturgicalEvent' => 'event-detail',
     'Rehearsal' => 'rehearsal',
     'PracticeAssignment' => 'practice-detail',

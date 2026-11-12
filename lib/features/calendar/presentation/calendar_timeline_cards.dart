@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../app/widgets/member_choir_visuals.dart';
 import '../../../core/errors/error_messages.dart';
 import '../../music/data/music_repository.dart';
 import '../data/calendar_member_dto.dart';
@@ -11,8 +12,16 @@ import '../data/calendar_repository.dart';
 import '../data/liturgical_models.dart';
 import 'participation_prompt.dart';
 
-const _softSurface = Color(0xFFF6F7F9);
-const _timelineAccent = Color(0xFF842539);
+const _stitchSurfaceBg = Color(0xFFFAF8F5);
+const _stitchBorder = Color(0xFFE6E1D8);
+const _stitchInsetBorder = Color(0x99E6E1D8);
+const _stitchTextDark = Color(0xFF201C21);
+const _stitchTextMuted = Color(0xFF76767E);
+const _stitchTextBody = Color(0xFF45464D);
+const _stitchGold = Color(0xFFFECE57);
+const _stitchAmberText = Color(0xFF775A00);
+const _stitchSuccessGreen = Color(0xFF2E7D32);
+const _stitchDangerRed = Color(0xFFBA1A1A);
 
 class CalendarEventCard extends ConsumerWidget {
   final LiturgicalEvent event;
@@ -30,6 +39,7 @@ class CalendarEventCard extends ConsumerWidget {
     void retry() => ref.invalidate(eventDetailProvider(event.id));
     if (state.hasError) {
       return _CalendarSurface(
+        accent: false,
         child: _CardError(
           error: state.error,
           retryLabel: 'Thử lại chi tiết lễ',
@@ -41,6 +51,7 @@ class CalendarEventCard extends ConsumerWidget {
     final detail = loading ? null : state.asData?.value;
     if (!loading && detail?.event.id != event.id) {
       return _CalendarSurface(
+        accent: false,
         child: _CardError(
           message: 'Thông tin chi tiết không khớp với sự kiện này.',
           retryLabel: 'Thử lại chi tiết lễ',
@@ -49,30 +60,58 @@ class CalendarEventCard extends ConsumerWidget {
       );
     }
     final current = detail?.event ?? event;
+    final specialRequirements = detail?.specialRequirements?.trim() ?? '';
+    final hasMetadata =
+        current.location.isNotEmpty ||
+        (!attendanceOnly && current.assignedVocalPart.isNotEmpty) ||
+        (!attendanceOnly && specialRequirements.isNotEmpty);
+
     return _CalendarSurface(
+      accent: false,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (!attendanceOnly) ...[
             Wrap(
               spacing: 6,
               runSpacing: 6,
+              alignment: WrapAlignment.spaceBetween,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                if (!loading && current.seasonName.isNotEmpty)
-                  _StatusBadge(
-                    label: current.seasonName,
-                    color: _seasonColor(current.seasonName),
-                    icon: Icons.circle,
-                    iconSize: 6,
-                  )
-                else
-                  Text(
-                    current.categoryName.isNotEmpty
-                        ? current.categoryName.toUpperCase()
-                        : 'PHỤNG VỤ',
-                    style: AppTypography.labelSmall,
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
                   ),
+                  decoration: BoxDecoration(
+                    color: MemberChoirStyle.accent.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    spacing: 4,
+                    children: [
+                      const Icon(
+                        Icons.stars_rounded,
+                        size: 13,
+                        color: MemberChoirStyle.accent,
+                      ),
+                      Flexible(
+                        child: Text(
+                          current.categoryName.isNotEmpty
+                              ? current.categoryName.toUpperCase()
+                              : 'PHỤNG VỤ',
+                          style: AppTypography.labelSmall.copyWith(
+                            color: MemberChoirStyle.accent,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.4,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 if (!loading &&
                     current.participationStatus != ParticipationStatus.unknown)
                   _ParticipationBadge(status: current.participationStatus),
@@ -81,49 +120,179 @@ class CalendarEventCard extends ConsumerWidget {
             const SizedBox(height: 8),
           ],
           Text(current.title, style: _eventTitle),
-          if (current.location.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            _InfoPanel(
-              icon: Icons.church_outlined,
-              child: Text(current.location, style: AppTypography.labelLarge),
+          if (hasMetadata) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: _stitchSurfaceBg,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: _stitchInsetBorder),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                spacing: 6,
+                children: [
+                  if (current.location.isNotEmpty)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      spacing: 6,
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.only(top: 1),
+                          child: Icon(
+                            Icons.location_on_outlined,
+                            size: 15,
+                            color: MemberChoirStyle.accent,
+                          ),
+                        ),
+                        Expanded(
+                          child: Text.rich(
+                            TextSpan(
+                              style: AppTypography.bodySmall.copyWith(
+                                color: _stitchTextBody,
+                                fontSize: 13,
+                              ),
+                              children: [
+                                const TextSpan(
+                                  text: 'Địa điểm: ',
+                                  style: TextStyle(fontWeight: FontWeight.w700),
+                                ),
+                                TextSpan(text: current.location),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  if (!attendanceOnly && current.assignedVocalPart.isNotEmpty)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      spacing: 6,
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.only(top: 1),
+                          child: Icon(
+                            Icons.record_voice_over_outlined,
+                            size: 15,
+                            color: _stitchAmberText,
+                          ),
+                        ),
+                        Expanded(
+                          child: Wrap(
+                            spacing: 4,
+                            runSpacing: 2,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              Text(
+                                'Nhiệm vụ:',
+                                style: AppTypography.bodySmall.copyWith(
+                                  color: _stitchTextBody,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              Text(
+                                current.assignedVocalPart,
+                                style: AppTypography.bodySmall.copyWith(
+                                  color: _stitchTextDark,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  if (!attendanceOnly && specialRequirements.isNotEmpty)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      spacing: 6,
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.only(top: 1),
+                          child: Icon(
+                            Icons.sticky_note_2_outlined,
+                            size: 15,
+                            color: _stitchTextMuted,
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            'Ghi chú: $specialRequirements',
+                            style: AppTypography.bodySmall.copyWith(
+                              color: _stitchTextBody,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
             ),
           ],
           if (loading) ...[
             const SizedBox(height: 12),
             const LinearProgressIndicator(
               minHeight: 2,
+              color: MemberChoirStyle.wine,
+              backgroundColor: Color(0xFFE7EEFF),
               semanticsLabel: 'Đang tải chi tiết lễ',
             ),
           ] else ...[
-            if (!attendanceOnly && current.assignedVocalPart.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              _InfoPanel(
-                icon: Icons.record_voice_over_outlined,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Phân công giọng hát:',
-                      style: AppTypography.bodySmall,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      current.assignedVocalPart,
-                      style: AppTypography.labelLarge.copyWith(
-                        color: AppColors.primary,
+            if (current.canRespond) _EventParticipationActions(event: current),
+            const SizedBox(height: 12),
+            const Divider(height: 1, color: Color(0x33C6C6CE)),
+            const SizedBox(height: 6),
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: TextButton(
+                onPressed: () => context.push(
+                  '/event-detail/${Uri.encodeComponent(event.id)}',
+                ),
+                style:
+                    TextButton.styleFrom(
+                      foregroundColor: MemberChoirStyle.accent,
+                      minimumSize: const Size(44, 40),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
                       ),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ).copyWith(
+                      overlayColor: WidgetStatePropertyAll(
+                        MemberChoirStyle.accent.withValues(alpha: 0.08),
+                      ),
+                    ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  spacing: 4,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        'Xem chi tiết phụng vụ & bài hát',
+                        textAlign: TextAlign.right,
+                        style: AppTypography.labelMedium.copyWith(
+                          color: MemberChoirStyle.accent,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const Icon(
+                      Icons.arrow_forward_rounded,
+                      size: 15,
+                      color: MemberChoirStyle.accent,
                     ),
                   ],
                 ),
               ),
-            ],
-            _CardFooter(
-              attendance: 'Chưa có thông tin điểm danh',
-              onOpen: () => context.push(
-                '/event-detail/${Uri.encodeComponent(event.id)}',
-              ),
             ),
-            if (current.canRespond) _EventParticipationActions(event: current),
           ],
         ],
       ),
@@ -138,10 +307,10 @@ class _EventParticipationActions extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => Padding(
-    padding: const EdgeInsets.only(top: 4),
+    padding: const EdgeInsets.only(top: 10),
     child: Wrap(
-      spacing: 4,
-      runSpacing: 0,
+      spacing: 6,
+      runSpacing: 6,
       children: [
         for (final (label, status) in [
           ('Có mặt', ParticipationStatus.confirmed),
@@ -152,13 +321,34 @@ class _EventParticipationActions extends ConsumerWidget {
             onPressed: () =>
                 showParticipationPrompt(context, ref, event, status),
             style: TextButton.styleFrom(
-              foregroundColor: status == ParticipationStatus.unsure
-                  ? AppColors.statusWarning
-                  : AppColors.primary,
-              minimumSize: const Size(48, 40),
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              foregroundColor: switch (status) {
+                ParticipationStatus.unsure => _stitchAmberText,
+                ParticipationStatus.declined => _stitchDangerRed,
+                _ => MemberChoirStyle.wine,
+              },
+              backgroundColor: switch (status) {
+                ParticipationStatus.unsure => _stitchGold.withValues(
+                  alpha: 0.16,
+                ),
+                ParticipationStatus.declined => _stitchDangerRed.withValues(
+                  alpha: 0.08,
+                ),
+                _ => MemberChoirStyle.wine.withValues(alpha: 0.08),
+              },
+              minimumSize: const Size(44, 36),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
-            child: Text(label, style: AppTypography.labelSmall),
+            child: Text(
+              label,
+              style: AppTypography.labelSmall.copyWith(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
       ],
     ),
@@ -181,6 +371,7 @@ class CalendarRehearsalCard extends ConsumerWidget {
     void retry() => ref.invalidate(rehearsalDetailProvider(rehearsal.id));
     if (state.hasError) {
       return _CalendarSurface(
+        accent: false,
         child: _CardError(
           error: state.error,
           retryLabel: 'Thử lại buổi tập',
@@ -192,6 +383,7 @@ class CalendarRehearsalCard extends ConsumerWidget {
     final detail = loading ? null : state.asData?.value;
     if (!loading && detail?.rehearsal.id != rehearsal.id) {
       return _CalendarSurface(
+        accent: false,
         child: _CardError(
           message: 'Thông tin chi tiết không khớp với buổi tập này.',
           retryLabel: 'Thử lại buổi tập',
@@ -200,60 +392,235 @@ class CalendarRehearsalCard extends ConsumerWidget {
       );
     }
     final current = detail?.rehearsal ?? rehearsal;
+    final noteText = current.note?.trim() ?? '';
+    final hasSongs =
+        !attendanceOnly && detail != null && detail.songs.isNotEmpty;
+    final hasMetadata =
+        current.location.isNotEmpty || noteText.isNotEmpty || hasSongs;
+
     return _CalendarSurface(
+      accent: false,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (!attendanceOnly) ...[
-            Text('LUYỆN TẬP THÁNH NHẠC', style: AppTypography.labelSmall),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _stitchAmberText.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    spacing: 5,
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: _stitchGold,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      Flexible(
+                        child: Text(
+                          'LỊCH TẬP DƯỢT',
+                          style: AppTypography.labelSmall.copyWith(
+                            color: _stitchAmberText,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (!loading)
+                  _AttendanceBadge(
+                    label: MemberRehearsalDetail.attendanceLabel(
+                      detail!.myAttendanceStatus,
+                    ),
+                    status: detail.myAttendanceStatus,
+                  ),
+              ],
+            ),
             const SizedBox(height: 8),
           ],
           Text(current.title, style: _eventTitle),
-          if (current.location.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            _Metadata(icon: Icons.location_on_outlined, text: current.location),
-          ],
-          if (current.note?.trim().isNotEmpty ?? false) ...[
-            const SizedBox(height: 8),
-            _Metadata(
-              icon: Icons.notes_rounded,
-              text: 'Ghi chú: ${current.note!.trim()}',
+          if (hasMetadata) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: _stitchSurfaceBg,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: _stitchInsetBorder),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                spacing: 6,
+                children: [
+                  if (current.location.isNotEmpty)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      spacing: 6,
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.only(top: 1),
+                          child: Icon(
+                            Icons.meeting_room_outlined,
+                            size: 15,
+                            color: _stitchTextMuted,
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            current.location,
+                            style: AppTypography.bodySmall.copyWith(
+                              color: _stitchTextBody,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  if (noteText.isNotEmpty)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      spacing: 6,
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.only(top: 1),
+                          child: Icon(
+                            Icons.notes_rounded,
+                            size: 15,
+                            color: MemberChoirStyle.accent,
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            'Ghi chú: $noteText',
+                            style: AppTypography.bodySmall.copyWith(
+                              color: _stitchTextBody,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  if (hasSongs)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      spacing: 6,
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.only(top: 1),
+                          child: Icon(
+                            Icons.music_note_outlined,
+                            size: 15,
+                            color: _stitchAmberText,
+                          ),
+                        ),
+                        Expanded(
+                          child: Text.rich(
+                            TextSpan(
+                              text: 'Chuẩn bị: ',
+                              style: AppTypography.bodySmall.copyWith(
+                                color: _stitchTextBody,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                              ),
+                              children: [
+                                TextSpan(
+                                  text: detail.songs
+                                      .map((song) => song.title)
+                                      .join(', '),
+                                  style: AppTypography.bodySmall.copyWith(
+                                    color: _stitchTextDark,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
             ),
           ],
           if (loading) ...[
             const SizedBox(height: 12),
             const LinearProgressIndicator(
               minHeight: 2,
+              color: MemberChoirStyle.wine,
+              backgroundColor: Color(0xFFE7EEFF),
               semanticsLabel: 'Đang tải chi tiết buổi tập',
             ),
           ] else ...[
-            if (!attendanceOnly && detail!.songs.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              _InfoPanel(
-                icon: Icons.music_note_outlined,
-                child: Text.rich(
-                  TextSpan(
-                    text: 'Chuẩn bị: ',
-                    style: AppTypography.bodySmall,
-                    children: [
-                      TextSpan(
-                        text: detail.songs.map((song) => song.title).join(', '),
-                        style: AppTypography.bodyMedium.copyWith(
-                          color: AppColors.onSurface,
+            const SizedBox(height: 12),
+            const Divider(height: 1, color: Color(0x33C6C6CE)),
+            const SizedBox(height: 10),
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: ElevatedButton(
+                onPressed: () => context.push(
+                  '/rehearsal/${Uri.encodeComponent(rehearsal.id)}',
+                ),
+                style:
+                    ElevatedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      backgroundColor: MemberChoirStyle.wine,
+                      elevation: 0,
+                      minimumSize: const Size(0, 38),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ).copyWith(
+                      backgroundColor: WidgetStateProperty.resolveWith((
+                        states,
+                      ) {
+                        if (states.contains(WidgetState.hovered) ||
+                            states.contains(WidgetState.pressed)) {
+                          return MemberChoirStyle.accent;
+                        }
+                        return MemberChoirStyle.wine;
+                      }),
+                    ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  spacing: 6,
+                  children: const [
+                    Icon(Icons.queue_music_rounded, size: 15),
+                    Flexible(
+                      child: Text(
+                        'Xem chi tiết',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                    Icon(Icons.arrow_forward_rounded, size: 15),
+                  ],
                 ),
-              ),
-            ],
-            _CardFooter(
-              attendance: MemberRehearsalDetail.attendanceLabel(
-                detail!.myAttendanceStatus,
-              ),
-              status: detail.myAttendanceStatus,
-              onOpen: () => context.push(
-                '/rehearsal/${Uri.encodeComponent(rehearsal.id)}',
               ),
             ),
           ],
@@ -341,7 +708,7 @@ class CalendarApprovedSongs extends ConsumerWidget {
                         height: 22,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          color: _softSurface,
+                          color: MemberChoirStyle.paper,
                           shape: BoxShape.circle,
                           border: Border.all(color: AppColors.border),
                         ),
@@ -412,7 +779,12 @@ class CalendarApprovedSongs extends ConsumerWidget {
   }
 }
 
-TextStyle get _eventTitle => AppTypography.headlineSmall;
+TextStyle get _eventTitle => AppTypography.titleMedium.copyWith(
+  color: _stitchTextDark,
+  fontSize: 16,
+  fontWeight: FontWeight.w700,
+  height: 1.3,
+);
 
 class _CalendarSurface extends StatelessWidget {
   final Widget child;
@@ -421,151 +793,34 @@ class _CalendarSurface extends StatelessWidget {
   const _CalendarSurface({required this.child, this.accent = true});
 
   @override
-  Widget build(BuildContext context) => Card(
-    margin: EdgeInsets.zero,
-    clipBehavior: Clip.antiAlias,
-    color: AppColors.surface,
-    elevation: .8,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(24),
-      side: const BorderSide(color: AppColors.border),
-    ),
-    child: DecoratedBox(
-      decoration: BoxDecoration(
-        border: accent
-            ? const Border(left: BorderSide(color: _timelineAccent, width: 4))
-            : null,
-      ),
-      child: Padding(padding: const EdgeInsets.all(20), child: child),
-    ),
-  );
-}
-
-class _Metadata extends StatelessWidget {
-  final IconData icon;
-  final String text;
-
-  const _Metadata({required this.icon, required this.text});
-
-  @override
-  Widget build(BuildContext context) => Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Icon(icon, size: 16, color: AppColors.muted),
-      const SizedBox(width: 6),
-      Expanded(child: Text(text, style: AppTypography.bodyMedium)),
-    ],
-  );
-}
-
-class _InfoPanel extends StatelessWidget {
-  final IconData icon;
-  final Widget child;
-
-  const _InfoPanel({required this.icon, required this.child});
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(10),
+  Widget build(BuildContext context) => DecoratedBox(
     decoration: BoxDecoration(
-      color: _softSurface,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: AppColors.border),
-    ),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 18, color: AppColors.primary),
-        const SizedBox(width: 8),
-        Expanded(child: child),
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: _stitchBorder),
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x0A1B2541),
+          blurRadius: 20,
+          spreadRadius: -2,
+          offset: Offset(0, 4),
+        ),
       ],
     ),
-  );
-}
-
-class _CardFooter extends StatelessWidget {
-  final String attendance;
-  final String? status;
-  final VoidCallback onOpen;
-
-  const _CardFooter({
-    required this.attendance,
-    required this.onOpen,
-    this.status,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final color = switch (status) {
-      'Present' => AppColors.statusSuccess,
-      'Absent' => AppColors.statusDanger,
-      'Late' || 'Excused' => AppColors.statusWarning,
-      _ => AppColors.muted,
-    };
-    return Padding(
-      padding: const EdgeInsets.only(top: 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Divider(height: 1),
-          const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(top: 5),
-                child: Icon(Icons.schedule_outlined, size: 14, color: color),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text.rich(
-                  TextSpan(
-                    text: 'Điểm danh: ',
-                    style: AppTypography.bodySmall,
-                    children: [
-                      TextSpan(
-                        text: attendance,
-                        style: AppTypography.bodySmall.copyWith(
-                          color: AppColors.body,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: onOpen,
-              style: TextButton.styleFrom(
-                foregroundColor: _timelineAccent,
-                minimumSize: const Size(48, 48),
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-              ),
-              child: Wrap(
-                spacing: 6,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  Text(
-                    'Xem chi tiết',
-                    style: AppTypography.labelMedium.copyWith(
-                      color: _timelineAccent,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const Icon(Icons.arrow_forward_rounded, size: 16),
-                ],
-              ),
-            ),
-          ),
-        ],
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: accent
+              ? const Border(
+                  left: BorderSide(color: MemberChoirStyle.accent, width: 3),
+                )
+              : null,
+        ),
+        child: Padding(padding: const EdgeInsets.all(16), child: child),
       ),
-    );
-  }
+    ),
+  );
 }
 
 class _CardError extends StatelessWidget {
@@ -585,16 +840,19 @@ class _CardError extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      const Icon(Icons.error_outline_rounded, color: AppColors.statusDanger),
+      const Icon(Icons.error_outline_rounded, color: _stitchDangerRed),
       const SizedBox(height: 8),
       Text(
         message ?? ErrorMessages.forException(error),
-        style: AppTypography.bodyMedium,
+        style: AppTypography.bodyMedium.copyWith(color: _stitchTextBody),
       ),
       const SizedBox(height: 4),
       TextButton(
         onPressed: onRetry,
-        style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+        style: TextButton.styleFrom(
+          foregroundColor: MemberChoirStyle.wine,
+          minimumSize: const Size(48, 44),
+        ),
         child: Text(retryLabel),
       ),
     ],
@@ -612,9 +870,9 @@ class _ParticipationBadge extends StatelessWidget {
         ? 'Không tham gia'
         : status.label,
     color: switch (status) {
-      ParticipationStatus.confirmed => AppColors.statusSuccess,
-      ParticipationStatus.declined => AppColors.statusDanger,
-      _ => AppColors.statusWarning,
+      ParticipationStatus.confirmed => _stitchSuccessGreen,
+      ParticipationStatus.declined => _stitchDangerRed,
+      _ => _stitchAmberText,
     },
     icon: status == ParticipationStatus.confirmed
         ? Icons.check_circle_outline_rounded
@@ -622,45 +880,64 @@ class _ParticipationBadge extends StatelessWidget {
   );
 }
 
+class _AttendanceBadge extends StatelessWidget {
+  final String label;
+  final String? status;
+
+  const _AttendanceBadge({required this.label, this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final (color, icon) = switch (status) {
+      'Present' => (_stitchSuccessGreen, Icons.check_circle_outline_rounded),
+      'Absent' => (_stitchDangerRed, Icons.cancel_outlined),
+      'Late' || 'Excused' => (_stitchAmberText, Icons.schedule_rounded),
+      _ => (_stitchTextMuted, Icons.schedule_rounded),
+    };
+    return _StatusBadge(label: label, color: color, icon: icon);
+  }
+}
+
 class _StatusBadge extends StatelessWidget {
   final String label;
   final Color color;
   final IconData icon;
-  final double iconSize;
 
   const _StatusBadge({
     required this.label,
     required this.color,
     required this.icon,
-    this.iconSize = 13,
   });
 
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
     decoration: BoxDecoration(
-      color: color.withValues(alpha: 0.1),
-      borderRadius: BorderRadius.circular(20),
+      color: color.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(6),
+      border: Border.all(color: color.withValues(alpha: 0.22)),
     ),
-    child: Text.rich(
-      TextSpan(
-        style: AppTypography.labelSmall.copyWith(color: color),
-        children: [
-          WidgetSpan(
-            alignment: PlaceholderAlignment.middle,
-            child: Padding(
-              padding: const EdgeInsets.only(right: 4),
-              child: Icon(icon, size: iconSize, color: color),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      spacing: 4,
+      children: [
+        Icon(icon, size: 13, color: color),
+        Flexible(
+          child: Text(
+            label,
+            style: AppTypography.labelSmall.copyWith(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
             ),
           ),
-          TextSpan(text: label),
-        ],
-      ),
+        ),
+      ],
     ),
   );
 }
 
-Color _seasonColor(String name) {
+Color calendarSeasonColor(String name) {
   final season = name.toLowerCase();
   if (season.contains('vọng') ||
       season.contains('chay') ||
@@ -681,6 +958,6 @@ Color _seasonColor(String name) {
     return AppColors.seasonPentecostMartyrs;
   }
   return (season.contains('thường niên') || season.contains('ordinary'))
-      ? AppColors.seasonOrdinary
-      : AppColors.muted;
+      ? _stitchSuccessGreen
+      : _stitchTextMuted;
 }

@@ -6,6 +6,7 @@ import '../../core/di/core_providers.dart';
 import '../../features/auth/presentation/auth_notifier.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
+import '../widgets/harmonia_logo.dart';
 import '../widgets/stitch_entrance.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
@@ -33,13 +34,17 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
-        backgroundColor: const Color(0xFF860022),
+        backgroundColor: AppColors.headerWine,
         body: DecoratedBox(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [Color(0xFFFF3B5D), AppColors.primary, Color(0xFF820021)],
+              colors: [
+                AppColors.headerWine,
+                AppColors.primary,
+                AppColors.primaryHover,
+              ],
               stops: [0, .45, 1],
             ),
           ),
@@ -62,7 +67,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                         alignment: Alignment.topRight,
                         child: DecoratedBox(
                           decoration: BoxDecoration(
-                            color: const Color(0x33820021),
+                            color: AppColors.headerWine.withValues(alpha: .35),
                             border: Border.all(
                               color: gold.withValues(alpha: .55),
                             ),
@@ -101,13 +106,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                                       color: gold.withValues(alpha: .65),
                                     ),
                                   ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(26),
-                                    child: Image.asset(
-                                      'assets/images/harmonia_logo.png',
-                                      fit: BoxFit.cover,
-                                    ),
-                                  ),
+                                  child: const HarmoniaLogo(size: 98),
                                 ),
                               ),
                               const SizedBox(height: 24),
@@ -223,7 +222,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                             'Đồng hành cùng Phụng vụ Thánh & Ca đoàn Giáo hội',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              color: Color(0xFFFFDCE5),
+                              color: AppColors.onPrimaryContainer,
                               fontSize: 12,
                             ),
                           ),

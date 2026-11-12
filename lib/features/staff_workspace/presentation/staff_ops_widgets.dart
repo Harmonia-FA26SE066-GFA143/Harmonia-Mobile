@@ -277,3 +277,82 @@ class OpsChoiceField extends StatelessWidget {
     ),
   );
 }
+
+class OpsChoicePicker extends StatefulWidget {
+  const OpsChoicePicker({
+    super.key,
+    required this.title,
+    required this.choices,
+    required this.selected,
+  });
+
+  final String title;
+  final List<Choice> choices;
+  final Set<String> selected;
+
+  @override
+  State<OpsChoicePicker> createState() => _OpsChoicePickerState();
+}
+
+class _OpsChoicePickerState extends State<OpsChoicePicker> {
+  late final _selected = widget.selected.intersection(
+    widget.choices.map((item) => item.id).toSet(),
+  );
+  String _keyword = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final matches = widget.choices
+        .where((choice) => choice.name.toLowerCase().contains(_keyword))
+        .toList();
+    return Dialog.fullscreen(
+      child: OpsPage(
+        title: widget.title,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: TextField(
+                decoration: const InputDecoration(
+                  hintText: 'Tìm theo tên',
+                  prefixIcon: Icon(Icons.search),
+                ),
+                onChanged: (value) =>
+                    setState(() => _keyword = value.trim().toLowerCase()),
+              ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                itemCount: matches.length,
+                itemBuilder: (context, index) {
+                  final item = matches[index];
+                  return CheckboxListTile(
+                    value: _selected.contains(item.id),
+                    title: Text(item.name),
+                    onChanged: (checked) => setState(() {
+                      if (checked == true) {
+                        _selected.add(item.id);
+                      } else {
+                        _selected.remove(item.id);
+                      }
+                    }),
+                  );
+                },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () => Navigator.of(context).pop(_selected),
+                  child: Text('Xác nhận (${_selected.length})'),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

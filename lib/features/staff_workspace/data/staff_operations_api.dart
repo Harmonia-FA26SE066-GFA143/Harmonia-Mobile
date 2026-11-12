@@ -2,13 +2,36 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/app_env.dart';
+import '../../../core/constants/api_endpoints.dart';
 import '../../../core/di/core_providers.dart';
 import '../../../core/errors/app_exceptions.dart';
 import '../../../core/network/api_client.dart';
 import '../../music/data/music_dto.dart';
 import '../../notifications/data/notification_dto.dart';
+import '../../profile/data/member_profile_dto.dart';
+import 'director_nomination.dart';
+import 'staff_documents.dart';
 
 typedef Choice = ({String id, String name});
+typedef StaffMemberSummary = ({
+  String id,
+  String name,
+  String email,
+  String status,
+  String? roleName,
+  List<String> approvedSkills,
+});
+typedef StaffChoirMember = ({
+  String id,
+  String name,
+  String email,
+  String joinedDate,
+});
+typedef PendingStaffSkill = ({
+  String memberId,
+  String memberName,
+  MemberSkillDto skill,
+});
 typedef RehearsalSong = ({String id, String title, String? note});
 typedef StaffRehearsal = ({
   String id,
@@ -46,6 +69,36 @@ typedef StaffRoster = ({
 });
 typedef PersonnelNeed = ({String skillId, String skill, int count});
 typedef ParticipationRow = ({String id, String name, String status});
+
+enum StaffPracticeScope {
+  all('All', 'Cả ca đoàn'),
+  skillGroup('SkillGroup', 'Theo kỹ năng'),
+  individual('Individual', 'Từng ca viên');
+
+  const StaffPracticeScope(this.wireName, this.label);
+  final String wireName;
+  final String label;
+}
+
+typedef StaffPracticeAssignment = ({
+  String id,
+  String title,
+  String? instruction,
+  String? eventId,
+  String? choirId,
+  String scope,
+  DateTime dueDate,
+  int targetCount,
+});
+typedef StaffPreparationProgress = ({
+  String name,
+  String? participation,
+  int rehearsalsHeld,
+  int rehearsalsAttended,
+  int assignmentsTotal,
+  int assignmentsPassed,
+  int assignmentsOverdue,
+});
 typedef StaffSubmission = ({
   String id,
   String member,
@@ -84,6 +137,11 @@ typedef StaffConversation = ({
   int unread,
 });
 typedef ReportColumn = ({String key, String label});
+typedef StaffMaterialProgress = ({
+  String name,
+  String status,
+  DateTime? updatedAt,
+});
 typedef TrendRow = ({
   String from,
   String to,
@@ -103,6 +161,7 @@ class StaffOperationsApi {
   static const _participations = '/api/event-participations';
   static const _submissions = '/api/practice-submissions';
   static const _notes = '/api/director-notes';
+  static const _nominations = '/api/director-nominations';
   static const _reports = '/api/reports';
 
   String _id(String value) => Uri.encodeComponent(value);
@@ -152,8 +211,12 @@ class StaffOperationsApi {
     int page,
     T Function(Map<String, dynamic>) decode, {
     Map<String, dynamic> query = const {},
+    int pageSize = 20,
   }) async => PagedList.fromJson(
-    await _object(path, query: {'pageNumber': page, 'pageSize': 20, ...query}),
+    await _object(
+      path,
+      query: {'pageNumber': page, 'pageSize': pageSize, ...query},
+    ),
     decode,
   );
 
@@ -163,6 +226,220 @@ class StaffOperationsApi {
   String _str(Map<String, dynamic> row, String key) => row[key] as String;
   int _count(Map<String, dynamic> row, String key) =>
       (row[key] as num?)?.toInt() ?? 0;
+
+  String _nominationPath(String id) => '$_nominations/${_id(id)}';
+
+  Future<PagedList<DirectorNomination>> directorNominations(
+    int page,
+    NominationStatus? status,
+  ) => _page(
+    _nominations,
+    page,
+    DirectorNomination.fromJson,
+    query: {if (status != null) 'status': status.wire},
+  );
+
+  Future<DirectorNomination> directorNomination(String id) async =>
+      DirectorNomination.fromJson(await _object(_nominationPath(id)));
+
+  Future<NominationStats> nominationEligibility(String memberId) async =>
+      NominationStats.fromJson(
+        await _object(
+          '$_nominations/eligibility',
+          query: {'memberId': memberId},
+        ),
+      );
+
+  Future<DirectorNomination> createDirectorNomination({
+    required String memberId,
+    required String reason,
+    String? choirId,
+  }) async => DirectorNomination.fromJson(
+    (await _request<Map<String, dynamic>>(
+      'POST',
+      _nominations,
+      body: {
+        'memberId': memberId,
+        'reason': reason,
+        'proposedChoirId': ?choirId,
+      },
+    ))!,
+  );
+
+  Future<void> changeNomination(
+    String id,
+    NominationAction action, {
+    String? note,
+  }) async {
+    await _request<Object?>(
+      'POST',
+      '${_nominationPath(id)}/${action.path}',
+      body: note == null ? null : {'note': note},
+    );
+  }
+
+  Future<List<DirectorTraining>> directorTrainings(String id) =>
+      _list('${_nominationPath(id)}/trainings', DirectorTraining.fromJson);
+
+  Future<void> createDirectorTraining(
+    String id, {
+    required String name,
+    String? organizer,
+    required String startDate,
+    String? endDate,
+  }) async {
+    await _request<Object?>(
+      'POST',
+      '${_nominationPath(id)}/trainings',
+      body: {
+        'courseName': name,
+        'startDate': startDate,
+        'organizer': ?organizer,
+        'endDate': ?endDate,
+      },
+    );
+  }
+
+  Future<void> recordDirectorTrainingResult(
+    String id,
+    String trainingId, {
+    required bool passed,
+    String? note,
+  }) async {
+    await _request<Object?>(
+      'PUT',
+      '${_nominationPath(id)}/trainings/${_id(trainingId)}/result',
+      body: {'result': passed ? 'Passed' : 'Failed', 'note': ?note},
+    );
+  }
+
+  Future<void> deleteDirectorTraining(String id, String trainingId) async {
+    await _request<Object?>(
+      'DELETE',
+      '${_nominationPath(id)}/trainings/${_id(trainingId)}',
+    );
+  }
+
+  Future<PagedList<StaffMemberSummary>> memberProfiles(
+    int page, {
+    String keyword = '',
+    MemberStatus? status,
+    String? skillId,
+  }) => _page(
+    ApiEndpoints.memberProfiles,
+    page,
+    (row) => (
+      id: _str(row, 'id'),
+      name: _str(row, 'fullName'),
+      email: _str(row, 'email'),
+      status: _str(row, 'status'),
+      roleName: row['roleName'] as String?,
+      approvedSkills: _rows(row['approvedSkills'])
+          .map((skill) => _str(skill, 'skillName'))
+          .toList(),
+    ),
+    query: {
+      if (keyword.trim().isNotEmpty) 'keyword': keyword.trim(),
+      if (status != null) 'status': status.wireName,
+      'skillId': ?skillId,
+    },
+  );
+
+  String _memberProfilePath(String id) =>
+      '${ApiEndpoints.memberProfiles}/${_id(id)}';
+
+  Future<MemberProfileDto> memberProfile(String id) async {
+    final row = await _object(_memberProfilePath(id));
+    if (!MemberStatus.values.any(
+      (status) => status.wireName == row['status'],
+    )) {
+      throw const FormatException('Unknown member status');
+    }
+    return MemberProfileDto.fromJson(row);
+  }
+
+  Future<StaffMemberSummary?> memberSummary(String id, String email) async {
+    if (email.isEmpty) return null;
+    final keyword = email.length <= 100
+        ? email
+        : String.fromCharCodes(email.runes.take(50));
+    var page = 1;
+    while (true) {
+      final result = await memberProfiles(page, keyword: keyword);
+      for (final member in result.items) {
+        if (member.id == id) return member;
+      }
+      if (!result.hasNextPage) return null;
+      page++;
+    }
+  }
+
+  Future<void> updateMemberProfile(
+    String id, {
+    required String? phone,
+    required String? dateOfBirth,
+    required String joinedDate,
+    required MemberStatus status,
+  }) async {
+    await _request<Object?>(
+      'PUT',
+      _memberProfilePath(id),
+      body: {
+        'phone': phone,
+        'dateOfBirth': dateOfBirth,
+        'joinedDate': joinedDate,
+        'status': status.wireName,
+      },
+    );
+  }
+
+  Future<List<StaffChoirMember>> choirMembers(String choirId) => _list(
+    ApiEndpoints.choirMembers(_id(choirId)),
+    (row) => (
+      id: _str(row, 'memberId'),
+      name: _str(row, 'fullName'),
+      email: _str(row, 'email'),
+      joinedDate: _str(row, 'joinedDate'),
+    ),
+  );
+
+  Future<void> addChoirMembers(String choirId, List<String> memberIds) async {
+    await _request<Object?>(
+      'POST',
+      ApiEndpoints.choirMembers(_id(choirId)),
+      body: {'memberIds': memberIds},
+    );
+  }
+
+  Future<void> removeChoirMember(String choirId, String memberId) async {
+    await _request<Object?>(
+      'DELETE',
+      '${ApiEndpoints.choirMembers(_id(choirId))}/${_id(memberId)}',
+    );
+  }
+
+  Future<PagedList<PendingStaffSkill>> pendingMemberSkills(
+    int page, {
+    int pageSize = 20,
+  }) => _page(
+    ApiEndpoints.pendingMemberSkills,
+    page,
+    (row) => (
+      memberId: _str(row, 'memberId'),
+      memberName: _str(row, 'memberFullName'),
+      skill: MemberSkillDto.fromJson(row),
+    ),
+    pageSize: pageSize,
+  );
+
+  Future<void> reviewMemberSkill(String id, {String? rejectReason}) async {
+    final action = rejectReason == null ? 'approve' : 'reject';
+    await _request<Object?>(
+      'PATCH',
+      '${ApiEndpoints.memberSkillById(_id(id))}/$action',
+      body: rejectReason == null ? null : {'reason': rejectReason},
+    );
+  }
 
   RehearsalSong _rehearsalSong(Map<String, dynamic> row) => (
     id: _str(row, 'songId'),
@@ -419,6 +696,71 @@ class StaffOperationsApi {
     );
   }
 
+  Future<PagedList<StaffPracticeAssignment>> practiceAssignments(
+    int page,
+    String? eventId,
+  ) => _page(ApiEndpoints.practiceAssignments, page, (row) {
+    final scope = _str(row, 'scope');
+    return (
+      id: _str(row, 'id'),
+      title: _str(row, 'title'),
+      instruction: row['instruction'] as String?,
+      eventId: row['eventId'] as String?,
+      choirId: row['choirId'] as String?,
+      scope: scope,
+      dueDate: DateTime.parse(_str(row, 'dueDate')),
+      targetCount: switch (scope) {
+        'SkillGroup' => (row['skillIds'] as List?)?.length ?? 0,
+        'Individual' => (row['memberIds'] as List?)?.length ?? 0,
+        _ => 0,
+      },
+    );
+  }, query: {'eventId': ?eventId});
+
+  Future<void> createPracticeAssignment({
+    required String choirId,
+    String? eventId,
+    String? songId,
+    List<String> materialIds = const [],
+    required String title,
+    String? instruction,
+    required StaffPracticeScope scope,
+    required DateTime dueDate,
+    List<String> skillIds = const [],
+    List<String> memberIds = const [],
+  }) async {
+    await _request<Object?>(
+      'POST',
+      ApiEndpoints.practiceAssignments,
+      body: {
+        'choirId': choirId,
+        'eventId': ?eventId,
+        'songId': ?songId,
+        if (materialIds.isNotEmpty) 'materialIds': materialIds,
+        'title': title,
+        'instruction': ?instruction,
+        'scope': scope.wireName,
+        'dueDate': dueDate.toUtc().toIso8601String(),
+        if (scope == StaffPracticeScope.skillGroup) 'skillIds': skillIds,
+        if (scope == StaffPracticeScope.individual) 'memberIds': memberIds,
+      },
+    );
+  }
+
+  Future<List<StaffPreparationProgress>> preparationProgress(String eventId) =>
+      _list(
+        ApiEndpoints.eventPreparationProgress(_id(eventId)),
+        (row) => (
+          name: _str(row, 'fullName'),
+          participation: row['participationStatus'] as String?,
+          rehearsalsHeld: _count(row, 'rehearsalsHeld'),
+          rehearsalsAttended: _count(row, 'rehearsalsAttended'),
+          assignmentsTotal: _count(row, 'assignmentsTotal'),
+          assignmentsPassed: _count(row, 'assignmentsPassed'),
+          assignmentsOverdue: _count(row, 'assignmentsOverdue'),
+        ),
+      );
+
   StaffSubmission _submission(Map<String, dynamic> row) => (
     id: _str(row, 'id'),
     member: _str(row, 'memberName'),
@@ -440,14 +782,16 @@ class StaffOperationsApi {
   Future<PagedList<StaffSubmission>> submissions(
     int page,
     String? status,
-    String? assignment,
-  ) => _page(
+    String? assignment, {
+    int pageSize = 20,
+  }) => _page(
     assignment == null
         ? _submissions
         : '/api/practice-assignments/${_id(assignment)}/submissions',
     page,
     _submission,
     query: {'status': ?status},
+    pageSize: pageSize,
   );
 
   Future<StaffSubmission> submission(String id) async =>
@@ -560,13 +904,17 @@ class StaffOperationsApi {
     query: {...filters, 'groupBy': 'Month'},
   );
 
-  Future<String> exportCsv(String type, Map<String, dynamic> filters) async {
+  Future<List<int>> exportReport(
+    String type,
+    String format,
+    Map<String, dynamic> filters,
+  ) async {
     try {
-      return (await _request<String>(
+      return (await _request<List<int>>(
         'GET',
         '$_reports/export',
-        query: {...filters, 'type': type, 'format': 'Csv'},
-        responseType: ResponseType.plain,
+        query: {...filters, 'type': type, 'format': format},
+        responseType: ResponseType.bytes,
       ))!;
     } on NotFoundException {
       throw const NotFoundException(
@@ -576,10 +924,120 @@ class StaffOperationsApi {
     }
   }
 
-  Future<MusicMaterialPlaybackDto> scorePlayback(String id) async =>
-      MusicMaterialPlaybackDto.fromJson(
-        await _object('/api/music-materials/${_id(id)}/playback'),
+  Future<SongDto> saveSong(SongDto song, {String? id}) async {
+    final body = song.toJson()..remove('id');
+    final result = await _request<Map<String, dynamic>>(
+      id == null ? 'POST' : 'PUT',
+      id == null ? ApiEndpoints.songs : ApiEndpoints.songById(_id(id)),
+      body: body,
+    );
+    return SongDto.fromJson(result!);
+  }
+
+  Future<SongClassificationDto> songClassification(String songId) async =>
+      SongClassificationDto.fromJson(
+        await _object(ApiEndpoints.songClassification(_id(songId))),
       );
+
+  Future<void> saveSongClassification(
+    String songId,
+    Map<String, Object?> values,
+  ) async {
+    await _request<Object?>(
+      'PUT',
+      ApiEndpoints.songClassification(_id(songId)),
+      body: values,
+    );
+  }
+
+  Future<MultipartFile> _uploadFile(StaffDocument document) =>
+      MultipartFile.fromFile(document.path, filename: document.name);
+
+  Future<void> uploadMaterial({
+    required String songId,
+    required MaterialType type,
+    required String title,
+    StaffDocument? file,
+    String? targetSkillId,
+    String? lyricsText,
+    String? instrument,
+  }) async {
+    await _request<Object?>(
+      'POST',
+      ApiEndpoints.musicMaterials,
+      body: FormData.fromMap({
+        'songId': songId,
+        'title': title,
+        'materialType': type.wireName,
+        'targetSkillId': ?targetSkillId,
+        'lyricsText': ?lyricsText,
+        'instrument': ?instrument,
+        if (file != null) 'file': await _uploadFile(file),
+      }),
+      timeout: const Duration(minutes: 2),
+    );
+  }
+
+  Future<void> replaceMaterialFile(
+    String materialId,
+    StaffDocument file, {
+    required bool resetProgress,
+    String? instrument,
+  }) async {
+    await _request<Object?>(
+      'PUT',
+      '${ApiEndpoints.musicMaterials}/${_id(materialId)}/file',
+      body: FormData.fromMap({
+        'file': await _uploadFile(file),
+        'resetProgress': resetProgress.toString(),
+        'instrument': ?instrument,
+      }),
+      timeout: const Duration(minutes: 2),
+    );
+  }
+
+  Future<PagedList<StaffMaterialProgress>> materialProgress(
+    String materialId,
+    int page,
+    String? status,
+  ) => _page(
+    '${ApiEndpoints.musicMaterials}/${_id(materialId)}/learning-progress',
+    page,
+    (row) => (
+      name: _str(row, 'fullName'),
+      status: _str(row, 'status'),
+      updatedAt: DateTime.tryParse(row['updatedAt'] as String? ?? ''),
+    ),
+    query: {'status': ?status},
+  );
+
+  Future<void> uploadRehearsalRecording(
+    String rehearsalId,
+    StaffDocument file, {
+    String? title,
+    String? songId,
+  }) async {
+    await _request<Object?>(
+      'POST',
+      ApiEndpoints.rehearsalRecordings(_id(rehearsalId)),
+      body: FormData.fromMap({
+        'file': await _uploadFile(file),
+        'title': ?title,
+        'songId': ?songId,
+      }),
+      timeout: const Duration(minutes: 2),
+    );
+  }
+
+  Future<void> deleteRehearsalRecording(
+    String rehearsalId,
+    String recordingId,
+  ) async {
+    await _request<Object?>(
+      'DELETE',
+      '${ApiEndpoints.rehearsalRecordings(_id(rehearsalId))}/${_id(recordingId)}',
+    );
+  }
 
   Future<PagedList<MusicMaterialDto>> songMaterials(String song, int page) =>
       _page(

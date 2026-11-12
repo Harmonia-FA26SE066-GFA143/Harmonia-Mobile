@@ -8,6 +8,9 @@ import 'package:intl/intl.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../core/errors/error_messages.dart';
+import '../../staff_workspace/data/staff_operations_api.dart';
+import '../../staff_workspace/presentation/staff_ops_widgets.dart';
+import '../../staff_workspace/presentation/staff_rehearsal_recording_editor.dart';
 import '../data/calendar_member_dto.dart';
 import '../data/calendar_repository.dart';
 
@@ -18,16 +21,19 @@ class RehearsalDetailScreen extends ConsumerStatefulWidget {
     super.key,
     required this.rehearsalId,
     this.showOwnAttendance = true,
+    this.manageRecordings = false,
   });
 
   final bool showOwnAttendance;
+  final bool manageRecordings;
 
   @override
   ConsumerState<RehearsalDetailScreen> createState() =>
       _RehearsalDetailScreenState();
 }
 
-class _RehearsalDetailScreenState extends ConsumerState<RehearsalDetailScreen> {
+class _RehearsalDetailScreenState extends ConsumerState<RehearsalDetailScreen>
+    with OpsActions<RehearsalDetailScreen> {
   final AudioPlayer _audioPlayer = AudioPlayer();
   StreamSubscription<PlayerState>? _playerStateSubscription;
   StreamSubscription<void>? _playerCompleteSubscription;
@@ -111,6 +117,42 @@ class _RehearsalDetailScreenState extends ConsumerState<RehearsalDetailScreen> {
     return '${duration.inHours > 0 ? '${duration.inHours}:' : ''}$minutes:$remainingSeconds';
   }
 
+  Future<void> _addRecording() async {
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) =>
+            StaffRehearsalRecordingEditor(rehearsalId: widget.rehearsalId),
+      ),
+    );
+    if (saved != true || !mounted) return;
+    ref.invalidate(rehearsalRecordingsProvider(widget.rehearsalId));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Đã tải bản thu buổi tập lên.')),
+    );
+  }
+
+  Future<void> _removeRecording(RehearsalRecording recording) async {
+    final api = ref.read(staffOperationsApiProvider);
+    final confirmed = await opsConfirm(
+      context,
+      'Gỡ bản thu buổi tập?',
+      'Ca viên sẽ không còn nghe được bản thu này.',
+      'Gỡ bản thu',
+    );
+    if (!confirmed || !mounted) return;
+    final removed = await runAction(() async {
+      if (_activeRecordingId == recording.id) {
+        await _audioPlayer.stop();
+        if (mounted) setState(() => _activeRecordingId = null);
+      }
+      await api.deleteRehearsalRecording(widget.rehearsalId, recording.id);
+    });
+    if (!removed || !mounted) return;
+    ref.invalidate(rehearsalRecordingsProvider(widget.rehearsalId));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Đã gỡ bản thu buổi tập.')));
+  }
+
   Widget _recordingsSection(BuildContext context) {
     final state = ref.watch(rehearsalRecordingsProvider(widget.rehearsalId));
     return Column(
@@ -122,6 +164,14 @@ class _RehearsalDetailScreenState extends ConsumerState<RehearsalDetailScreen> {
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 8),
+        if (widget.manageRecordings) ...[
+          FilledButton.icon(
+            onPressed: busy ? null : _addRecording,
+            icon: const Icon(Icons.upload_file),
+            label: const Text('Tải bản thu lên'),
+          ),
+          actionState,
+        ],
         state.when(
           loading: () => const Padding(
             padding: EdgeInsets.all(20),
@@ -165,7 +215,7 @@ class _RehearsalDetailScreenState extends ConsumerState<RehearsalDetailScreen> {
                                 _audioPlayer.state == PlayerState.playing
                             ? 'Tạm dừng'
                             : 'Phát bản ghi',
-                        onPressed: _loadingRecordingId == null
+                        onPressed: _loadingRecordingId == null && !busy
                             ? () => _togglePlayback(recording)
                             : null,
                         icon: _loadingRecordingId == recording.id
@@ -200,6 +250,15 @@ class _RehearsalDetailScreenState extends ConsumerState<RehearsalDetailScreen> {
                         '${_formatFileSize(recording.fileSizeBytes)} • '
                         '${DateFormat('dd/MM/yyyy HH:mm').format(recording.createdAt)}',
                       ),
+                      trailing: widget.manageRecordings
+                          ? IconButton(
+                              tooltip: 'Gỡ bản thu',
+                              onPressed: busy || _loadingRecordingId != null
+                                  ? null
+                                  : () => _removeRecording(recording),
+                              icon: const Icon(Icons.delete_outline),
+                            )
+                          : null,
                     ),
                   ),
               ],

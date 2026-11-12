@@ -3,15 +3,18 @@ import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/widgets/app_page_header.dart';
+import '../../../app/widgets/member_choir_visuals.dart';
 import '../../../app/widgets/stitch_entrance.dart';
 import '../../music/data/music_file_loader.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/di/core_providers.dart';
 import '../../../core/errors/error_messages.dart';
+import '../data/practice_models.dart';
 import '../data/practice_repository.dart';
 
 class PracticeSubmissionDetailScreen extends ConsumerStatefulWidget {
@@ -161,407 +164,383 @@ class _PracticeSubmissionDetailScreenState
 
   @override
   Widget build(BuildContext context) {
-    final detailAsync = ref.watch(
-      mySubmissionDetailProvider(widget.submissionId),
-    );
+    final provider = mySubmissionDetailProvider(widget.submissionId);
+    final detail = ref.watch(provider);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppPageHeader(
+    final scaffold = Scaffold(
+      backgroundColor: MemberChoirStyle.paper,
+      appBar: const AppPageHeader(
         centerTitle: true,
-        title: const Text('Chi tiết bản thu âm'),
+        gradient: MemberChoirStyle.header,
+        titleFontFamily: MemberChoirStyle.displayFont,
+        title: Text('Chi tiết bản thu âm'),
       ),
       body: SafeArea(
-        child: detailAsync.when(
-          loading: () => const Center(
-            child: CircularProgressIndicator(color: AppColors.primary),
-          ),
-          error: (e, _) => Center(
-            child: Padding(
+        top: false,
+        child: detail.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) => Center(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                spacing: 12,
                 children: [
                   const Icon(
                     Icons.error_outline_rounded,
                     size: 48,
                     color: AppColors.statusDanger,
                   ),
-                  const SizedBox(height: 12),
                   Text(
                     ErrorMessages.forException(
-                      e,
+                      error,
                       defaultMessage:
                           'Không thể tải chi tiết bản thu. Vui lòng thử lại.',
                     ),
-                    style: AppTypography.bodyMedium,
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 20),
                   ElevatedButton(
-                    onPressed: () => ref.refresh(
-                      mySubmissionDetailProvider(widget.submissionId),
-                    ),
+                    onPressed: () => ref.invalidate(provider),
                     child: const Text('Thử lại'),
                   ),
                 ],
               ),
             ),
           ),
-          data: (submission) {
-            if (submission == null) {
-              return const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Text(
-                    'Bản thu không tồn tại hoặc bạn không có quyền truy cập.',
-                    style: TextStyle(color: AppColors.muted),
-                    textAlign: TextAlign.center,
+          data: (submission) => submission == null
+              ? const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Text(
+                      'Bản thu không tồn tại hoặc bạn không có quyền truy cập.',
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                )
+              : _contents(submission),
+        ),
+      ),
+    );
+    return Theme(data: MemberChoirStyle.theme(context), child: scaffold);
+  }
+
+  Widget _contents(PracticeSubmissionDetail submission) {
+    final (statusLabel, statusColor) = switch (submission.status) {
+      'Passed' => ('Đạt yêu cầu', AppColors.statusSuccess),
+      'NeedsRevision' => ('Cần luyện thêm', AppColors.statusDanger),
+      _ => ('Đã nộp • Chờ chấm', AppColors.statusInfo),
+    };
+    final seconds = _duration?.inSeconds ?? submission.durationSeconds;
+    final duration = _duration ?? Duration(seconds: seconds < 0 ? 0 : seconds);
+    final maxPosition = duration.isNegative
+        ? 0.0
+        : duration.inMilliseconds.toDouble();
+    final position = _position.inMilliseconds.toDouble().clamp(
+      0.0,
+      maxPosition,
+    );
+    final canSeek = _prepared && !_isLoadingAudio && maxPosition > 0;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: 14,
+        children: [
+          StitchEntrance(
+            child: _SubmissionPanel(
+              children: [
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    const Icon(
+                      Icons.mic_none_rounded,
+                      color: MemberChoirStyle.wine,
+                      size: 19,
+                    ),
+                    Text(
+                      'Lần nộp ${submission.attemptNo}',
+                      style: AppTypography.labelLarge.copyWith(
+                        color: MemberChoirStyle.wine,
+                      ),
+                    ),
+                    _SubmissionPill(label: statusLabel, color: statusColor),
+                  ],
+                ),
+                Text(
+                  submission.assignmentTitle?.trim().isNotEmpty == true
+                      ? submission.assignmentTitle!
+                      : 'Bài luyện tập',
+                  style: AppTypography.headlineMedium.copyWith(
+                    color: MemberChoirStyle.ink,
+                    fontFamily: MemberChoirStyle.displayFont,
                   ),
                 ),
-              );
-            }
-
-            Color statusColor;
-            String statusLabel;
-            if (submission.status == 'Passed') {
-              statusColor = AppColors.statusSuccess;
-              statusLabel = 'Đạt yêu cầu';
-            } else if (submission.status == 'NeedsRevision') {
-              statusColor = AppColors.statusDanger;
-              statusLabel = 'Cần luyện thêm';
-            } else {
-              statusColor = AppColors.statusInfo;
-              statusLabel = 'Đã nộp • Chờ chấm';
-            }
-
-            final length =
-                _duration ?? Duration(seconds: submission.durationSeconds);
-            final maxPosition = length.inMilliseconds.toDouble();
-            final position = _position.inMilliseconds.toDouble().clamp(
-              0.0,
-              maxPosition,
-            );
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Main Info Card
-                  StitchEntrance(
-                    child: Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Wrap(
-                              alignment: WrapAlignment.spaceBetween,
-                              spacing: 8,
-                              runSpacing: 6,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.primary.withValues(
-                                      alpha: 0.1,
-                                    ),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    'Lần nộp ${submission.attemptNo}',
-                                    style: AppTypography.labelSmall.copyWith(
-                                      color: AppColors.primary,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: statusColor.withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    statusLabel,
-                                    style: AppTypography.labelSmall.copyWith(
-                                      color: statusColor,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            if (submission.assignmentTitle != null) ...[
-                              Text(
-                                submission.assignmentTitle!,
-                                style: AppTypography.titleLarge.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                            ],
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.access_time_rounded,
-                                  size: 16,
-                                  color: AppColors.muted,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'Nộp lúc: ${DateFormat('dd/MM/yyyy HH:mm').format(submission.submittedAt)}',
-                                  style: AppTypography.bodySmall.copyWith(
-                                    color: AppColors.muted,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 20),
-                            const Divider(),
-                            const SizedBox(height: 12),
-
-                            // Audio playback box
-                            Container(
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFFF5F7),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: const Color(0xFFFFDCE4),
-                                ),
-                              ),
-                              child: Column(
-                                children: [
-                                  Row(
-                                    children: [
-                                      IconButton.filled(
-                                        tooltip: _isPlaying
-                                            ? 'Tạm dừng bản thu'
-                                            : 'Phát bản thu',
-                                        style: IconButton.styleFrom(
-                                          backgroundColor: AppColors.primary,
-                                          minimumSize: const Size(48, 48),
-                                        ),
-                                        onPressed: _isLoadingAudio
-                                            ? null
-                                            : _playAudio,
-                                        icon: _isLoadingAudio
-                                            ? const SizedBox(
-                                                width: 20,
-                                                height: 20,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                      strokeWidth: 2,
-                                                      color: Colors.white,
-                                                    ),
-                                              )
-                                            : Icon(
-                                                _isPlaying
-                                                    ? Icons.pause_rounded
-                                                    : Icons.play_arrow_rounded,
-                                                color: Colors.white,
-                                                size: 28,
-                                              ),
-                                      ),
-                                      const SizedBox(width: 14),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'Bản ghi âm đã nộp',
-                                              style: AppTypography.titleMedium
-                                                  .copyWith(
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                            ),
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              _isPlaying
-                                                  ? 'Đang phát'
-                                                  : 'Thời lượng: ${_formatDuration(length.inSeconds)}',
-                                              style: AppTypography.bodySmall
-                                                  .copyWith(
-                                                    color: AppColors.muted,
-                                                  ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  Row(
-                                    children: [
-                                      Text(
-                                        _formatDuration(_position.inSeconds),
-                                        style: AppTypography.labelSmall,
-                                      ),
-                                      Expanded(
-                                        child: Slider(
-                                          max: maxPosition > 0
-                                              ? maxPosition
-                                              : 1,
-                                          value: position,
-                                          onChanged:
-                                              _prepared && maxPosition > 0
-                                              ? _seek
-                                              : null,
-                                        ),
-                                      ),
-                                      Text(
-                                        _formatDuration(length.inSeconds),
-                                        style: AppTypography.labelSmall,
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                const Divider(height: 1),
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 8,
+                  children: [
+                    Text(
+                      'Nộp lúc: ${DateFormat('dd/MM/yyyy HH:mm').format(submission.submittedAt)}',
+                      style: AppTypography.bodySmall,
                     ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Feedbacks Section
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    if (seconds > 0)
+                      Text(
+                        'Thời lượng: ${_formatDuration(seconds)}',
+                        style: AppTypography.bodySmall,
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          _SubmissionPanel(
+            children: [
+              Text(
+                'Bản ghi âm đã nộp',
+                style: AppTypography.titleLarge.copyWith(
+                  color: MemberChoirStyle.ink,
+                ),
+              ),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: MemberChoirStyle.paper,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: MemberChoirStyle.border),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text('Tiến độ phát', style: AppTypography.labelMedium),
+                      Slider(
+                        max: maxPosition > 0 ? maxPosition : 1,
+                        value: position,
+                        semanticFormatterCallback: (value) =>
+                            _formatDuration(value ~/ 1000),
+                        onChanged: canSeek ? _seek : null,
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.rate_review_rounded,
-                                color: AppColors.secondary,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Nhận xét từ Ca trưởng (${submission.feedbacks.length})',
-                                  style: AppTypography.titleMedium.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
+                          Text(
+                            _formatDuration(position ~/ 1000),
+                            style: AppTypography.labelSmall,
                           ),
-                          const Divider(),
-                          if (submission.feedbacks.isEmpty)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              child: Center(
-                                child: Text(
-                                  'Chưa có nhận xét nào từ Ca trưởng cho lần nộp này.',
-                                  style: AppTypography.bodySmall.copyWith(
-                                    color: AppColors.muted,
-                                  ),
-                                ),
-                              ),
-                            )
-                          else
-                            ListView.separated(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              itemCount: submission.feedbacks.length,
-                              separatorBuilder: (context, index) =>
-                                  const Divider(height: 16),
-                              itemBuilder: (context, index) {
-                                final fb = submission.feedbacks[index];
-                                final isPassed = fb.result == 'Passed';
-
-                                return Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 4,
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              fb.reviewerName ?? 'Ca trưởng',
-                                              style: AppTypography.titleMedium
-                                                  .copyWith(
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                            ),
-                                          ),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 2,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: isPassed
-                                                  ? AppColors.statusSuccessSoft
-                                                  : AppColors.statusDangerSoft,
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                            ),
-                                            child: Text(
-                                              isPassed ? 'Đạt' : 'Cần sửa',
-                                              style: AppTypography.labelSmall
-                                                  .copyWith(
-                                                    color: isPassed
-                                                        ? AppColors
-                                                              .statusSuccess
-                                                        : AppColors
-                                                              .statusDanger,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      if (fb.reviewedAt != null) ...[
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          DateFormat('dd/MM/yyyy HH:mm')
-                                              .format(fb.reviewedAt!),
-                                          style: AppTypography.labelSmall
-                                              .copyWith(color: AppColors.muted),
-                                        ),
-                                      ],
-                                      if (fb.comment != null &&
-                                          fb.comment!.isNotEmpty) ...[
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          fb.comment!,
-                                          style: AppTypography.bodyMedium,
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                );
-                              },
-                            ),
+                          Text(
+                            _formatDuration(maxPosition ~/ 1000),
+                            style: AppTypography.labelSmall,
+                          ),
                         ],
                       ),
+                    ],
+                  ),
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                spacing: 10,
+                children: [
+                  IconButton(
+                    tooltip: 'Lùi 10 giây',
+                    onPressed: canSeek
+                        ? () =>
+                              _seek((position - 10000).clamp(0.0, maxPosition))
+                        : null,
+                    icon: const Icon(Icons.replay_10_rounded),
+                  ),
+                  IconButton.filled(
+                    tooltip: _isPlaying ? 'Tạm dừng bản thu' : 'Phát bản thu',
+                    style: IconButton.styleFrom(
+                      backgroundColor: MemberChoirStyle.wine,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size.square(56),
                     ),
+                    onPressed: _isLoadingAudio ? null : _playAudio,
+                    icon: _isLoadingAudio
+                        ? const SizedBox.square(
+                            dimension: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Icon(
+                            _isPlaying
+                                ? Icons.pause_rounded
+                                : Icons.play_arrow_rounded,
+                            size: 26,
+                          ),
+                  ),
+                  IconButton(
+                    tooltip: 'Tiến 10 giây',
+                    onPressed: canSeek
+                        ? () =>
+                              _seek((position + 10000).clamp(0.0, maxPosition))
+                        : null,
+                    icon: const Icon(Icons.forward_10_rounded),
                   ),
                 ],
               ),
-            );
-          },
+            ],
+          ),
+          _SubmissionPanel(
+            color: MemberChoirStyle.softGold.withValues(alpha: .46),
+            children: [
+              Text(
+                'Nhận xét từ Ca trưởng (${submission.feedbacks.length})',
+                style: AppTypography.titleMedium.copyWith(
+                  color: MemberChoirStyle.ink,
+                ),
+              ),
+              if (submission.feedbacks.isEmpty)
+                const Text('Chưa có nhận xét nào từ Ca trưởng cho lần nộp này.')
+              else
+                for (final (index, feedback)
+                    in submission.feedbacks.indexed) ...[
+                  if (index > 0) const Divider(height: 1),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 5,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        feedback.reviewerName ?? 'Ca trưởng',
+                        style: AppTypography.titleMedium,
+                      ),
+                      if (feedback.result == 'Passed' ||
+                          feedback.result == 'NeedsRevision')
+                        _SubmissionPill(
+                          label: feedback.result == 'Passed'
+                              ? 'Đạt'
+                              : 'Cần sửa',
+                          color: feedback.result == 'Passed'
+                              ? AppColors.statusSuccess
+                              : AppColors.statusDanger,
+                        ),
+                    ],
+                  ),
+                  if (feedback.reviewedAt case final date?)
+                    Text(
+                      DateFormat('dd/MM/yyyy HH:mm').format(date),
+                      style: AppTypography.labelSmall,
+                    ),
+                  if (feedback.comment?.trim().isNotEmpty == true)
+                    Text(feedback.comment!, style: AppTypography.bodyMedium),
+                ],
+            ],
+          ),
+          if (submission.practiceAssignmentId.isNotEmpty)
+            _SubmissionAttempts(submission: submission),
+        ],
+      ),
+    );
+  }
+}
+
+class _SubmissionPanel extends StatelessWidget {
+  const _SubmissionPanel({required this.children, this.color});
+
+  final List<Widget> children;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    color: color,
+    margin: EdgeInsets.zero,
+    child: Padding(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: 10,
+        children: children,
+      ),
+    ),
+  );
+}
+
+class _SubmissionPill extends StatelessWidget {
+  const _SubmissionPill({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: .12),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Text(
+        label,
+        style: AppTypography.labelSmall.copyWith(
+          color: color,
+          fontWeight: FontWeight.w700,
         ),
       ),
+    ),
+  );
+}
+
+class _SubmissionAttempts extends ConsumerWidget {
+  const _SubmissionAttempts({required this.submission});
+
+  final PracticeSubmissionDetail submission;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(
+      practiceSubmissionsNotifierProvider(submission.practiceAssignmentId),
+    );
+    final attempts = state.items
+        .where((item) => item.id != submission.id)
+        .take(3);
+    return _SubmissionPanel(
+      children: [
+        Text('Lịch sử các lần nộp', style: AppTypography.titleMedium),
+        ListTile(
+          tileColor: MemberChoirStyle.paper,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          leading: const Icon(
+            Icons.radio_button_checked_rounded,
+            color: MemberChoirStyle.wine,
+          ),
+          title: Text('Đang xem · Lần nộp ${submission.attemptNo}'),
+          subtitle: Text(
+            DateFormat('dd/MM/yyyy HH:mm').format(submission.submittedAt),
+          ),
+        ),
+        for (final attempt in attempts)
+          ListTile(
+            leading: const Icon(
+              Icons.history_rounded,
+              color: MemberChoirStyle.wine,
+            ),
+            title: Text('Lần nộp ${attempt.attemptNo}'),
+            subtitle: Text(
+              DateFormat('dd/MM/yyyy HH:mm').format(attempt.submittedAt),
+            ),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => context.pushReplacement(
+              '/practice-submission/${Uri.encodeComponent(attempt.id)}',
+            ),
+          ),
+        if (submission.status == 'NeedsRevision')
+          OutlinedButton.icon(
+            onPressed: () => context.push(
+              '/practice-detail/${Uri.encodeComponent(submission.practiceAssignmentId)}',
+            ),
+            icon: const Icon(Icons.mic_none_rounded),
+            label: const Text('Mở bài tập để luyện lại'),
+          ),
+      ],
     );
   }
 }

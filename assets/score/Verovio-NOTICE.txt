@@ -1,0 +1,3 @@
+Verovio 6.4.1 (LGPL-3.0-only), unmodified JavaScript/WebAssembly build.
+Source and build instructions: https://github.com/rism-digital/verovio/tree/version-6.4.1
+Published build: https://registry.npmjs.org/verovio/-/verovio-6.4.1.tgz

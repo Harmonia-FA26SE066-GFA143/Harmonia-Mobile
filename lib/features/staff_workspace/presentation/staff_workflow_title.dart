@@ -47,7 +47,7 @@ class StaffWorkflowTitle extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: AppTypography.bodySmall.copyWith(
-            color: const Color(0xFFFFE1E9),
+            color: AppColors.onPrimaryContainer,
           ),
         ),
     ],

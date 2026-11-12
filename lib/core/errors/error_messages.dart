@@ -56,20 +56,40 @@ class ErrorMessages {
         'Không phân tích được âm thanh. Hãy kiểm tra chất lượng bản thu.',
     'PRACTICE_SUBMISSION_SUPERSEDED':
         'Ca viên đã gửi bản thu mới hơn. Hãy mở lần nộp mới nhất.',
+    'CHOIR_NOT_FOUND': 'Không tìm thấy ca đoàn bạn phụ trách.',
+    'CHOIR_INACTIVE': 'Ca đoàn ngừng hoạt động nên không thể thêm ca viên.',
+    'CHOIR_MEMBER_INVALID': 'Chỉ có thể thêm ca viên đang sinh hoạt.',
+    'CHOIR_MEMBERSHIP_NOT_FOUND': 'Ca viên không còn thuộc ca đoàn này.',
+    'MEMBER_NOT_FOUND': 'Không tìm thấy hồ sơ ca viên trong phạm vi phụ trách.',
+    'MEMBER_JOINED_DATE_IN_FUTURE': 'Ngày tham gia không được sau hôm nay.',
     'MEMBER_NOT_ACTIVE': 'Hồ sơ ca viên chưa ở trạng thái hoạt động.',
+    'MEMBER_SKILL_NOT_FOUND': 'Không tìm thấy kỹ năng trong phạm vi phụ trách.',
+    'MEMBER_SKILL_REJECT_REASON_REQUIRED': 'Vui lòng nhập lý do từ chối.',
     'MEMBER_SKILL_EVIDENCE_REQUIRED': 'Vui lòng chọn tệp minh chứng.',
     'MEMBER_SKILL_EVIDENCE_TYPE_NOT_ALLOWED':
         'Chỉ hỗ trợ ghi âm MP3, M4A, WAV hoặc video MP4, MOV.',
     'MEMBER_SKILL_EVIDENCE_TOO_LARGE':
         'Ghi âm tối đa 20 MB, video tối đa 100 MB.',
     'MEMBER_SKILL_ALREADY_REVIEWED':
-        'Kỹ năng đã được ca trưởng xem xét nên không thể cập nhật minh chứng.',
+        'Kỹ năng này đã được ca trưởng xem xét. Vui lòng tải lại.',
     'MEMBER_SKILL_ALREADY_DECLARED': 'Bạn đã khai báo kỹ năng này trước đó.',
     'MATERIAL_LEARNING_STATUS_INVALID':
         'Chỉ có thể chọn Đã thuộc hoặc Cần tập thêm.',
+    'MATERIAL_SCORE_INVALID':
+        'Tệp MusicXML / MXL bị hỏng hoặc quá lớn khi giải nén.',
+    'MATERIAL_SCORE_UNSUPPORTED':
+        'Bản nhạc không có nốt nào phát được hoặc định dạng chưa hỗ trợ.',
+    'MATERIAL_NOT_INTERACTIVE_SCORE':
+        'Tài liệu này không phải bản nhạc tương tác.',
     'MATERIAL_PLAYBACK_UNAVAILABLE':
         'Tài liệu chưa có dữ liệu phát. Vui lòng nhờ ca trưởng kiểm tra lại.',
     'CALENDAR_DAY_NOT_FOUND': 'Chưa có dữ liệu lịch lễ cho ngày này.',
+    'STAFF_FILE_TYPE_NOT_ALLOWED': 'Định dạng tệp đã chọn không được hỗ trợ.',
+    'STAFF_FILE_TOO_LARGE': 'Tệp tải lên phải có dung lượng tối đa 20 MB.',
+    'STAFF_FILE_REQUIRED': 'Vui lòng chọn một tệp có nội dung.',
+    'REPORT_NO_DATA': 'Không có dữ liệu để xuất trong khoảng đã chọn.',
+    'REPORT_SAVE_FAILED':
+        'Không thể lưu tệp báo cáo. Vui lòng chọn lại nơi lưu.',
     'REPORT_DATE_RANGE_INVALID': 'Khoảng ngày không hợp lệ.',
     'REPORT_DATE_RANGE_TOO_LARGE': 'Vui lòng chọn khoảng thời gian ngắn hơn.',
     'AUTH_INVALID_CREDENTIALS': 'Email hoặc mật khẩu không chính xác.',
@@ -101,6 +121,21 @@ class ErrorMessages {
     'PRACTICE_DURATION_INVALID':
         'Thời lượng bản thu phải từ 1 giây đến 60 phút.',
     'PRACTICE_ASSIGNMENT_NOT_FOUND': 'Không tìm thấy bài tập.',
+    'PRACTICE_DUE_DATE_IN_PAST': 'Hạn nộp phải sau thời điểm hiện tại.',
+    'PRACTICE_TARGET_REQUIRED': 'Vui lòng chọn đối tượng nhận bài tập.',
+    'DIRECTOR_NOMINATION_NOT_FOUND': 'Không tìm thấy đề cử.',
+    'DIRECTOR_NOMINATION_ALREADY_OPEN':
+        'Ca viên này đang có một đề cử chưa xử lý xong.',
+    'DIRECTOR_NOMINATION_INVALID_STATUS':
+        'Không thực hiện được thao tác này ở trạng thái hiện tại của đề cử.',
+    'DIRECTOR_NOMINATION_NOTE_REQUIRED': 'Vui lòng nhập lý do.',
+    'DIRECTOR_TRAINING_NOT_FOUND': 'Không tìm thấy khóa học.',
+    'DIRECTOR_TRAINING_IN_PROGRESS':
+        'Ca viên đang có một khóa học chưa có kết quả.',
+    'DIRECTOR_TRAINING_ALREADY_RECORDED':
+        'Khóa học này đã có kết quả, không sửa hoặc xóa được.',
+    'CHOIR_NOT_SERVING_EVENT':
+        'Ca đoàn đã chọn không phục vụ chương trình này.',
     'VALIDATION_FAILED': 'Vui lòng kiểm tra lại thông tin đã nhập.',
     'NETWORK_ERROR':
         'Không thể kết nối máy chủ. Vui lòng kiểm tra kết nối mạng.',

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../app/widgets/member_choir_visuals.dart';
 import '../data/liturgical_models.dart';
 
 class LiturgicalDayDialog extends StatelessWidget {
@@ -70,7 +71,7 @@ class LiturgicalDayDialog extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-              color: AppColors.primary,
+              color: MemberChoirStyle.wine,
               child: Text(
                 dateLabel,
                 style: const TextStyle(
@@ -114,9 +115,10 @@ class LiturgicalDayDialog extends StatelessWidget {
                           time: event.timeRange,
                           actionLabel: 'Chi tiết sự kiện',
                           onAction: () {
+                            final router = GoRouter.of(context);
                             Navigator.of(context).pop();
-                            context.push(
-                              '/event/${Uri.encodeComponent(event.id)}',
+                            router.push(
+                              '/event-detail/${Uri.encodeComponent(event.id)}',
                             );
                           },
                         ),
@@ -138,8 +140,9 @@ class LiturgicalDayDialog extends StatelessWidget {
                           time: rehearsal.timeRange,
                           actionLabel: 'Chi tiết buổi tập',
                           onAction: () {
+                            final router = GoRouter.of(context);
                             Navigator.of(context).pop();
-                            context.push(
+                            router.push(
                               '/rehearsal/${Uri.encodeComponent(rehearsal.id)}',
                             );
                           },
@@ -159,7 +162,7 @@ class LiturgicalDayDialog extends StatelessWidget {
   Widget _sectionTitle(String title) => Text(
     title,
     style: AppTypography.labelSmall.copyWith(
-      color: AppColors.primary,
+      color: MemberChoirStyle.wine,
       fontWeight: FontWeight.w700,
       fontSize: 11,
     ),
@@ -207,7 +210,7 @@ class LiturgicalDayDialog extends StatelessWidget {
         ElevatedButton(
           onPressed: onAction,
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
+            backgroundColor: MemberChoirStyle.wine,
             foregroundColor: Colors.white,
             elevation: 0,
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
