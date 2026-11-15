@@ -400,11 +400,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                                           TextAlign.center,
                                                     ),
                                                   ),
-                                                  SizedBox(width: 8),
-                                                  Icon(
-                                                    Icons.arrow_forward_rounded,
-                                                    size: 19,
-                                                  ),
                                                 ],
                                               ),
                                       ),
@@ -440,7 +435,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                           ],
                                         ),
                                       ),
-                                      OutlinedButton(
+                                      OutlinedButton.icon(
                                         onPressed: auth.isLoading
                                             ? null
                                             : _handleGoogleSignIn,
@@ -460,23 +455,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                             ),
                                           ),
                                         ),
-                                        child: Row(
-                                          children: [
-                                            Image.asset(
-                                              'assets/images/google_g.png',
-                                              width: 20,
-                                              height: 20,
-                                              excludeFromSemantics: true,
-                                            ),
-                                            const SizedBox(width: 10),
-                                            const Expanded(
-                                              child: Text(
-                                                'Đăng nhập bằng Google',
-                                                textAlign: TextAlign.center,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 30),
-                                          ],
+                                        icon: Image.asset(
+                                          'assets/images/google_g.png',
+                                          width: 20,
+                                          height: 20,
+                                          excludeFromSemantics: true,
+                                        ),
+                                        label: const Text(
+                                          'Đăng nhập bằng Google',
+                                          textAlign: TextAlign.center,
                                         ),
                                       ),
                                     ],

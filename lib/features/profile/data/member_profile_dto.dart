@@ -28,6 +28,7 @@ class MemberProfileDto {
   final String joinedDate; // ISO Date YYYY-MM-DD
   final MemberStatus status;
   final String? avatarUrl;
+  final List<String>? choirNames;
 
   const MemberProfileDto({
     required this.id,
@@ -38,6 +39,7 @@ class MemberProfileDto {
     required this.joinedDate,
     required this.status,
     this.avatarUrl,
+    this.choirNames,
   });
 
   factory MemberProfileDto.fromJson(Map<String, dynamic> json) {
@@ -50,6 +52,10 @@ class MemberProfileDto {
       joinedDate: json['joinedDate']?.toString() ?? '',
       status: MemberStatus.fromWire(json['status']),
       avatarUrl: json['avatarUrl']?.toString(),
+      choirNames: switch (json['choirNames']) {
+        List names => List<String>.unmodifiable(names),
+        _ => null,
+      },
     );
   }
 
@@ -62,6 +68,7 @@ class MemberProfileDto {
     'joinedDate': joinedDate,
     'status': status.wireName,
     'avatarUrl': avatarUrl,
+    'choirNames': ?choirNames,
   };
 }
 

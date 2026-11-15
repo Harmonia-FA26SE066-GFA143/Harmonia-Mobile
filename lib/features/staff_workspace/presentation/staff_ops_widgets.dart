@@ -47,8 +47,7 @@ class OpsTile extends StatelessWidget {
       title: Text(title),
       subtitle: subtitle == null || subtitle!.isEmpty ? null : Text(subtitle!),
       leading: icon == null ? null : Icon(icon, color: AppColors.primary),
-      trailing:
-          trailing ?? (onTap == null ? null : const Icon(Icons.chevron_right)),
+      trailing: trailing,
       onTap: onTap,
     ),
   );
@@ -261,6 +260,7 @@ class OpsChoiceField extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
     child: DropdownButtonFormField<String>(
+      icon: const SizedBox.shrink(),
       key: ValueKey((label, value)),
       initialValue: options.any((choice) => choice.id == value) ? value : null,
       decoration: InputDecoration(labelText: label),

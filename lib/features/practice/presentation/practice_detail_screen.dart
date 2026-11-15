@@ -1145,9 +1145,6 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                                     ),
                                     title: Text(reference.title),
                                     subtitle: Text(reference.type.label),
-                                    trailing: const Icon(
-                                      Icons.chevron_right_rounded,
-                                    ),
                                     onTap:
                                         _isRecording ||
                                             _isSubmitting ||
@@ -1195,6 +1192,7 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                       Card(
                         clipBehavior: Clip.antiAlias,
                         child: ExpansionTile(
+                          showTrailingIcon: false,
                           leading: const Icon(
                             Icons.menu_book_rounded,
                             color: AppColors.primary,
@@ -1576,9 +1574,6 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                                             'Nộp lúc: ${DateFormat('dd/MM/yyyy HH:mm').format(sub.submittedAt)} • ${sub.feedbacks.length} nhận xét',
                                             style: AppTypography.bodySmall,
                                           ),
-                                          trailing: const Icon(
-                                            Icons.chevron_right_rounded,
-                                          ),
                                           onTap: () {
                                             context.push(
                                               '/practice-submission/${sub.id}',
@@ -1635,7 +1630,7 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                                         )
                                       else
                                         Center(
-                                          child: OutlinedButton.icon(
+                                          child: OutlinedButton(
                                             onPressed: () => ref
                                                 .read(
                                                   practiceSubmissionsNotifierProvider(
@@ -1643,11 +1638,7 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                                                   ).notifier,
                                                 )
                                                 .loadMore(),
-                                            icon: const Icon(
-                                              Icons.arrow_downward_rounded,
-                                              size: 16,
-                                            ),
-                                            label: const Text(
+                                            child: const Text(
                                               'Tải thêm bản thu',
                                             ),
                                           ),

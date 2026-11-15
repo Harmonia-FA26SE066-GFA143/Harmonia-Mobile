@@ -198,6 +198,7 @@ void main() {
         'joinedDate': '2023-01-15T00:00:00Z',
         'status': 'Active',
         'avatarUrl': 'https://storage.harmonia.org/avatars/teresa.png',
+        'choirNames': ['Ca đoàn Cecilia', 'Ca đoàn Thánh Gia'],
       };
 
       final profile = MemberProfileDto.fromJson(json);
@@ -206,6 +207,16 @@ void main() {
       expect(profile.email, 'teresa.huong@harmonia.org');
       expect(profile.phone, '0901234567');
       expect(profile.dateOfBirth, '1998-12-25');
+      expect(profile.choirNames, json['choirNames']);
+      expect(profile.toJson()['choirNames'], json['choirNames']);
+      expect(
+        MemberProfileDto.fromJson({...json, 'choirNames': []}).choirNames,
+        isEmpty,
+      );
+      expect(
+        MemberProfileDto.fromJson({...json}..remove('choirNames')).choirNames,
+        isNull,
+      );
       expect(profile.joinedDate, '2023-01-15T00:00:00Z');
       expect(profile.status, MemberStatus.active);
       expect(

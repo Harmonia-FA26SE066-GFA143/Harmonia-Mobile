@@ -493,6 +493,7 @@ class _MusicMaterialScreenState extends ConsumerState<MusicMaterialScreen> {
                   ),
                   const Divider(height: 1),
                   DropdownButtonFormField<LearningStatus>(
+                    icon: const SizedBox.shrink(),
                     key: ValueKey((
                       progress,
                       material.learningUpdatedAt,
@@ -649,6 +650,7 @@ class _MusicMaterialScreenState extends ConsumerState<MusicMaterialScreen> {
           Card(
             margin: EdgeInsets.zero,
             child: ExpansionTile(
+              showTrailingIcon: false,
               initiallyExpanded: true,
               leading: const Icon(
                 Icons.lyrics_outlined,
@@ -738,7 +740,10 @@ class _MaterialPdfReaderState extends State<_MaterialPdfReader> {
                 onPressed: _turning || _controller == null || _page <= 0
                     ? null
                     : () => _goToPage(_page - 1),
-                icon: const Icon(Icons.chevron_left_rounded),
+                icon: const Text(
+                  'Trước',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                ),
               ),
               Flexible(
                 child: Text(
@@ -758,7 +763,10 @@ class _MaterialPdfReaderState extends State<_MaterialPdfReader> {
                         _page + 1 >= pageCount
                     ? null
                     : () => _goToPage(_page + 1),
-                icon: const Icon(Icons.chevron_right_rounded),
+                icon: const Text(
+                  'Sau',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                ),
               ),
             ],
           ),

@@ -619,6 +619,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                   ),
                                   const SizedBox(height: 6),
                                   DropdownButtonFormField<SkillLevel>(
+                                    icon: const SizedBox.shrink(),
                                     initialValue: selectedLevel,
                                     isExpanded: true,
                                     decoration: InputDecoration(
@@ -1275,10 +1276,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final skillsNotifier = ref.read(memberSkillsNotifierProvider.notifier);
     final profileFuture = ref.watch(currentMemberProfileProvider.future);
     final settings = ref.watch(publicAppSettingsProvider).asData?.value;
-    final choir = [settings?.choirName, settings?.parishName].nonNulls
-        .map((name) => name.trim())
-        .where((name) => name.isNotEmpty)
-        .join(' · ');
+    final parishName = settings?.parishName.trim() ?? '';
     final busy = ref.watch(
       authNotifierProvider.select((auth) => auth.isLoading),
     );
@@ -1300,9 +1298,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (choir.isNotEmpty)
+                  if (parishName.isNotEmpty)
                     Text(
-                      choir,
+                      parishName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: AppTypography.labelSmall.copyWith(
@@ -1448,13 +1446,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 ],
                               )
                             else
-                              OutlinedButton.icon(
+                              OutlinedButton(
                                 onPressed: skillsNotifier.loadMore,
-                                icon: const Icon(
-                                  Icons.arrow_downward_rounded,
-                                  size: 16,
-                                ),
-                                label: const Text('Tải thêm kỹ năng'),
+                                child: const Text('Tải thêm kỹ năng'),
                               ),
                         ],
                         const SizedBox(height: 20),
@@ -1469,7 +1463,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             subtitle: const Text(
                               'Theo dõi đề cử đã duyệt và lịch sử đào tạo',
                             ),
-                            trailing: const Icon(Icons.chevron_right_rounded),
                             onTap: () => context.push('/director-nominations'),
                           ),
                         ),
@@ -1504,7 +1497,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             subtitle: const Text(
                               'Xem kết quả phục vụ lễ và bài tập đã hoàn thành',
                             ),
-                            trailing: const Icon(Icons.chevron_right_rounded),
                             onTap: () => context.push('/profile/history'),
                           ),
                         ),
@@ -1523,7 +1515,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             subtitle: const Text(
                               'Cập nhật mật khẩu đăng nhập Harmonia',
                             ),
-                            trailing: const Icon(Icons.chevron_right_rounded),
                             onTap: () => context.push('/change-password'),
                           ),
                         ),
@@ -1742,6 +1733,12 @@ class _ProfileSummary extends StatelessWidget {
       (Icons.phone_outlined, 'Số điện thoại', profile.phone),
       (Icons.cake_outlined, 'Ngày sinh', profile.dateOfBirth),
       (Icons.calendar_month_outlined, 'Ngày tham gia', profile.joinedDate),
+      if (profile.choirNames case final names?)
+        (
+          Icons.groups_outlined,
+          'Ca đoàn',
+          names.isEmpty ? 'Chưa tham gia ca đoàn' : names.join(' · '),
+        ),
     ];
     return Card(
       margin: EdgeInsets.zero,
@@ -2012,11 +2009,6 @@ class _ProfileSkillCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                size: 18,
-                color: MemberChoirStyle.wine,
-              ),
             ],
           ),
         ),
@@ -2063,7 +2055,6 @@ class _ProfileRecentPractice extends ConsumerWidget {
                     DateFormat('dd/MM/yyyy · HH:mm')
                         .format(submission.submittedAt),
                   ),
-                  trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => context.push(
                     '/practice-submission/${Uri.encodeComponent(submission.id)}',
                   ),

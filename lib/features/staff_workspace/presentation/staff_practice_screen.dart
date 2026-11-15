@@ -234,6 +234,7 @@ class _StaffSubmissionScreenState extends ConsumerState<StaffSubmissionScreen>
               mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButtonFormField<String>(
+                  icon: const SizedBox.shrink(),
                   initialValue: result,
                   isExpanded: true,
                   decoration: const InputDecoration(labelText: 'Kết quả'),

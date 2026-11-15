@@ -549,7 +549,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                     ? () => _moveWeek(-7)
                     : null,
                 style: navStyle,
-                icon: const Icon(Icons.chevron_left_rounded, size: 20),
+                icon: const Text(
+                  'Trước',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                ),
               ),
               Expanded(
                 child: Padding(
@@ -585,7 +588,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 tooltip: 'Tuần sau',
                 onPressed: () => _moveWeek(7),
                 style: navStyle,
-                icon: const Icon(Icons.chevron_right_rounded, size: 20),
+                icon: const Text(
+                  'Sau',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                ),
               ),
             ],
           ),

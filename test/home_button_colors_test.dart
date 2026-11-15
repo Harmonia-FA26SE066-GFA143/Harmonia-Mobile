@@ -100,7 +100,9 @@ void main() {
               MockPracticeRepositoryImpl(),
             ),
             profileRepositoryProvider.overrideWithValue(
-              MockProfileRepositoryImpl(),
+              MockProfileRepositoryImpl(
+                profile: MockProfileData.profileWithChoirs,
+              ),
             ),
             notificationRepositoryProvider.overrideWithValue(
               _TestNotificationRepository(),
@@ -113,6 +115,10 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+
+      expect(find.text('Ca viên'), findsOneWidget);
+      expect(find.text('Ca đoàn'), findsOneWidget);
+      expect(find.text(MockProfileData.choirNames.join(' · ')), findsOneWidget);
 
       // 1. Header icon buttons: notifications and profile avatar.
       final notifButton = tester.widget<IconButton>(
@@ -207,7 +213,7 @@ void main() {
       expect(recordBtn.style?.backgroundColor, isNull);
       expect(recordBtn.style?.foregroundColor, isNull);
 
-      // 3. Music library shortcut leading & trailing icon wrappers.
+      // 3. Music library shortcut remains tappable without the trailing arrow.
       final libraryTile = tester.widget<ListTile>(
         find.ancestor(
           of: find.text('Thư viện thánh ca'),
@@ -223,14 +229,8 @@ void main() {
       );
       expect((leadingBox.child! as Icon).color, const Color(0xFF735700));
 
-      final trailingBox = libraryTile.trailing! as Container;
-      final trailingDeco = trailingBox.decoration! as BoxDecoration;
-      expect(trailingDeco.color, Colors.white);
-      expect(
-        (trailingDeco.border! as Border).top.color,
-        const Color(0xFFE6E1D8),
-      );
-      expect((trailingBox.child! as Icon).color, const Color(0xFF76767E));
+      expect(libraryTile.trailing, isNull);
+      expect(libraryTile.onTap, isNotNull);
 
       // 4. Secondary TextButton ('Xem tất cả').
       final seeAllFinder = find.ancestor(

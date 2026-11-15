@@ -171,7 +171,13 @@ class _LiturgicalMonthCalendarState
                             foregroundColor: _stitchPrimary,
                             hoverColor: _stitchSurfaceContainer,
                           ),
-                          icon: const Icon(Icons.chevron_left_rounded),
+                          icon: const Text(
+                            'Trước',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                           onPressed: () =>
                               setDialogState(() => tempYear = tempYear - 1),
                         ),
@@ -191,7 +197,13 @@ class _LiturgicalMonthCalendarState
                             foregroundColor: _stitchPrimary,
                             hoverColor: _stitchSurfaceContainer,
                           ),
-                          icon: const Icon(Icons.chevron_right_rounded),
+                          icon: const Text(
+                            'Sau',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                           onPressed: () =>
                               setDialogState(() => tempYear = tempYear + 1),
                         ),
@@ -385,7 +397,13 @@ class _LiturgicalMonthCalendarState
                       tooltip: 'Tháng trước',
                       onPressed: _previousMonth,
                       style: navIconStyle,
-                      icon: const Icon(Icons.chevron_left_rounded, size: 20),
+                      icon: const Text(
+                        'Trước',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                     Expanded(
                       child: Center(
@@ -424,11 +442,6 @@ class _LiturgicalMonthCalendarState
                                   ),
                                 ),
                               ),
-                              const Icon(
-                                Icons.arrow_drop_down_rounded,
-                                size: 20,
-                                color: _stitchOutline,
-                              ),
                             ],
                           ),
                         ),
@@ -438,7 +451,13 @@ class _LiturgicalMonthCalendarState
                       tooltip: 'Tháng sau',
                       onPressed: _nextMonth,
                       style: navIconStyle,
-                      icon: const Icon(Icons.chevron_right_rounded, size: 20),
+                      icon: const Text(
+                        'Sau',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -925,7 +944,7 @@ class _MonthEventCard extends StatelessWidget {
                       const Divider(height: 1, color: _stitchCardBorder),
                       Align(
                         alignment: AlignmentDirectional.centerEnd,
-                        child: TextButton.icon(
+                        child: TextButton(
                           onPressed: onOpen,
                           style:
                               TextButton.styleFrom(
@@ -950,12 +969,7 @@ class _MonthEventCard extends StatelessWidget {
                                       return MemberChoirStyle.wine;
                                     }),
                               ),
-                          icon: const Icon(
-                            Icons.arrow_forward_rounded,
-                            size: 18,
-                          ),
-                          iconAlignment: IconAlignment.end,
-                          label: const Text(
+                          child: const Text(
                             'Xem chi tiết',
                             style: TextStyle(
                               fontSize: 14,
@@ -1097,7 +1111,7 @@ class _MonthRehearsalCard extends StatelessWidget {
                   const Divider(height: 1, color: _stitchDivider),
                   Align(
                     alignment: AlignmentDirectional.centerEnd,
-                    child: TextButton.icon(
+                    child: TextButton(
                       onPressed: onOpen,
                       style:
                           TextButton.styleFrom(
@@ -1123,9 +1137,7 @@ class _MonthRehearsalCard extends StatelessWidget {
                               return _stitchSurfaceContainer;
                             }),
                           ),
-                      icon: const Icon(Icons.arrow_forward_rounded, size: 16),
-                      iconAlignment: IconAlignment.end,
-                      label: const Text(
+                      child: const Text(
                         'Xem chi tiết',
                         style: TextStyle(
                           fontSize: 12,

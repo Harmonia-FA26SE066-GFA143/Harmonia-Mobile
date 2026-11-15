@@ -182,15 +182,11 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final calendarState = ref.watch(calendarNotifierProvider);
-    final settings = ref.watch(publicAppSettingsProvider).value;
-    final choirLabel = settings?.choirName.isNotEmpty == true
-        ? settings!.choirName
-        : 'Ca viên';
     final notificationState = ref.watch(notificationNotifierProvider);
     final practiceState = ref.watch(practiceListNotifierProvider);
-    final profileState = ref.watch(currentMemberProfileProvider);
+    final profile = ref.watch(currentMemberProfileProvider).asData?.value;
 
-    final memberName = profileState.asData?.value.fullName.trim();
+    final memberName = profile?.fullName.trim();
     final displayName = (memberName != null && memberName.isNotEmpty)
         ? memberName
         : 'Ca viên';
@@ -199,7 +195,6 @@ class HomeScreen extends ConsumerWidget {
         .take(2)
         .map((part) => part.characters.first.toUpperCase())
         .join();
-    final avatarUrl = profileState.asData?.value.avatarUrl;
 
     return Theme(
       data: _homeTheme(context),
@@ -215,7 +210,6 @@ class HomeScreen extends ConsumerWidget {
                 color: MemberChoirStyle.accent,
                 onRefresh: () async {
                   ref.invalidate(rehearsalsProvider);
-                  ref.invalidate(publicAppSettingsProvider);
                   ref.invalidate(currentMemberProfileProvider);
                   await ref
                       .read(calendarNotifierProvider.notifier)
@@ -237,8 +231,8 @@ class HomeScreen extends ConsumerWidget {
                         child: _HomeGreeting(
                           name: displayName,
                           initial: avatarInitial,
-                          choirLabel: choirLabel,
-                          avatarUrl: avatarUrl,
+                          choirNames: profile?.choirNames,
+                          avatarUrl: profile?.avatarUrl,
                           unreadCount: notificationState.unreadCount,
                           onNotifications: () => context.go('/notifications'),
                           onProfile: () => context.go('/profile'),
@@ -639,11 +633,6 @@ class HomeScreen extends ConsumerWidget {
                                                           TextAlign.center,
                                                     ),
                                                   ),
-                                                  const SizedBox(width: 6),
-                                                  const Icon(
-                                                    Icons.arrow_forward_rounded,
-                                                    size: 18,
-                                                  ),
                                                 ],
                                               ),
                                             ),
@@ -691,20 +680,6 @@ class HomeScreen extends ConsumerWidget {
                                 title: const Text('Thư viện thánh ca'),
                                 subtitle: const Text(
                                   'Tìm bài hát và tài liệu học của bạn',
-                                ),
-                                trailing: Container(
-                                  width: 36,
-                                  height: 36,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: _stitchBorder),
-                                  ),
-                                  child: const Icon(
-                                    Icons.chevron_right_rounded,
-                                    size: 20,
-                                    color: _stitchMutedIcon,
-                                  ),
                                 ),
                                 onTap: () => context.go('/music-library'),
                               ),
@@ -1083,7 +1058,7 @@ class _HomeGreeting extends StatelessWidget {
   const _HomeGreeting({
     required this.name,
     required this.initial,
-    required this.choirLabel,
+    required this.choirNames,
     required this.avatarUrl,
     required this.unreadCount,
     required this.onNotifications,
@@ -1092,7 +1067,7 @@ class _HomeGreeting extends StatelessWidget {
 
   final String name;
   final String initial;
-  final String choirLabel;
+  final List<String>? choirNames;
   final String? avatarUrl;
   final int unreadCount;
   final VoidCallback onNotifications;
@@ -1193,9 +1168,23 @@ class _HomeGreeting extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              choirLabel == 'Ca viên' ? choirLabel : 'Ca viên · $choirLabel',
+              'Ca viên',
               style: AppTypography.bodySmall.copyWith(color: Colors.white70),
             ),
+            if (choirNames case final names?) ...[
+              const SizedBox(height: 10),
+              Text(
+                'Ca đoàn',
+                style: AppTypography.labelMedium.copyWith(
+                  color: AppColors.onPrimaryContainer,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                names.isEmpty ? 'Chưa tham gia ca đoàn' : names.join(' · '),
+                style: AppTypography.bodyMedium.copyWith(color: Colors.white),
+              ),
+            ],
             const SizedBox(height: 14),
             const MemberChoirArt(
               artwork: MemberChoirArtwork.home,

@@ -1218,10 +1218,6 @@ class _SongMaterialCard extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const Icon(
-                      Icons.chevron_right_rounded,
-                      color: MemberChoirStyle.accent,
-                    ),
                   ],
                 ),
                 if (material.lyricsText?.trim().isNotEmpty == true)

@@ -344,6 +344,7 @@ class _StaffProgramFormState extends ConsumerState<StaffProgramForm> {
   }) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
     child: DropdownButtonFormField<String>(
+      icon: const SizedBox.shrink(),
       initialValue: value,
       decoration: InputDecoration(labelText: label),
       isExpanded: true,

@@ -174,6 +174,7 @@ class _ParticipationHistoryScreenState
                       // Season dropdown
                       Expanded(
                         child: DropdownButtonFormField<String?>(
+                          icon: const SizedBox.shrink(),
                           initialValue: _selectedSeasonId,
                           isExpanded: true,
                           decoration: InputDecoration(
@@ -344,7 +345,7 @@ class _ParticipationHistoryScreenState
                                           strokeWidth: 2,
                                         ),
                                       )
-                                    : const Icon(Icons.expand_more_rounded),
+                                    : null,
                                 label: const Text('Tải thêm sự kiện'),
                               ),
                             ),

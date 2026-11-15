@@ -93,10 +93,6 @@ class MemberAssignmentsCard extends ConsumerWidget {
                           '${DateFormat('dd/MM/yyyy').format(event.date)} • ${event.assignedVocalPart}',
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
-                        trailing: const Icon(
-                          Icons.chevron_right,
-                          color: Color(0xFF76767E),
-                        ),
                         onTap: () => context.push(
                           '/event-detail/${Uri.encodeComponent(event.id)}',
                         ),
@@ -162,10 +158,6 @@ class UpcomingRehearsalCard extends ConsumerWidget {
                   if (rehearsal.contentSummary.isNotEmpty)
                     rehearsal.contentSummary,
                 ].join('\n'),
-              ),
-              trailing: const Icon(
-                Icons.chevron_right,
-                color: Color(0xFF76767E),
               ),
               onTap: () => context.push(
                 '/rehearsal/${Uri.encodeComponent(rehearsal.id)}',

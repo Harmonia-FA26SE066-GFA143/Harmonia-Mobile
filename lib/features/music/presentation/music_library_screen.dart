@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app/widgets/app_back_label.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../app/widgets/app_page_header.dart';
@@ -348,6 +349,7 @@ class _MusicLibraryScreenState extends ConsumerState<MusicLibraryScreen> {
   }) => SizedBox(
     width: width,
     child: DropdownButtonFormField<String>(
+      icon: const SizedBox.shrink(),
       key: ValueKey((label, value)),
       initialValue: value,
       isExpanded: true,
@@ -371,6 +373,7 @@ class _MusicLibraryScreenState extends ConsumerState<MusicLibraryScreen> {
   }) => SizedBox(
     width: width,
     child: DropdownButtonFormField<bool>(
+      icon: const SizedBox.shrink(),
       key: ValueKey(('classification', value)),
       initialValue: value,
       isExpanded: true,
@@ -694,10 +697,6 @@ class _MusicLibraryScreenState extends ConsumerState<MusicLibraryScreen> {
                     color: const Color(0xFF45464D),
                   ),
                 ),
-          trailing: const Icon(
-            Icons.chevron_right_rounded,
-            color: MemberChoirStyle.wine,
-          ),
           onTap: () =>
               context.push('/song-detail/${Uri.encodeComponent(song.id)}'),
         ),
@@ -1137,10 +1136,6 @@ class _MusicLibraryScreenState extends ConsumerState<MusicLibraryScreen> {
                     nextEvent.title,
                     style: const TextStyle(color: Color(0xFFD2DAEB)),
                   ),
-                  trailing: const Icon(
-                    Icons.arrow_forward,
-                    color: Color(0xFFFFD369),
-                  ),
                   onTap: () => context.push(
                     '/event-detail/${Uri.encodeComponent(nextEvent.id)}',
                   ),
@@ -1201,7 +1196,7 @@ class _MusicLibraryScreenState extends ConsumerState<MusicLibraryScreen> {
               ),
         leading: IconButton(
           tooltip: 'Quay lại',
-          icon: const Icon(Icons.arrow_back_rounded),
+          icon: const AppBackLabel(),
           onPressed: () {
             if (context.canPop()) {
               context.pop();
