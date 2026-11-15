@@ -20,6 +20,9 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
+  static const _supportEmail = 'harmoniafall26@gmail.com';
+  static const _supportChannel = MethodChannel('harmonia/support');
+
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -95,6 +98,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     context.push(location.toString());
   }
 
+  Future<void> _openSupportEmail() async {
+    bool? opened;
+    try {
+      opened = await _supportChannel.invokeMethod<bool>(
+        'openEmail',
+        'mailto:$_supportEmail',
+      );
+    } on PlatformException {
+      opened = false;
+    } on MissingPluginException {
+      opened = false;
+    }
+    if (opened == true || !mounted) return;
+
+    await Clipboard.setData(const ClipboardData(text: _supportEmail));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Đã sao chép địa chỉ email hỗ trợ.')),
+    );
+  }
+
   InputDecoration _field(String hint, IconData icon, {Widget? trailing}) {
     final shape = OutlineInputBorder(
       borderRadius: BorderRadius.circular(16),
@@ -124,6 +148,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final auth = ref.watch(authNotifierProvider);
     final type = Theme.of(context).textTheme
         .apply(fontFamily: 'Plus Jakarta Sans');
+    final supportTextStyle = type.bodySmall?.copyWith(
+      color: AppColors.muted,
+      height: 1.5,
+    );
     const white = Colors.white;
     final titleScale = MediaQuery.textScalerOf(context).scale(16) / 16;
 
@@ -386,45 +414,69 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         ),
                                         child: Row(
                                           children: [
-                                            const Expanded(child: Divider()),
-                                            Flexible(
-                                              flex: 6,
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 10,
-                                                    ),
-                                                child: Text(
-                                                  'HOẶC TIẾP TỤC VỚI',
-                                                  textAlign: TextAlign.center,
-                                                  style: type.labelSmall
-                                                      ?.copyWith(
-                                                        color: AppColors.muted,
-                                                      ),
-                                                ),
+                                            const Expanded(
+                                              child: Divider(
+                                                color: AppColors.outlineVariant,
                                               ),
                                             ),
-                                            const Expanded(child: Divider()),
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 10,
+                                                  ),
+                                              child: Text(
+                                                'hoặc',
+                                                style: type.labelSmall
+                                                    ?.copyWith(
+                                                      color: AppColors.muted,
+                                                    ),
+                                              ),
+                                            ),
+                                            const Expanded(
+                                              child: Divider(
+                                                color: AppColors.outlineVariant,
+                                              ),
+                                            ),
                                           ],
                                         ),
                                       ),
-                                      OutlinedButton.icon(
+                                      OutlinedButton(
                                         onPressed: auth.isLoading
                                             ? null
                                             : _handleGoogleSignIn,
                                         style: OutlinedButton.styleFrom(
                                           foregroundColor: AppColors.onSurface,
-                                          backgroundColor: const Color(
-                                            0xFFF8F6F3,
+                                          backgroundColor: AppColors.surface,
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 14,
+                                            vertical: 10,
+                                          ),
+                                          side: const BorderSide(
+                                            color: AppColors.outlineVariant,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
                                           ),
                                         ),
-                                        icon: const Icon(
-                                          Icons.g_mobiledata_rounded,
-                                          size: 25,
-                                          color: Color(0xFF4285F4),
-                                        ),
-                                        label: const Text(
-                                          'Đăng nhập với Google',
+                                        child: Row(
+                                          children: [
+                                            Image.asset(
+                                              'assets/images/google_g.png',
+                                              width: 20,
+                                              height: 20,
+                                              excludeFromSemantics: true,
+                                            ),
+                                            const SizedBox(width: 10),
+                                            const Expanded(
+                                              child: Text(
+                                                'Đăng nhập bằng Google',
+                                                textAlign: TextAlign.center,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 30),
+                                          ],
                                         ),
                                       ),
                                     ],
@@ -436,12 +488,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         const SizedBox(height: 20),
                         Text(
-                          'Tài khoản do Ca trưởng hoặc Quản trị ca đoàn cấp.\nNếu gặp sự cố, vui lòng liên hệ Ban điều hành.',
+                          'Tài khoản do quản trị viên giáo xứ xét duyệt và cấp.',
                           textAlign: TextAlign.center,
-                          style: type.bodySmall?.copyWith(
-                            color: AppColors.muted,
-                            height: 1.5,
-                          ),
+                          style: supportTextStyle,
+                        ),
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(
+                              'Cần hỗ trợ, liên hệ',
+                              style: supportTextStyle,
+                            ),
+                            TextButton(
+                              onPressed: _openSupportEmail,
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                ),
+                                textStyle: type.bodySmall?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                              child: const Text(_supportEmail),
+                            ),
+                          ],
                         ),
                       ],
                     ),

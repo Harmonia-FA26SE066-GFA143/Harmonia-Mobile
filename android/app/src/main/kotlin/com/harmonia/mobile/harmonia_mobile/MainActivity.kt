@@ -1,6 +1,7 @@
 package com.harmonia.mobile.harmonia_mobile
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -21,6 +22,24 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "harmonia/support")
+            .setMethodCallHandler { call, result ->
+                if (call.method != "openEmail") {
+                    result.notImplemented()
+                    return@setMethodCallHandler
+                }
+                val uri = (call.arguments as? String)?.let { Uri.parse(it) }
+                if (uri?.scheme != "mailto") {
+                    result.success(false)
+                    return@setMethodCallHandler
+                }
+                try {
+                    startActivity(Intent(Intent.ACTION_SENDTO, uri))
+                    result.success(true)
+                } catch (_: ActivityNotFoundException) {
+                    result.success(false)
+                }
+            }
         flutterEngine.platformViewsController.registry.registerViewFactory(
             "harmonia/score_engraving",
             ScoreEngravingFactory(

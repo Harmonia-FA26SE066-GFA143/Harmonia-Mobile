@@ -15,6 +15,24 @@ import WebKit
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+    let supportRegistrar = engineBridge.pluginRegistry.registrar(forPlugin: "HarmoniaSupport")
+    let supportChannel = FlutterMethodChannel(
+      name: "harmonia/support", binaryMessenger: supportRegistrar.messenger()
+    )
+    supportChannel.setMethodCallHandler { call, result in
+      guard call.method == "openEmail" else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      guard let address = call.arguments as? String,
+        let url = URL(string: address), url.scheme == "mailto" else {
+        result(false)
+        return
+      }
+      UIApplication.shared.open(url) { opened in
+        result(opened)
+      }
+    }
     let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "AvatarImagePickerPlugin")
     AvatarImagePickerPlugin.register(with: registrar)
     let scoreRegistrar = engineBridge.pluginRegistry.registrar(forPlugin: "HarmoniaScoreEngraving")
