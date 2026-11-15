@@ -24,6 +24,7 @@ class MemberProfileDto {
   final String fullName;
   final String email;
   final String? phone;
+  final String? saintName;
   final String? dateOfBirth; // ISO Date YYYY-MM-DD
   final String joinedDate; // ISO Date YYYY-MM-DD
   final MemberStatus status;
@@ -35,6 +36,7 @@ class MemberProfileDto {
     required this.fullName,
     required this.email,
     this.phone,
+    this.saintName,
     this.dateOfBirth,
     required this.joinedDate,
     required this.status,
@@ -48,6 +50,7 @@ class MemberProfileDto {
       fullName: json['fullName']?.toString() ?? '',
       email: json['email']?.toString() ?? '',
       phone: json['phone']?.toString(),
+      saintName: json['saintName'] as String?,
       dateOfBirth: json['dateOfBirth']?.toString(),
       joinedDate: json['joinedDate']?.toString() ?? '',
       status: MemberStatus.fromWire(json['status']),
@@ -64,6 +67,7 @@ class MemberProfileDto {
     'fullName': fullName,
     'email': email,
     'phone': phone,
+    'saintName': saintName,
     'dateOfBirth': dateOfBirth,
     'joinedDate': joinedDate,
     'status': status.wireName,
@@ -75,17 +79,20 @@ class MemberProfileDto {
 class UpdateMyMemberProfileRequest {
   final String fullName;
   final String? phone;
+  final String? saintName;
   final String? dateOfBirth; // ISO Date YYYY-MM-DD
 
   const UpdateMyMemberProfileRequest({
     required this.fullName,
     this.phone,
+    this.saintName,
     this.dateOfBirth,
   });
 
   Map<String, dynamic> toJson() {
     final map = <String, dynamic>{'fullName': fullName};
     if (phone != null) map['phone'] = phone;
+    if (saintName != null) map['saintName'] = saintName;
     if (dateOfBirth != null) map['dateOfBirth'] = dateOfBirth;
     return map;
   }

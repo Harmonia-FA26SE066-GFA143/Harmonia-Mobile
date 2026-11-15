@@ -101,7 +101,11 @@ void main() {
             ),
             profileRepositoryProvider.overrideWithValue(
               MockProfileRepositoryImpl(
-                profile: MockProfileData.profileWithChoirs,
+                profile: MemberProfileDto.fromJson({
+                  ...MockProfileData.profileWithChoirs.toJson(),
+                  'fullName': 'Nguyễn Thị Mai',
+                  'saintName': '  Têrêsa  ',
+                }),
               ),
             ),
             notificationRepositoryProvider.overrideWithValue(
@@ -119,6 +123,8 @@ void main() {
       expect(find.text('Ca viên'), findsOneWidget);
       expect(find.text('Ca đoàn'), findsOneWidget);
       expect(find.text(MockProfileData.choirNames.join(' · ')), findsOneWidget);
+
+      expect(find.text('Chào Têrêsa Nguyễn Thị Mai'), findsOneWidget);
 
       // 1. Header icon buttons: notifications and profile avatar.
       final notifButton = tester.widget<IconButton>(

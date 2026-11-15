@@ -190,6 +190,10 @@ class HomeScreen extends ConsumerWidget {
     final displayName = (memberName != null && memberName.isNotEmpty)
         ? memberName
         : 'Ca viên';
+    final saintName = profile?.saintName?.trim();
+    final greetingName = saintName != null && saintName.isNotEmpty
+        ? '$saintName ${memberName ?? ''}'.trimRight()
+        : displayName;
     final avatarInitial = displayName
         .split(RegExp(r'\s+'))
         .take(2)
@@ -229,7 +233,7 @@ class HomeScreen extends ConsumerWidget {
                       StitchEntrance(
                         distance: 0,
                         child: _HomeGreeting(
-                          name: displayName,
+                          name: greetingName,
                           initial: avatarInitial,
                           choirNames: profile?.choirNames,
                           avatarUrl: profile?.avatarUrl,
