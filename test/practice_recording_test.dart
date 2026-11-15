@@ -169,7 +169,7 @@ void main() {
         return const StandardMessageCodec().encodeMessage(fontAssets);
       }
       if (key.startsWith('fonts/PlusJakartaSans-')) return ByteData(0);
-      return null;
+      return messenger.delegate.send('flutter/assets', message);
     });
     mock('flutter.baseflow.com/permissions/methods', (call) async {
       if (call.method == 'requestPermissions') {

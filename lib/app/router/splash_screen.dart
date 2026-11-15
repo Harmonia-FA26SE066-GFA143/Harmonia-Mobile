@@ -6,6 +6,7 @@ import '../../core/di/core_providers.dart';
 import '../../features/auth/presentation/auth_notifier.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
+import '../widgets/harmonia_blocking_progress.dart';
 import '../widgets/harmonia_logo.dart';
 import '../widgets/stitch_entrance.dart';
 
@@ -31,7 +32,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     final error = auth.isLoading ? null : auth.errorMessage;
     const gold = Color(0xFFFFD678);
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
+    final screen = AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
         backgroundColor: AppColors.headerWine,
@@ -199,21 +200,28 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                               child: const Text('Đăng nhập lại'),
                             ),
                           ] else ...[
-                            const Text(
-                              'Đang khôi phục phiên…',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
+                            const Center(
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: AppColors.background,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Padding(
+                                  padding: EdgeInsets.all(4),
+                                  child: HarmoniaRoseWindowSpinner(),
+                                ),
                               ),
                             ),
                             const SizedBox(height: 12),
-                            LinearProgressIndicator(
-                              minHeight: 4,
-                              borderRadius: BorderRadius.circular(8),
-                              color: gold,
-                              backgroundColor: Colors.white.withValues(
-                                alpha: .24,
+                            Semantics(
+                              liveRegion: true,
+                              child: const Text(
+                                'Đang khôi phục phiên…',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
                           ],
@@ -237,5 +245,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         ),
       ),
     );
+    return PopScope(canPop: error != null, child: screen);
   }
 }

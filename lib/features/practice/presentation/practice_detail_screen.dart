@@ -12,6 +12,7 @@ import 'package:record/record.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/widgets/app_page_header.dart';
+import '../../../app/widgets/harmonia_blocking_progress.dart';
 import '../../../app/widgets/member_choir_visuals.dart';
 import '../../../app/widgets/stitch_entrance.dart';
 import '../../music/data/music_dto.dart' show MaterialType;
@@ -1704,7 +1705,13 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
         },
       ),
     );
-    return Theme(data: MemberChoirStyle.theme(context), child: screen);
+    return Theme(
+      data: MemberChoirStyle.theme(context),
+      child: HarmoniaBlockingOverlay(
+        label: _isSubmitting ? 'Đang gửi bản thu…' : null,
+        child: screen,
+      ),
+    );
   }
 }
 

@@ -76,6 +76,7 @@ flutter:
     - assets/score/
     - assets/images/harmonia_logo.png
     - assets/images/google_g.png
+    - assets/illustrations/rose_window/
     - assets/images/choir_practice.png
     - assets/images/choir_service.png
     - assets/images/choir_home.png

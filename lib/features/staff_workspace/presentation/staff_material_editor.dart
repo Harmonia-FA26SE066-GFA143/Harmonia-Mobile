@@ -8,6 +8,7 @@ import '../../lookups/data/lookups_api_service.dart';
 import '../../music/data/music_dto.dart';
 import '../data/staff_documents.dart';
 import '../data/staff_operations_api.dart';
+import '../../../app/widgets/harmonia_blocking_progress.dart';
 import 'staff_ops_widgets.dart';
 
 const _documents = ['pdf', 'png', 'jpg'];
@@ -167,8 +168,8 @@ class _StaffMaterialEditorState extends ConsumerState<StaffMaterialEditor>
   }
 
   @override
-  Widget build(BuildContext context) => PopScope(
-    canPop: !busy,
+  Widget build(BuildContext context) => HarmoniaBlockingOverlay(
+    label: busy ? 'Đang tải tài liệu lên…' : null,
     child: OpsPage(
       title: _replacing ? 'Thay tệp tài liệu' : 'Tải tài liệu lên',
       child: Form(

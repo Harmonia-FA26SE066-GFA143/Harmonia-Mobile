@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/widgets/harmonia_blocking_progress.dart';
 import '../../../core/di/core_providers.dart';
 import '../../../core/errors/error_messages.dart';
 import '../data/calendar_repository.dart';
@@ -54,6 +55,7 @@ Future<void> showParticipationPrompt(
   final result = await showDialog<({bool ok, Object? error})>(
     context: context,
     barrierDismissible: false,
+    useSafeArea: false,
     builder: (_) =>
         _ParticipationRequestDialog(eventId: event.id, status: status),
   );
@@ -113,14 +115,6 @@ class _ParticipationRequestDialogState
   @override
   Widget build(BuildContext context) => const PopScope(
     canPop: false,
-    child: AlertDialog(
-      content: Row(
-        children: [
-          CircularProgressIndicator(),
-          SizedBox(width: 20),
-          Expanded(child: Text('Đang gửi phản hồi…')),
-        ],
-      ),
-    ),
+    child: HarmoniaBlockingProgress(label: 'Đang gửi phản hồi…'),
   );
 }
