@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/widgets/app_back_label.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/di/core_providers.dart';
@@ -305,10 +306,8 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_rounded,
-            color: AppColors.onSurface,
-          ),
+          tooltip: 'Quay lại',
+          icon: const AppBackLabel(),
           onPressed: () {
             _authNotifier.cancelResetPassword();
             if (context.canPop()) {

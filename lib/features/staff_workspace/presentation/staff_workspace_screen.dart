@@ -453,7 +453,6 @@ class StaffSongListScreen extends ConsumerWidget {
                             item.slotName.toUpperCase(),
                             style: const TextStyle(color: AppColors.primary),
                           ),
-                    trailing: const Icon(Icons.chevron_right),
                     onTap: () =>
                         context.push(_detailPath('song-detail', item.songId)),
                   ),
@@ -1151,6 +1150,7 @@ class _SubstituteDialogState extends State<_SubstituteDialog> {
           Text(widget.choir.name),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
+            icon: const SizedBox.shrink(),
             initialValue: _directorId,
             hint: const Text('Không chỉ định'),
             isExpanded: true,
@@ -1215,7 +1215,6 @@ class _Tile extends StatelessWidget {
       leading: Icon(icon, color: AppColors.primary),
       title: Text(title),
       subtitle: subtitle == null || subtitle!.isEmpty ? null : Text(subtitle!),
-      trailing: onTap == null ? null : const Icon(Icons.chevron_right),
       onTap: onTap,
     ),
   );

@@ -527,7 +527,6 @@ class _SubmissionAttempts extends ConsumerWidget {
             subtitle: Text(
               DateFormat('dd/MM/yyyy HH:mm').format(attempt.submittedAt),
             ),
-            trailing: const Icon(Icons.chevron_right_rounded),
             onTap: () => context.pushReplacement(
               '/practice-submission/${Uri.encodeComponent(attempt.id)}',
             ),

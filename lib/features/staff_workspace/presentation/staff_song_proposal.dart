@@ -254,6 +254,7 @@ class _StaffSongProposalState extends ConsumerState<StaffSongProposal> {
                             ),
                             const SizedBox(height: 8),
                             DropdownButtonFormField<String>(
+                              icon: const SizedBox.shrink(),
                               initialValue:
                                   choices.any((slot) => slot.id == song.slot)
                                   ? song.slot
@@ -294,14 +295,26 @@ class _StaffSongProposalState extends ConsumerState<StaffSongProposal> {
                                   onPressed: _busy || index == 0
                                       ? null
                                       : () => _move(index, index - 1),
-                                  icon: const Icon(Icons.arrow_upward),
+                                  icon: const Text(
+                                    'Lên',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
                                 ),
                                 IconButton(
                                   tooltip: 'Đưa bài xuống',
                                   onPressed: _busy || index == _songs.length - 1
                                       ? null
                                       : () => _move(index, index + 1),
-                                  icon: const Icon(Icons.arrow_downward),
+                                  icon: const Text(
+                                    'Xuống',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
                                 ),
                                 IconButton(
                                   tooltip: 'Bỏ bài hát',

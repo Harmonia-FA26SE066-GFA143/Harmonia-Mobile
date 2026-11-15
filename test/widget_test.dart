@@ -35,6 +35,7 @@ void main() {
       expect(find.byType(LoginScreen), findsOneWidget);
       expect(find.text('Đăng nhập'), findsOneWidget);
       expect(find.text('Đăng nhập bằng Google'), findsOneWidget);
+      expect(find.byIcon(Icons.arrow_forward_rounded), findsNothing);
     },
   );
 
@@ -141,6 +142,7 @@ void main() {
       expect(find.text('Thư viện'), findsOneWidget);
       expect(find.text('Luyện tập'), findsNothing);
 
+      expect(find.text('Về'), findsOneWidget);
       await tester.tap(find.byTooltip('Quay lại'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));

@@ -336,15 +336,13 @@ class _PracticeSubmissionCard extends StatelessWidget {
                 ],
                 Align(
                   alignment: Alignment.centerRight,
-                  child: TextButton.icon(
+                  child: TextButton(
                     onPressed: onTap,
-                    icon: const Icon(Icons.chevron_right_rounded, size: 18),
-                    iconAlignment: IconAlignment.end,
-                    label: const Text('Xem bản thu'),
                     style: TextButton.styleFrom(
                       foregroundColor: MemberChoirStyle.wine,
                       minimumSize: const Size(48, 44),
                     ),
+                    child: const Text('Xem bản thu'),
                   ),
                 ),
               ],
@@ -477,7 +475,7 @@ class _LoadMoreButton extends StatelessWidget {
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Icon(Icons.expand_more_rounded),
+              : null,
           label: Text(isLoading ? 'Đang tải…' : 'Tải thêm lần nộp'),
         ),
       ],

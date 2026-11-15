@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../widgets/app_back_label.dart';
 import 'app_colors.dart';
 import 'app_typography.dart';
 
@@ -30,6 +31,9 @@ class AppTheme {
 
     return ThemeData(
       useMaterial3: true,
+      actionIconTheme: ActionIconThemeData(
+        backButtonIconBuilder: (_) => const AppBackLabel(),
+      ),
       fontFamily: 'Be Vietnam Pro',
       colorScheme: colorScheme,
       textTheme: TextTheme(

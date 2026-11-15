@@ -470,6 +470,7 @@ class _StaffAttendanceScreenState extends ConsumerState<StaffAttendanceScreen>
                         child: ListTile(
                           title: Text(row.name),
                           subtitle: DropdownButton<String>(
+                            icon: const SizedBox.shrink(),
                             key: ValueKey(row.id),
                             isExpanded: true,
                             value:

@@ -400,11 +400,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                                           TextAlign.center,
                                                     ),
                                                   ),
-                                                  SizedBox(width: 8),
-                                                  Icon(
-                                                    Icons.arrow_forward_rounded,
-                                                    size: 19,
-                                                  ),
                                                 ],
                                               ),
                                       ),

@@ -369,7 +369,6 @@ class _RehearsalDetailScreenState extends ConsumerState<RehearsalDetailScreen>
                         subtitle: song.note?.isNotEmpty == true
                             ? Text(song.note!)
                             : null,
-                        trailing: const Icon(Icons.chevron_right),
                         onTap: () => context.push(
                           '/song-detail/${Uri.encodeComponent(song.songId)}',
                         ),

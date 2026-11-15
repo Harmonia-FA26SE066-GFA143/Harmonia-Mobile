@@ -559,10 +559,6 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
                                                               : AppColors.muted,
                                                         ),
                                                   ),
-                                                  const Icon(
-                                                    Icons.chevron_right,
-                                                    size: 20,
-                                                  ),
                                                 ],
                                               ),
                                             ],
@@ -797,10 +793,6 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
                                                 ),
                                           )
                                         : null,
-                                    trailing: const Icon(
-                                      Icons.chevron_right_rounded,
-                                      color: MemberChoirStyle.ink,
-                                    ),
                                     onTap: () => context.push(
                                       '/song-detail/${item.songId}',
                                     ),

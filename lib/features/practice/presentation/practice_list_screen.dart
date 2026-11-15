@@ -348,7 +348,7 @@ class _PracticeListScreenState extends ConsumerState<PracticeListScreen> {
                                             strokeWidth: 2,
                                           ),
                                         )
-                                      : const Icon(Icons.expand_more_rounded),
+                                      : null,
                                   label: const Text('Tải thêm bài tập'),
                                 ),
                               ),
@@ -486,7 +486,6 @@ class _PracticeAssignmentCard extends StatelessWidget {
                             ),
                           ),
                         ),
-                        const Icon(Icons.chevron_right_rounded, size: 18),
                       ],
                     ),
                   ),

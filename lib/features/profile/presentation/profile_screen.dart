@@ -619,6 +619,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                   ),
                                   const SizedBox(height: 6),
                                   DropdownButtonFormField<SkillLevel>(
+                                    icon: const SizedBox.shrink(),
                                     initialValue: selectedLevel,
                                     isExpanded: true,
                                     decoration: InputDecoration(
@@ -1448,13 +1449,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 ],
                               )
                             else
-                              OutlinedButton.icon(
+                              OutlinedButton(
                                 onPressed: skillsNotifier.loadMore,
-                                icon: const Icon(
-                                  Icons.arrow_downward_rounded,
-                                  size: 16,
-                                ),
-                                label: const Text('Tải thêm kỹ năng'),
+                                child: const Text('Tải thêm kỹ năng'),
                               ),
                         ],
                         const SizedBox(height: 20),
@@ -1469,7 +1466,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             subtitle: const Text(
                               'Theo dõi đề cử đã duyệt và lịch sử đào tạo',
                             ),
-                            trailing: const Icon(Icons.chevron_right_rounded),
                             onTap: () => context.push('/director-nominations'),
                           ),
                         ),
@@ -1504,7 +1500,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             subtitle: const Text(
                               'Xem kết quả phục vụ lễ và bài tập đã hoàn thành',
                             ),
-                            trailing: const Icon(Icons.chevron_right_rounded),
                             onTap: () => context.push('/profile/history'),
                           ),
                         ),
@@ -1523,7 +1518,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             subtitle: const Text(
                               'Cập nhật mật khẩu đăng nhập Harmonia',
                             ),
-                            trailing: const Icon(Icons.chevron_right_rounded),
                             onTap: () => context.push('/change-password'),
                           ),
                         ),
@@ -2012,11 +2006,6 @@ class _ProfileSkillCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                size: 18,
-                color: MemberChoirStyle.wine,
-              ),
             ],
           ),
         ),
@@ -2063,7 +2052,6 @@ class _ProfileRecentPractice extends ConsumerWidget {
                     DateFormat('dd/MM/yyyy · HH:mm')
                         .format(submission.submittedAt),
                   ),
-                  trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => context.push(
                     '/practice-submission/${Uri.encodeComponent(submission.id)}',
                   ),

@@ -800,14 +800,9 @@ class _MemberNotificationCard extends StatelessWidget {
                         const Spacer(),
                       Flexible(
                         flex: 2,
-                        child: TextButton.icon(
+                        child: TextButton(
                           onPressed: onOpen,
-                          icon: const Icon(
-                            Icons.chevron_right_rounded,
-                            size: 18,
-                          ),
-                          iconAlignment: IconAlignment.end,
-                          label: const Text('Xem chi tiết'),
+                          child: const Text('Xem chi tiết'),
                         ),
                       ),
                     ],

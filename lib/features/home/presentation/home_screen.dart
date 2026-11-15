@@ -639,11 +639,6 @@ class HomeScreen extends ConsumerWidget {
                                                           TextAlign.center,
                                                     ),
                                                   ),
-                                                  const SizedBox(width: 6),
-                                                  const Icon(
-                                                    Icons.arrow_forward_rounded,
-                                                    size: 18,
-                                                  ),
                                                 ],
                                               ),
                                             ),
@@ -691,20 +686,6 @@ class HomeScreen extends ConsumerWidget {
                                 title: const Text('Thư viện thánh ca'),
                                 subtitle: const Text(
                                   'Tìm bài hát và tài liệu học của bạn',
-                                ),
-                                trailing: Container(
-                                  width: 36,
-                                  height: 36,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: _stitchBorder),
-                                  ),
-                                  child: const Icon(
-                                    Icons.chevron_right_rounded,
-                                    size: 20,
-                                    color: _stitchMutedIcon,
-                                  ),
                                 ),
                                 onTap: () => context.go('/music-library'),
                               ),
