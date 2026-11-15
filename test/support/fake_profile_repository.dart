@@ -69,6 +69,7 @@ class MockProfileRepositoryImpl implements ProfileRepository {
       fullName: request.fullName,
       email: _profile.email,
       phone: request.phone ?? _profile.phone,
+      saintName: request.saintName?.isEmpty == true ? null : request.saintName,
       dateOfBirth: request.dateOfBirth ?? _profile.dateOfBirth,
       joinedDate: _profile.joinedDate,
       status: _profile.status,

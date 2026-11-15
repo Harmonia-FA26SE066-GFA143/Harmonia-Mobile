@@ -15,7 +15,6 @@ import '../../../app/widgets/stitch_entrance.dart';
 import '../../../core/di/core_providers.dart';
 import '../../../core/errors/app_exceptions.dart';
 import '../../../core/errors/error_messages.dart';
-import '../../auth/data/auth_dto.dart';
 import '../../auth/presentation/auth_notifier.dart';
 import '../../lookups/data/lookup_dto.dart';
 import '../../lookups/data/lookups_api_service.dart';
@@ -190,6 +189,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final dobController = TextEditingController(
       text: profile.dateOfBirth ?? '',
     );
+    var saintName = profile.saintName ?? '';
     bool isSaving = false;
     String? errorMessage;
 
@@ -242,6 +242,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 14),
+                    TextFormField(
+                      initialValue: saintName,
+                      enabled: !isSaving,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: const InputDecoration(
+                        labelText: 'Tên thánh (không bắt buộc)',
+                        hintText: 'Ví dụ: Giuse',
+                      ),
+                      onChanged: (value) => saintName = value,
+                    ),
+                    const SizedBox(height: 14),
                     Text('Số điện thoại', style: AppTypography.labelLarge),
                     const SizedBox(height: 6),
                     TextField(
@@ -288,6 +299,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 return;
                               }
 
+                              final trimmedSaintName = saintName.trim();
+                              if (trimmedSaintName.length > 50) {
+                                setModalState(() {
+                                  errorMessage =
+                                      'Tên thánh không được vượt quá 50 ký tự.';
+                                });
+                                return;
+                              }
+
                               setModalState(() {
                                 isSaving = true;
                                 errorMessage = null;
@@ -305,6 +325,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 await repo.updateProfile(
                                   UpdateMyMemberProfileRequest(
                                     fullName: name,
+                                    saintName: trimmedSaintName,
                                     phone: phone.isNotEmpty
                                         ? phone
                                         : profile.phone,
@@ -313,20 +334,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                         : profile.dateOfBirth,
                                   ),
                                 );
-
-                                // Also sync UserDto via /api/auth/me to avoid losing phone
-                                try {
-                                  await ref
-                                      .read(authRepositoryProvider)
-                                      .updateMe(
-                                        UpdateMyUserRequest(
-                                          fullName: name,
-                                          phone: phone.isNotEmpty
-                                              ? phone
-                                              : profile.phone,
-                                        ),
-                                      );
-                                } catch (_) {}
 
                                 if (mounted) {
                                   nav.pop();
@@ -1730,6 +1737,7 @@ class _ProfileSummary extends StatelessWidget {
     );
     final contacts = [
       (Icons.email_outlined, 'Email', profile.email),
+      (Icons.badge_outlined, 'Tên thánh', profile.saintName),
       (Icons.phone_outlined, 'Số điện thoại', profile.phone),
       (Icons.cake_outlined, 'Ngày sinh', profile.dateOfBirth),
       (Icons.calendar_month_outlined, 'Ngày tham gia', profile.joinedDate),

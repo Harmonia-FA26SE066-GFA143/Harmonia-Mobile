@@ -21,7 +21,7 @@ class _EmptyPracticeHistory extends PracticeSubmissionsNotifier {
 }
 
 void main() {
-  testWidgets('profile displays every choir at narrow width with large text', (
+  testWidgets('profile displays all choirs and supports editing saint name', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(320, 1200);
@@ -39,7 +39,10 @@ void main() {
           sessionManagerProvider.overrideWithValue(session),
           profileRepositoryProvider.overrideWithValue(
             MockProfileRepositoryImpl(
-              profile: MockProfileData.profileWithChoirs,
+              profile: MemberProfileDto.fromJson({
+                ...MockProfileData.profileWithChoirs.toJson(),
+                'saintName': 'Giuse',
+              }),
             ),
           ),
           practiceSubmissionsNotifierProvider(null)
@@ -64,6 +67,45 @@ void main() {
     expect(find.text('Ca đoàn'), findsOneWidget);
     expect(find.text(MockProfileData.choirNames.join(' · ')), findsOneWidget);
     expect(find.text('Ca đoàn chung'), findsNothing);
+    expect(find.text('Tên thánh'), findsOneWidget);
+    expect(find.text('Giuse'), findsOneWidget);
+
+    final edit = find.text('Chỉnh sửa thông tin cá nhân');
+    await tester.ensureVisible(edit);
+    await tester.tap(edit);
+    await tester.pumpAndSettle();
+
+    final saintNameField = find.widgetWithText(
+      TextField,
+      'Tên thánh (không bắt buộc)',
+    );
+    expect(tester.widget<TextField>(saintNameField).controller?.text, 'Giuse');
+
+    final save = find.text('Lưu thay đổi');
+    await tester.enterText(saintNameField, 'a' * 51);
+    await tester.ensureVisible(save);
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Tên thánh không được vượt quá 50 ký tự.'),
+      findsOneWidget,
+    );
+
+    await tester.enterText(saintNameField, '  Têrêsa  ');
+    await tester.ensureVisible(save);
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+    expect(find.text('Têrêsa'), findsOneWidget);
+
+    await tester.ensureVisible(edit);
+    await tester.tap(edit);
+    await tester.pumpAndSettle();
+    await tester.enterText(saintNameField, '');
+    await tester.ensureVisible(save);
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+    expect(find.text('Têrêsa'), findsNothing);
+    expect(find.text('Chưa cập nhật'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }
