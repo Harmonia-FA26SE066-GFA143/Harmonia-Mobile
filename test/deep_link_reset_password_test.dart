@@ -919,7 +919,7 @@ void main() {
         expect(loginButton.onPressed, isNotNull);
 
         final googleButton = tester.widget<OutlinedButton>(
-          find.widgetWithText(OutlinedButton, 'Đăng nhập với Google'),
+          find.widgetWithText(OutlinedButton, 'Đăng nhập bằng Google'),
         );
         expect(googleButton.onPressed, isNotNull);
         expect(find.byType(CircularProgressIndicator), findsNothing);
@@ -1055,7 +1055,7 @@ void main() {
         );
         expect(loginButton.onPressed, isNotNull);
         final googleButton = tester.widget<OutlinedButton>(
-          find.widgetWithText(OutlinedButton, 'Đăng nhập với Google'),
+          find.widgetWithText(OutlinedButton, 'Đăng nhập bằng Google'),
         );
         expect(googleButton.onPressed, isNotNull);
 

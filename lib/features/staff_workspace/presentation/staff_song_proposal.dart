@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/widgets/harmonia_blocking_progress.dart';
 import '../../../app/widgets/app_page_header.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/di/core_providers.dart';
@@ -145,8 +146,8 @@ class _StaffSongProposalState extends ConsumerState<StaffSongProposal> {
     final version =
         (widget.latest?.version ?? 0) +
         (widget.latest?.status == 'Draft' ? 0 : 1);
-    return PopScope(
-      canPop: !_busy,
+    return HarmoniaBlockingOverlay(
+      label: _busy ? 'Đang lưu danh sách bài hát…' : null,
       child: Dialog.fullscreen(
         child: Scaffold(
           appBar: AppPageHeader(

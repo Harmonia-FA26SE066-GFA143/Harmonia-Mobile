@@ -26,6 +26,7 @@ class MemberScreenRepository extends MockCalendarRepositoryImpl {
   final eventResponses = <Completer<MemberEventDetail>>[];
   bool defer = false;
   bool failRehearsal = false;
+  Map<String, dynamic>? participation;
   int writes = 0;
   @override
   Future<MemberEventDetail> getEventDetail(String eventId) {
@@ -34,7 +35,8 @@ class MemberScreenRepository extends MockCalendarRepositoryImpl {
       eventResponses.add(response);
       return response.future;
     }
-    return Future.value(MemberEventDetail.fromJson(eventDetailJson(eventId)));
+    final json = eventDetailJson(eventId)..['participation'] = participation;
+    return Future.value(MemberEventDetail.fromJson(json));
   }
 
   @override
@@ -292,10 +294,39 @@ void main() {
       expect(find.text('Sự kiện không có trong lịch sắp tới'), findsNothing);
       expect(find.text('Phân công của bạn'), findsOneWidget);
       expect(find.text('Test song'), findsOneWidget);
-      final yesButton = tester.widget<OutlinedButton>(
-        find.widgetWithText(OutlinedButton, 'Xác nhận'),
-      );
-      expect(yesButton.onPressed, isNull);
+      const responseLabels = ['Xác nhận', 'Báo vắng', 'Chưa chắc'];
+      for (final label in responseLabels) {
+        expect(find.widgetWithText(OutlinedButton, label), findsNothing);
+      }
+
+      repo.participation = {
+        'participationId': 'invitation-a',
+        'eventId': id,
+        'status': 'Invited',
+        'requestedAt': '2026-10-08T01:00:00Z',
+        'canRespond': true,
+      };
+      await tester.tap(find.byTooltip('Tải lại'));
+      await tester.pumpAndSettle();
+      for (final label in responseLabels) {
+        final button = tester.widget<OutlinedButton>(
+          find.widgetWithText(OutlinedButton, label),
+        );
+        expect(button.onPressed, isNotNull);
+      }
+
+      repo.participation = {
+        ...repo.participation!,
+        'status': 'Confirmed',
+        'respondedAt': '2026-10-08T02:00:00Z',
+        'canRespond': false,
+      };
+      await tester.tap(find.byTooltip('Tải lại'));
+      await tester.pumpAndSettle();
+      for (final label in responseLabels) {
+        expect(find.widgetWithText(OutlinedButton, label), findsNothing);
+      }
+      expect(find.textContaining('Đã xác nhận tham gia lúc'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

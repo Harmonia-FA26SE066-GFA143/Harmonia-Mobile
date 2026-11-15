@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../app/widgets/harmonia_blocking_progress.dart';
 import 'auth_notifier.dart';
 
 class ChangePasswordScreen extends ConsumerStatefulWidget {
@@ -26,6 +27,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
   bool _obscureConfirm = true;
   String? _localError;
   bool _isSuccess = false;
+  bool _isChangingPassword = false;
 
   @override
   void dispose() {
@@ -66,14 +68,17 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
       return;
     }
 
-    setState(() => _localError = null);
-
     final from = GoRouterState.of(context).uri.queryParameters['from'];
+    setState(() {
+      _localError = null;
+      _isChangingPassword = true;
+    });
     final success = await ref
         .read(authNotifierProvider.notifier)
         .changePassword(currentPassword: currentPw, newPassword: newPw);
 
     if (!mounted) return;
+    setState(() => _isChangingPassword = false);
 
     if (success) {
       setState(() => _isSuccess = true);
@@ -100,7 +105,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
     final authState = ref.watch(authNotifierProvider);
     final errorMessage = _localError ?? authState.errorMessage;
 
-    return PopScope(
+    final screen = PopScope(
       canPop: !widget.isForced,
       child: Scaffold(
         backgroundColor: AppColors.background,
@@ -286,6 +291,12 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
           ),
         ),
       ),
+    );
+    return HarmoniaBlockingOverlay(
+      label: widget.isForced && _isChangingPassword
+          ? 'Đang đổi mật khẩu…'
+          : null,
+      child: screen,
     );
   }
 }

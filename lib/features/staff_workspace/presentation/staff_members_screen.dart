@@ -9,6 +9,7 @@ import '../../lookups/data/lookups_api_service.dart';
 import '../../profile/data/member_profile_dto.dart';
 import '../data/staff_operations_api.dart';
 import '../data/staff_workspace_repository.dart';
+import '../../../app/widgets/harmonia_blocking_progress.dart';
 import 'staff_ops_widgets.dart';
 
 typedef _MemberQuery = ({
@@ -108,8 +109,8 @@ class _StaffMembersScreenState extends ConsumerState<StaffMembersScreen>
     final skills = _choosing ? null : ref.watch(_skills);
     final skillOptions = skills?.asData?.value;
 
-    return PopScope(
-      canPop: !busy,
+    return HarmoniaBlockingOverlay(
+      label: busy ? 'Đang thêm ca viên…' : null,
       child: OpsPage(
         title: _choosing ? 'Thêm ca viên' : 'Danh sách ca viên',
         actions: [

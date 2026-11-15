@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -33,7 +34,7 @@ void main() {
       // Verify LoginScreen is displayed
       expect(find.byType(LoginScreen), findsOneWidget);
       expect(find.text('Đăng nhập'), findsOneWidget);
-      expect(find.text('Đăng nhập với Google'), findsOneWidget);
+      expect(find.text('Đăng nhập bằng Google'), findsOneWidget);
     },
   );
 
@@ -69,6 +70,14 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
+    const supportChannel = MethodChannel('harmonia/support');
+    final messenger = tester.binding.defaultBinaryMessenger;
+    MethodCall? emailRequest;
+    messenger.setMockMethodCallHandler(supportChannel, (call) async {
+      emailRequest = call;
+      return true;
+    });
+    addTearDown(() => messenger.setMockMethodCallHandler(supportChannel, null));
 
     await tester.pumpWidget(
       ProviderScope(
@@ -83,6 +92,18 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    final emailLink = find.widgetWithText(
+      TextButton,
+      'harmoniafall26@gmail.com',
+    );
+    await tester.ensureVisible(emailLink);
+    await tester.pumpAndSettle();
+    await tester.tap(emailLink);
+    await tester.pumpAndSettle();
+
+    expect(emailRequest?.method, 'openEmail');
+    expect(emailRequest?.arguments, 'mailto:harmoniafall26@gmail.com');
+    expect(tester.getCenter(find.text('hoặc')).dx, closeTo(160, 1));
     expect(tester.takeException(), isNull);
     expect(find.byType(TextFormField), findsNWidgets(2));
   });

@@ -349,61 +349,38 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _ParticipationOption(
-                                      label: 'Xác nhận',
-                                      status: ParticipationStatus.confirmed,
-                                      selected:
-                                          event.participationStatus ==
-                                          ParticipationStatus.confirmed,
-                                      enabled: event.canRespond,
-                                      onPressed: () => showParticipationPrompt(
-                                        context,
-                                        ref,
-                                        event,
+                              if (event.canRespond) ...[
+                                const SizedBox(height: 12),
+                                Row(
+                                  spacing: 6,
+                                  children: [
+                                    for (final (label, status) in const [
+                                      (
+                                        'Xác nhận',
                                         ParticipationStatus.confirmed,
                                       ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Expanded(
-                                    child: _ParticipationOption(
-                                      label: 'Báo vắng',
-                                      status: ParticipationStatus.declined,
-                                      selected:
-                                          event.participationStatus ==
-                                          ParticipationStatus.declined,
-                                      enabled: event.canRespond,
-                                      onPressed: () => showParticipationPrompt(
-                                        context,
-                                        ref,
-                                        event,
+                                      (
+                                        'Báo vắng',
                                         ParticipationStatus.declined,
                                       ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Expanded(
-                                    child: _ParticipationOption(
-                                      label: 'Chưa chắc',
-                                      status: ParticipationStatus.unsure,
-                                      selected:
-                                          event.participationStatus ==
-                                          ParticipationStatus.unsure,
-                                      enabled: event.canRespond,
-                                      onPressed: () => showParticipationPrompt(
-                                        context,
-                                        ref,
-                                        event,
-                                        ParticipationStatus.unsure,
+                                      ('Chưa chắc', ParticipationStatus.unsure),
+                                    ])
+                                      Expanded(
+                                        child: _ParticipationOption(
+                                          label: label,
+                                          status: status,
+                                          onPressed: () =>
+                                              showParticipationPrompt(
+                                                context,
+                                                ref,
+                                                event,
+                                                status,
+                                              ),
+                                        ),
                                       ),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                                  ],
+                                ),
+                              ],
                               if (respondedAt != null) ...[
                                 const SizedBox(height: 10),
                                 Row(
@@ -896,36 +873,23 @@ class _ParticipationOption extends StatelessWidget {
   const _ParticipationOption({
     required this.label,
     required this.status,
-    required this.selected,
-    required this.enabled,
     required this.onPressed,
   });
 
   final String label;
   final ParticipationStatus status;
-  final bool selected;
-  final bool enabled;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    final background = selected ? MemberChoirStyle.ink : Colors.white;
-    final foreground = selected ? Colors.white : MemberChoirStyle.ink;
-
     return OutlinedButton(
-      onPressed: enabled ? onPressed : null,
+      onPressed: onPressed,
       style: OutlinedButton.styleFrom(
         minimumSize: const Size(0, 50),
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-        backgroundColor: background,
-        disabledBackgroundColor: selected
-            ? background
-            : MemberChoirStyle.serviceCanvas,
-        foregroundColor: foreground,
-        disabledForegroundColor: selected ? foreground : AppColors.muted,
-        side: BorderSide(
-          color: selected ? MemberChoirStyle.ink : MemberChoirStyle.border,
-        ),
+        backgroundColor: Colors.white,
+        foregroundColor: MemberChoirStyle.ink,
+        side: const BorderSide(color: MemberChoirStyle.border),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       child: Column(

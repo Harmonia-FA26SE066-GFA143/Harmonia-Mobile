@@ -5,6 +5,7 @@ import '../../calendar/data/calendar_repository.dart';
 import '../data/staff_documents.dart';
 import '../data/staff_operations_api.dart';
 import 'staff_material_editor.dart' show StaffDocumentField;
+import '../../../app/widgets/harmonia_blocking_progress.dart';
 import 'staff_ops_widgets.dart';
 
 class StaffRehearsalRecordingEditor extends ConsumerStatefulWidget {
@@ -53,8 +54,8 @@ class _StaffRehearsalRecordingEditorState
   @override
   Widget build(BuildContext context) {
     final songs = rehearsalSongsProvider(widget.rehearsalId);
-    return PopScope(
-      canPop: !busy,
+    return HarmoniaBlockingOverlay(
+      label: busy ? 'Đang tải bản thu buổi tập…' : null,
       child: OpsPage(
         title: 'Tải bản thu buổi tập',
         child: Form(

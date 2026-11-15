@@ -8,6 +8,7 @@ import '../../lookups/data/lookups_api_service.dart';
 import '../../music/data/music_dto.dart' show SongDto;
 import '../data/staff_operations_api.dart';
 import '../data/staff_workspace_repository.dart';
+import '../../../app/widgets/harmonia_blocking_progress.dart';
 import 'staff_ops_widgets.dart';
 import 'staff_song_proposal.dart';
 
@@ -292,8 +293,8 @@ class _RehearsalFormState extends ConsumerState<_RehearsalForm>
         : _creating
         ? 'Tạo buổi tập'
         : 'Sửa lịch tập';
-    return PopScope(
-      canPop: !busy,
+    return HarmoniaBlockingOverlay(
+      label: busy ? 'Đang lưu buổi tập…' : null,
       child: Dialog.fullscreen(
         child: OpsPage(
           title: title,
