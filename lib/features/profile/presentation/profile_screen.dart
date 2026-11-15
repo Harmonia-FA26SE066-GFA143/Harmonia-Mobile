@@ -1276,10 +1276,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final skillsNotifier = ref.read(memberSkillsNotifierProvider.notifier);
     final profileFuture = ref.watch(currentMemberProfileProvider.future);
     final settings = ref.watch(publicAppSettingsProvider).asData?.value;
-    final choir = [settings?.choirName, settings?.parishName].nonNulls
-        .map((name) => name.trim())
-        .where((name) => name.isNotEmpty)
-        .join(' · ');
+    final parishName = settings?.parishName.trim() ?? '';
     final busy = ref.watch(
       authNotifierProvider.select((auth) => auth.isLoading),
     );
@@ -1301,9 +1298,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (choir.isNotEmpty)
+                  if (parishName.isNotEmpty)
                     Text(
-                      choir,
+                      parishName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: AppTypography.labelSmall.copyWith(
@@ -1736,6 +1733,12 @@ class _ProfileSummary extends StatelessWidget {
       (Icons.phone_outlined, 'Số điện thoại', profile.phone),
       (Icons.cake_outlined, 'Ngày sinh', profile.dateOfBirth),
       (Icons.calendar_month_outlined, 'Ngày tham gia', profile.joinedDate),
+      if (profile.choirNames case final names?)
+        (
+          Icons.groups_outlined,
+          'Ca đoàn',
+          names.isEmpty ? 'Chưa tham gia ca đoàn' : names.join(' · '),
+        ),
     ];
     return Card(
       margin: EdgeInsets.zero,

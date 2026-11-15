@@ -100,7 +100,9 @@ void main() {
               MockPracticeRepositoryImpl(),
             ),
             profileRepositoryProvider.overrideWithValue(
-              MockProfileRepositoryImpl(),
+              MockProfileRepositoryImpl(
+                profile: MockProfileData.profileWithChoirs,
+              ),
             ),
             notificationRepositoryProvider.overrideWithValue(
               _TestNotificationRepository(),
@@ -113,6 +115,10 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+
+      expect(find.text('Ca viên'), findsOneWidget);
+      expect(find.text('Ca đoàn'), findsOneWidget);
+      expect(find.text(MockProfileData.choirNames.join(' · ')), findsOneWidget);
 
       // 1. Header icon buttons: notifications and profile avatar.
       final notifButton = tester.widget<IconButton>(

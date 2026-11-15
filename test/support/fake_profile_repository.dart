@@ -13,6 +13,13 @@ class MockProfileData {
     avatarUrl: null,
   );
 
+  static const choirNames = ['Ca đoàn Cecilia', 'Ca đoàn Thánh Gia'];
+
+  static final profileWithChoirs = MemberProfileDto.fromJson({
+    ...profile.toJson(),
+    'choirNames': choirNames,
+  });
+
   static final List<MemberSkill> skills = [
     const MemberSkill(
       id: 'skill-01',
@@ -40,7 +47,10 @@ class MockProfileData {
 }
 
 class MockProfileRepositoryImpl implements ProfileRepository {
-  MemberProfileDto _profile = MockProfileData.profile;
+  MockProfileRepositoryImpl({MemberProfileDto? profile})
+    : _profile = profile ?? MockProfileData.profile;
+
+  MemberProfileDto _profile;
   List<MemberSkill> _skills = List.from(MockProfileData.skills);
 
   @override
@@ -63,6 +73,7 @@ class MockProfileRepositoryImpl implements ProfileRepository {
       joinedDate: _profile.joinedDate,
       status: _profile.status,
       avatarUrl: _profile.avatarUrl,
+      choirNames: _profile.choirNames,
     );
     return _profile;
   }
