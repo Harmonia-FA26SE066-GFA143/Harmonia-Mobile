@@ -34,7 +34,23 @@ void main() {
       // Verify LoginScreen is displayed
       expect(find.byType(LoginScreen), findsOneWidget);
       expect(find.text('Đăng nhập'), findsOneWidget);
-      expect(find.text('Đăng nhập bằng Google'), findsOneWidget);
+      final googleLabel = find.text('Đăng nhập bằng Google');
+      final googleButton = find.widgetWithText(
+        OutlinedButton,
+        'Đăng nhập bằng Google',
+      );
+      final googleIcon = find.descendant(
+        of: googleButton,
+        matching: find.byType(Image),
+      );
+      final iconToLabelGap =
+          tester.getTopLeft(googleLabel).dx - tester.getTopRight(googleIcon).dx;
+      expect(iconToLabelGap, inInclusiveRange(0, 12));
+      final groupCenter =
+          (tester.getTopLeft(googleIcon).dx +
+              tester.getTopRight(googleLabel).dx) /
+          2;
+      expect(groupCenter, closeTo(tester.getCenter(googleButton).dx, 1));
       expect(find.byIcon(Icons.arrow_forward_rounded), findsNothing);
     },
   );
