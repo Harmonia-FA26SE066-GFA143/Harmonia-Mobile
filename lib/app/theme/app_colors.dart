@@ -37,7 +37,7 @@ class AppColors {
   static const Color tertiary = Color(0xFF3F2E00);
 
   // Neutral & Surfaces
-  static const Color background = Color(0xFFF7F8FA);
+  static const Color background = Color(0xFFF5F0E8);
   static const Color canvas = background;
   static const Color surface = Color(0xFFFFFFFF);
   static const Color surfaceContainerLow = Color(0xFFF5F7FA);

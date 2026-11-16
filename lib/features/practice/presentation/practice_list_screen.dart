@@ -5,9 +5,11 @@ import 'package:intl/intl.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/widgets/app_page_header.dart';
+import '../../../app/widgets/harmonia_svg_art.dart';
 import '../../../app/widgets/member_choir_visuals.dart';
 import '../../../app/widgets/stitch_entrance.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/errors/error_messages.dart';
 import '../../calendar/data/calendar_repository.dart'
     show publicAppSettingsProvider;
 import '../data/practice_models.dart';
@@ -100,7 +102,7 @@ class _PracticeListScreenState extends ConsumerState<PracticeListScreen> {
     return Theme(
       data: MemberChoirStyle.theme(context),
       child: Scaffold(
-        backgroundColor: MemberChoirStyle.paper,
+        backgroundColor: AppColors.background,
         appBar: AppPageHeader(
           gradient: MemberChoirStyle.header,
           titleFontFamily: MemberChoirStyle.displayFont,
@@ -118,257 +120,282 @@ class _PracticeListScreenState extends ConsumerState<PracticeListScreen> {
         ),
         body: SafeArea(
           top: false,
-          child: Column(
-            children: [
-              if (MediaQuery.sizeOf(context).height >= 540)
-                MemberChoirArt(
-                  artwork: MemberChoirArtwork.practice,
-                  height: 138,
-                  gradient: const LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, MemberChoirStyle.paper],
-                    stops: [0.48, 1],
+          child: AntiphonaryBackground(
+            child: RefreshIndicator(
+              onRefresh: () async => _reload(),
+              color: MemberChoirStyle.accent,
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: _PracticeHeroBanner(choirName: choirName),
                   ),
-                  caption: choirName != null && choirName.isNotEmpty
-                      ? _PracticeBadge(
-                          label: choirName,
-                          color: MemberChoirStyle.wine,
-                          fill: Colors.white,
-                        )
-                      : null,
-                ),
-              // Filter chips with server counts
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 6,
-                ),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: countsAsync.when(
-                    loading: () => Row(
-                      children: [
-                        FilterChip(
-                          selected: _selectedFilter == PracticeFilter.all,
-                          label: const Text('Tất cả'),
-                          onSelected: (_) =>
-                              _onFilterChanged(PracticeFilter.all),
-                        ),
-                      ],
-                    ),
-                    error: (error, stack) => Row(
-                      children: [
-                        FilterChip(
-                          selected: _selectedFilter == PracticeFilter.all,
-                          label: const Text('Tất cả'),
-                          onSelected: (_) =>
-                              _onFilterChanged(PracticeFilter.all),
-                        ),
-                      ],
-                    ),
-                    data: (counts) {
-                      return Row(
-                        children: [
-                          FilterChip(
-                            selected: _selectedFilter == PracticeFilter.all,
-                            label: Text('Tất cả (${counts.total})'),
-                            onSelected: (_) =>
-                                _onFilterChanged(PracticeFilter.all),
-                          ),
-                          const SizedBox(width: 8),
-                          FilterChip(
-                            selected:
-                                _selectedFilter == PracticeFilter.notSubmitted,
-                            label: Text('Chưa nộp (${counts.notSubmitted})'),
-                            onSelected: (_) =>
-                                _onFilterChanged(PracticeFilter.notSubmitted),
-                          ),
-                          const SizedBox(width: 8),
-                          FilterChip(
-                            selected:
-                                _selectedFilter == PracticeFilter.submitted,
-                            label: Text('Chờ chấm (${counts.submitted})'),
-                            onSelected: (_) =>
-                                _onFilterChanged(PracticeFilter.submitted),
-                          ),
-                          const SizedBox(width: 8),
-                          FilterChip(
-                            selected:
-                                _selectedFilter == PracticeFilter.needsRevision,
-                            label: Text('Cần luyện (${counts.needsRevision})'),
-                            onSelected: (_) =>
-                                _onFilterChanged(PracticeFilter.needsRevision),
-                          ),
-                          const SizedBox(width: 8),
-                          FilterChip(
-                            selected: _selectedFilter == PracticeFilter.passed,
-                            label: Text('Đã đạt (${counts.passed})'),
-                            onSelected: (_) =>
-                                _onFilterChanged(PracticeFilter.passed),
-                          ),
-                          const SizedBox(width: 8),
-                          FilterChip(
-                            selected: _selectedFilter == PracticeFilter.overdue,
-                            label: Text('Quá hạn (${counts.overdue})'),
-                            onSelected: (_) =>
-                                _onFilterChanged(PracticeFilter.overdue),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-              ),
-
-              // Assignments list
-              Expanded(
-                child: state.when(
-                  loading: () => const Center(
-                    child: CircularProgressIndicator(
-                      color: MemberChoirStyle.accent,
-                    ),
-                  ),
-                  error: (e, _) => Center(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.error_outline_rounded,
-                            size: 48,
-                            color: AppColors.statusDanger,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Lỗi tải danh sách bài tập: $e',
-                            style: AppTypography.bodyMedium,
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 16),
-                          ElevatedButton(
-                            onPressed: _reload,
-                            child: const Text('Thử lại'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  data: (practiceState) {
-                    final assignments = practiceState.items;
-                    if (assignments.isEmpty) {
-                      return Center(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.all(32),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: countsAsync.when(
+                          loading: () => Row(
                             children: [
-                              Icon(
-                                Icons.mic_none_rounded,
-                                size: 56,
-                                color: AppColors.muted.withValues(alpha: 0.5),
+                              _StitchPracticeFilterPill(
+                                label: 'Tất cả',
+                                selected: _selectedFilter == PracticeFilter.all,
+                                onTap: () =>
+                                    _onFilterChanged(PracticeFilter.all),
                               ),
-                              const SizedBox(height: 16),
-                              Text(
-                                _selectedFilter != PracticeFilter.all
-                                    ? 'Không có bài tập nào thuộc nhóm này'
-                                    : 'Chưa có bài tập nào từ máy chủ',
-                                style: AppTypography.titleMedium.copyWith(
-                                  color: AppColors.muted,
+                            ],
+                          ),
+                          error: (_, _) => Row(
+                            children: [
+                              _StitchPracticeFilterPill(
+                                label: 'Tất cả',
+                                selected: _selectedFilter == PracticeFilter.all,
+                                onTap: () =>
+                                    _onFilterChanged(PracticeFilter.all),
+                              ),
+                            ],
+                          ),
+                          data: (counts) => Row(
+                            spacing: 8,
+                            children: [
+                              _StitchPracticeFilterPill(
+                                label: 'Tất cả',
+                                count: counts.total,
+                                badgeFill: const Color(0xFFF3ECEF),
+                                badgeColor: MemberChoirStyle.wine,
+                                selected: _selectedFilter == PracticeFilter.all,
+                                onTap: () =>
+                                    _onFilterChanged(PracticeFilter.all),
+                              ),
+                              _StitchPracticeFilterPill(
+                                label: 'Chưa nộp',
+                                count: counts.notSubmitted,
+                                badgeFill: const Color(0xFFF2F0EC),
+                                badgeColor: const Color(0xFF64646B),
+                                selected:
+                                    _selectedFilter ==
+                                    PracticeFilter.notSubmitted,
+                                onTap: () => _onFilterChanged(
+                                  PracticeFilter.notSubmitted,
                                 ),
-                                textAlign: TextAlign.center,
+                              ),
+                              _StitchPracticeFilterPill(
+                                label: 'Chờ chấm',
+                                count: counts.submitted,
+                                badgeFill: const Color(0xFFE7EEFF),
+                                badgeColor: AppColors.statusInfo,
+                                selected:
+                                    _selectedFilter == PracticeFilter.submitted,
+                                onTap: () =>
+                                    _onFilterChanged(PracticeFilter.submitted),
+                              ),
+                              _StitchPracticeFilterPill(
+                                label: 'Cần luyện',
+                                count: counts.needsRevision,
+                                badgeFill: AppColors.statusWarningSoft,
+                                badgeColor: AppColors.statusWarning,
+                                selected:
+                                    _selectedFilter ==
+                                    PracticeFilter.needsRevision,
+                                onTap: () => _onFilterChanged(
+                                  PracticeFilter.needsRevision,
+                                ),
+                              ),
+                              _StitchPracticeFilterPill(
+                                label: 'Đã đạt',
+                                count: counts.passed,
+                                badgeFill: AppColors.statusSuccessSoft,
+                                badgeColor: AppColors.statusSuccess,
+                                selected:
+                                    _selectedFilter == PracticeFilter.passed,
+                                onTap: () =>
+                                    _onFilterChanged(PracticeFilter.passed),
+                              ),
+                              _StitchPracticeFilterPill(
+                                label: 'Quá hạn',
+                                count: counts.overdue,
+                                badgeFill: AppColors.statusDangerSoft,
+                                badgeColor: AppColors.statusDanger,
+                                selected:
+                                    _selectedFilter == PracticeFilter.overdue,
+                                onTap: () =>
+                                    _onFilterChanged(PracticeFilter.overdue),
                               ),
                             ],
                           ),
                         ),
-                      );
-                    }
-
-                    return RefreshIndicator(
-                      onRefresh: () async => _reload(),
-                      color: MemberChoirStyle.accent,
-                      child: ListView.separated(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                        itemCount:
-                            assignments.length +
-                            (practiceState.hasNextPage ? 1 : 0),
-                        separatorBuilder: (context, index) =>
-                            const SizedBox(height: 16),
-                        itemBuilder: (context, index) {
-                          if (index == assignments.length) {
-                            if (practiceState.loadMoreError != null) {
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
+                      ),
+                    ),
+                  ),
+                  ...state.when(
+                    loading: () => const [
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: MemberChoirStyle.accent,
+                          ),
+                        ),
+                      ),
+                    ],
+                    error: (e, _) => [
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.error_outline_rounded,
+                                  size: 48,
+                                  color: AppColors.statusDanger,
                                 ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  ErrorMessages.forException(
+                                    e,
+                                    defaultMessage:
+                                        'Không thể tải danh sách bài tập. Vui lòng thử lại.',
+                                  ),
+                                  style: AppTypography.bodyMedium,
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 16),
+                                ElevatedButton(
+                                  onPressed: _reload,
+                                  child: const Text('Thử lại'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                    data: (practiceState) {
+                      final assignments = practiceState.items;
+                      if (assignments.isEmpty) {
+                        return [
+                          SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(32),
                                 child: Column(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
+                                    Icon(
+                                      Icons.mic_none_rounded,
+                                      size: 56,
+                                      color: AppColors.muted.withValues(
+                                        alpha: 0.5,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
                                     Text(
-                                      practiceState.loadMoreError!,
-                                      style: AppTypography.bodyMedium.copyWith(
-                                        color: AppColors.statusDanger,
+                                      _selectedFilter != PracticeFilter.all
+                                          ? 'Không có bài tập nào thuộc nhóm này'
+                                          : 'Chưa có bài tập nào từ máy chủ',
+                                      style: AppTypography.titleMedium.copyWith(
+                                        color: AppColors.muted,
                                       ),
                                       textAlign: TextAlign.center,
                                     ),
-                                    const SizedBox(height: 8),
-                                    ElevatedButton(
-                                      onPressed: () => ref
-                                          .read(
-                                            practiceListNotifierProvider
-                                                .notifier,
-                                          )
-                                          .loadMore(),
-                                      child: const Text('Thử lại'),
-                                    ),
                                   ],
                                 ),
-                              );
-                            }
-                            return Center(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                                child: ElevatedButton.icon(
-                                  onPressed: practiceState.isLoadingMore
-                                      ? null
-                                      : () => ref
-                                            .read(
-                                              practiceListNotifierProvider
-                                                  .notifier,
-                                            )
-                                            .loadMore(),
-                                  icon: practiceState.isLoadingMore
-                                      ? const SizedBox(
-                                          width: 16,
-                                          height: 16,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                          ),
-                                        )
-                                      : null,
-                                  label: const Text('Tải thêm bài tập'),
-                                ),
                               ),
-                            );
-                          }
-                          final item = assignments[index];
-                          return StitchEntrance(
-                            key: ValueKey(item.id),
-                            child: _PracticeAssignmentCard(
-                              item: item,
-                              statusColor: _getStatusColor(item.status),
                             ),
-                          );
-                        },
-                      ),
-                    );
-                  },
-                ),
+                          ),
+                        ];
+                      }
+
+                      return [
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                          sliver: SliverList.separated(
+                            itemCount:
+                                assignments.length +
+                                (practiceState.hasNextPage ? 1 : 0),
+                            separatorBuilder: (context, index) =>
+                                const SizedBox(height: 16),
+                            itemBuilder: (context, index) {
+                              if (index == assignments.length) {
+                                if (practiceState.loadMoreError != null) {
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        Text(
+                                          practiceState.loadMoreError!,
+                                          style: AppTypography.bodyMedium
+                                              .copyWith(
+                                                color: AppColors.statusDanger,
+                                              ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                        const SizedBox(height: 8),
+                                        ElevatedButton(
+                                          onPressed: () => ref
+                                              .read(
+                                                practiceListNotifierProvider
+                                                    .notifier,
+                                              )
+                                              .loadMore(),
+                                          child: const Text('Thử lại'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }
+                                return Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    child: ElevatedButton.icon(
+                                      onPressed: practiceState.isLoadingMore
+                                          ? null
+                                          : () => ref
+                                                .read(
+                                                  practiceListNotifierProvider
+                                                      .notifier,
+                                                )
+                                                .loadMore(),
+                                      icon: practiceState.isLoadingMore
+                                          ? const SizedBox(
+                                              width: 16,
+                                              height: 16,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                          : null,
+                                      label: const Text('Tải thêm bài tập'),
+                                    ),
+                                  ),
+                                );
+                              }
+                              final item = assignments[index];
+                              return StitchEntrance(
+                                key: ValueKey(item.id),
+                                child: _PracticeAssignmentCard(
+                                  item: item,
+                                  statusColor: _getStatusColor(item.status),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ];
+                    },
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -499,17 +526,206 @@ class _PracticeAssignmentCard extends StatelessWidget {
   }
 }
 
+class _PracticeHeroBanner extends StatelessWidget {
+  const _PracticeHeroBanner({required this.choirName});
+
+  final String? choirName;
+
+  @override
+  Widget build(BuildContext context) {
+    final trimmedChoir = choirName?.trim() ?? '';
+    final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+    final bannerHeight = (164.0 * textScale).clamp(164.0, 240.0);
+    return MemberChoirArt(
+      artwork: MemberChoirArtwork.practice,
+      height: bannerHeight,
+      alignment: Alignment.topCenter,
+      gradient: const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0x526D2636), Color(0xAD5C1E2B), Color(0xEB4A1521)],
+        stops: [0.0, 0.56, 1.0],
+      ),
+      caption: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 6,
+              children: [
+                if (trimmedChoir.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.24),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      spacing: 6,
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFFECE57),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        Flexible(
+                          child: Text(
+                            trimmedChoir.toUpperCase(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.labelSmall.copyWith(
+                              color: const Color(0xFFFCEBC0),
+                              letterSpacing: 0.9,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                Text(
+                  'Sổ luyện thanh và đánh giá chất giọng cá nhân',
+                  softWrap: true,
+                  style: AppTypography.bodySmall.copyWith(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white.withValues(alpha: 0.94),
+                    shadows: const [
+                      Shadow(
+                        color: Color(0x80240910),
+                        blurRadius: 6,
+                        offset: Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          ExcludeSemantics(
+            child: Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.16),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
+              ),
+              child: const Icon(
+                Icons.graphic_eq_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StitchPracticeFilterPill extends StatelessWidget {
+  const _StitchPracticeFilterPill({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    this.count,
+    this.badgeFill = const Color(0xFFF3ECEF),
+    this.badgeColor = MemberChoirStyle.wine,
+  });
+
+  final String label;
+  final int? count;
+  final bool selected;
+  final VoidCallback onTap;
+  final Color badgeFill;
+  final Color badgeColor;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    selected: selected,
+    child: Material(
+      color: selected ? MemberChoirStyle.wine : AppColors.surface,
+      shape: StadiumBorder(
+        side: BorderSide(
+          color: selected ? MemberChoirStyle.wine : MemberChoirStyle.border,
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 40),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 7,
+              children: [
+                Text(
+                  label,
+                  style: AppTypography.labelLarge.copyWith(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                    color: selected ? Colors.white : const Color(0xFF333642),
+                  ),
+                ),
+                if (count != null)
+                  Container(
+                    constraints: const BoxConstraints(minWidth: 20),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? Colors.white.withValues(alpha: 0.22)
+                          : badgeFill,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      '$count',
+                      style: AppTypography.labelSmall.copyWith(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: selected ? Colors.white : badgeColor,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 class _PracticeBadge extends StatelessWidget {
-  const _PracticeBadge({required this.label, required this.color, this.fill});
+  const _PracticeBadge({required this.label, required this.color});
 
   final String label;
   final Color color;
-  final Color? fill;
 
   @override
   Widget build(BuildContext context) => DecoratedBox(
     decoration: BoxDecoration(
-      color: fill ?? color.withValues(alpha: .10),
+      color: color.withValues(alpha: .10),
       borderRadius: BorderRadius.circular(8),
     ),
     child: Padding(

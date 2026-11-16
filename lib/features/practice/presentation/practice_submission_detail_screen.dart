@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/widgets/app_page_header.dart';
+import '../../../app/widgets/harmonia_svg_art.dart';
 import '../../../app/widgets/member_choir_visuals.dart';
 import '../../../app/widgets/stitch_entrance.dart';
 import '../../music/data/music_file_loader.dart';
@@ -168,56 +169,59 @@ class _PracticeSubmissionDetailScreenState
     final detail = ref.watch(provider);
 
     final scaffold = Scaffold(
-      backgroundColor: MemberChoirStyle.paper,
+      backgroundColor: AppColors.background,
       appBar: const AppPageHeader(
         centerTitle: true,
         gradient: MemberChoirStyle.header,
         titleFontFamily: MemberChoirStyle.displayFont,
         title: Text('Chi tiết bản thu âm'),
+        showEmptyAccent: true,
       ),
       body: SafeArea(
         top: false,
-        child: detail.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                spacing: 12,
-                children: [
-                  const Icon(
-                    Icons.error_outline_rounded,
-                    size: 48,
-                    color: AppColors.statusDanger,
-                  ),
-                  Text(
-                    ErrorMessages.forException(
-                      error,
-                      defaultMessage:
-                          'Không thể tải chi tiết bản thu. Vui lòng thử lại.',
+        child: AntiphonaryBackground(
+          child: detail.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, _) => Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  spacing: 12,
+                  children: [
+                    const Icon(
+                      Icons.error_outline_rounded,
+                      size: 48,
+                      color: AppColors.statusDanger,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                  ElevatedButton(
-                    onPressed: () => ref.invalidate(provider),
-                    child: const Text('Thử lại'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          data: (submission) => submission == null
-              ? const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Text(
-                      'Bản thu không tồn tại hoặc bạn không có quyền truy cập.',
+                    Text(
+                      ErrorMessages.forException(
+                        error,
+                        defaultMessage:
+                            'Không thể tải chi tiết bản thu. Vui lòng thử lại.',
+                      ),
                       textAlign: TextAlign.center,
                     ),
-                  ),
-                )
-              : _contents(submission),
+                    ElevatedButton(
+                      onPressed: () => ref.invalidate(provider),
+                      child: const Text('Thử lại'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            data: (submission) => submission == null
+                ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Text(
+                        'Bản thu không tồn tại hoặc bạn không có quyền truy cập.',
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  )
+                : _contents(submission),
+          ),
         ),
       ),
     );

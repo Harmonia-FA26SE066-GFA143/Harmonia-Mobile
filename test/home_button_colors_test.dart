@@ -100,13 +100,7 @@ void main() {
               MockPracticeRepositoryImpl(),
             ),
             profileRepositoryProvider.overrideWithValue(
-              MockProfileRepositoryImpl(
-                profile: MemberProfileDto.fromJson({
-                  ...MockProfileData.profileWithChoirs.toJson(),
-                  'fullName': 'Nguyễn Thị Mai',
-                  'saintName': '  Têrêsa  ',
-                }),
-              ),
+              MockProfileRepositoryImpl(),
             ),
             notificationRepositoryProvider.overrideWithValue(
               _TestNotificationRepository(),
@@ -120,11 +114,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Ca viên'), findsOneWidget);
-      expect(find.text('Ca đoàn'), findsOneWidget);
-      expect(find.text(MockProfileData.choirNames.join(' · ')), findsOneWidget);
-
-      expect(find.text('Chào Têrêsa Nguyễn Thị Mai'), findsOneWidget);
+      expect(
+        find.text('Chào ${MockProfileData.profile.fullName}'),
+        findsOneWidget,
+      );
 
       // 1. Header icon buttons: notifications and profile avatar.
       final notifButton = tester.widget<IconButton>(
@@ -171,7 +164,7 @@ void main() {
 
       // 2. Primary CTA button and To-do ElevatedButtons resolve Stitch colors.
       final primaryBtnFinder = find.ancestor(
-        of: find.text('Xem chi tiết phụng vụ & bài hát'),
+        of: find.text('Xem chi tiết phục vụ'),
         matching: find.byType(ElevatedButton),
       );
       final primaryTheme = ElevatedButtonTheme.of(
@@ -368,8 +361,8 @@ void main() {
         const Color(0xFF76767E),
       );
 
-      // Switch to 'Lịch tuần' tab and verify memberChoirScreen preserves wine active color.
-      await tester.tap(find.text('Lịch tuần'));
+      // Switch to the calendar tab and verify memberChoirScreen preserves wine active color.
+      await tester.tap(find.text('Lịch'));
       await tester.pumpAndSettle();
 
       final navBarCalendar = tester.widget<NavigationBar>(
@@ -378,6 +371,207 @@ void main() {
       final calendarDest =
           navBarCalendar.destinations[1] as NavigationDestination;
       expect((calendarDest.selectedIcon! as Icon).color, MemberChoirStyle.wine);
+    },
+  );
+
+  testWidgets('HomeScreen implements 5 details from Stitch 01 design', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final session = SessionManager(SecureStorageService());
+    await session.markAuthenticated(role: 'ChoirMember');
+    addTearDown(session.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sessionManagerProvider.overrideWithValue(session),
+          calendarRepositoryProvider.overrideWithValue(
+            _TestCalendarRepository(),
+          ),
+          practiceRepositoryProvider.overrideWithValue(
+            MockPracticeRepositoryImpl(),
+          ),
+          profileRepositoryProvider.overrideWithValue(
+            MockProfileRepositoryImpl(
+              profile: MemberProfileDto.fromJson({
+                ...MockProfileData.profileWithChoirs.toJson(),
+                'fullName': 'Nguyễn Thị Mai',
+                'saintName': '  Têrêsa  ',
+              }),
+            ),
+          ),
+          notificationRepositoryProvider.overrideWithValue(
+            _TestNotificationRepository(),
+          ),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: const HomeScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 1. Số thông báo: Badge nằm sát góc trên bên phải của icon chuông (inside IconButton icon child)
+    final notifBtn = find.byWidgetPredicate(
+      (w) => w is IconButton && w.tooltip == 'Thông báo',
+    );
+    expect(notifBtn, findsOneWidget);
+    final notifBadge = tester.widget<Badge>(
+      find.descendant(of: notifBtn, matching: find.byType(Badge)),
+    );
+    expect(notifBadge.isLabelVisible, isTrue);
+    expect(notifBadge.backgroundColor, const Color(0xFFC59B27));
+    expect(notifBadge.textColor, const Color(0xFF05102B));
+    expect(find.text('4'), findsWidgets);
+
+    // 2. Show the member's role and every active choir separately.
+    expect(find.text('Chào Têrêsa Nguyễn Thị Mai'), findsOneWidget);
+    expect(find.text('Chúc một ngày phụng vụ bình an'), findsOneWidget);
+    expect(find.text('Ca viên'), findsOneWidget);
+    expect(find.text('Ca đoàn'), findsOneWidget);
+    expect(find.text(MockProfileData.choirNames.join(' · ')), findsOneWidget);
+
+    // 3. Chương trình phục vụ sắp tới: Bỏ câu phụ & chip ngày, có badge ƯU TIÊN
+    expect(find.text('Chương trình phục vụ sắp tới'), findsOneWidget);
+    expect(
+      find.text('Chỉ hiển thị sự kiện sắp tới được cha xứ công bố.'),
+      findsNothing,
+    );
+    expect(find.text('ƯU TIÊN'), findsOneWidget);
+
+    // 4. Phân công cá nhân: Tách khung riêng trong thẻ sự kiện, đặt trước nút "Xem chi tiết phục vụ"
+    expect(find.text('Phân công cá nhân:'), findsOneWidget);
+    expect(find.text('Xem chi tiết phục vụ'), findsOneWidget);
+    // Danh sách "Phân công của bạn" vẫn độc lập bên dưới
+    expect(find.text('Phân công của bạn'), findsOneWidget);
+
+    // 5. Thư viện thánh ca: Thẻ thu gọn, subtitle 1 dòng ellipsis
+    expect(find.text('Thư viện thánh ca'), findsOneWidget);
+    final subtitleFinder = find.text(
+      'Tìm bài hát, phổ nhạc và tài liệu học của bạn',
+    );
+    expect(subtitleFinder, findsOneWidget);
+    final subtitleWidget = tester.widget<Text>(subtitleFinder);
+    expect(subtitleWidget.maxLines, 1);
+    expect(subtitleWidget.overflow, TextOverflow.ellipsis);
+  });
+
+  testWidgets(
+    'Choir member bottom navigation has 5 tabs and notification bell routes properly',
+    (tester) async {
+      final session = SessionManager(SecureStorageService());
+      await session.markAuthenticated(role: 'ChoirMember');
+      addTearDown(session.dispose);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sessionManagerProvider.overrideWithValue(session),
+            calendarRepositoryProvider.overrideWithValue(
+              _TestCalendarRepository(),
+            ),
+            practiceRepositoryProvider.overrideWithValue(
+              MockPracticeRepositoryImpl(),
+            ),
+            profileRepositoryProvider.overrideWithValue(
+              MockProfileRepositoryImpl(),
+            ),
+            notificationRepositoryProvider.overrideWithValue(
+              _TestNotificationRepository(),
+            ),
+          ],
+          child: const HarmoniaApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 1. Verify 5 destinations in correct order
+      final navBar = tester.widget<NavigationBar>(find.byType(NavigationBar));
+      expect(navBar.destinations.length, 5);
+      expect(
+        (navBar.destinations[0] as NavigationDestination).label,
+        'Trang chủ',
+      );
+      expect((navBar.destinations[1] as NavigationDestination).label, 'Lịch');
+      expect(
+        (navBar.destinations[2] as NavigationDestination).label,
+        'Tài liệu',
+      );
+      expect(
+        (navBar.destinations[3] as NavigationDestination).label,
+        'Luyện tập',
+      );
+      expect(
+        (navBar.destinations[4] as NavigationDestination).label,
+        'Cá nhân',
+      );
+
+      // 2. Tap 'Tài liệu' -> switches to tab index 2
+      await tester.tap(find.text('Tài liệu'));
+      await tester.pumpAndSettle();
+      final navBarMaterials = tester.widget<NavigationBar>(
+        find.byType(NavigationBar),
+      );
+      expect(navBarMaterials.selectedIndex, 2);
+
+      // 3. Tap 'Luyện tập' -> switches to tab index 3
+      await tester.tap(find.text('Luyện tập'));
+      await tester.pumpAndSettle();
+      final navBarPractice = tester.widget<NavigationBar>(
+        find.byType(NavigationBar),
+      );
+      expect(navBarPractice.selectedIndex, 3);
+      expect(
+        find.text('Sổ luyện thanh và đánh giá chất giọng cá nhân'),
+        findsOneWidget,
+      );
+
+      // 4. Tap 'Cá nhân' -> switches to tab index 4
+      await tester.tap(find.text('Cá nhân'));
+      await tester.pumpAndSettle();
+      final navBarProfile = tester.widget<NavigationBar>(
+        find.byType(NavigationBar),
+      );
+      expect(navBarProfile.selectedIndex, 4);
+
+      // 5. Tap 'Trang chủ' -> returns to home tab (index 0)
+      await tester.tap(find.text('Trang chủ'));
+      await tester.pumpAndSettle();
+      final navBarHome = tester.widget<NavigationBar>(
+        find.byType(NavigationBar),
+      );
+      expect(navBarHome.selectedIndex, 0);
+
+      // 6. Tap notification bell on Home header -> opens notifications, hides bottom bar
+      final notifBell = find.byWidgetPredicate(
+        (w) => w is IconButton && w.tooltip == 'Thông báo',
+      );
+      expect(notifBell, findsOneWidget);
+      await tester.tap(notifBell);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Thông báo phụng vụ'), findsOneWidget);
+      expect(find.byType(NavigationBar), findsNothing);
+
+      // 7. Tap back button in Notification header -> returns to Home
+      final backBtn = find.byWidgetPredicate(
+        (w) => w is IconButton && w.tooltip == 'Quay lại',
+      );
+      expect(backBtn, findsOneWidget);
+      await tester.tap(backBtn);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(NavigationBar), findsOneWidget);
+      final navBarBackHome = tester.widget<NavigationBar>(
+        find.byType(NavigationBar),
+      );
+      expect(navBarBackHome.selectedIndex, 0);
     },
   );
 }

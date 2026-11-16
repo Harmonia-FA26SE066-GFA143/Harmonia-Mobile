@@ -111,6 +111,8 @@ class _StaffProgramFormState extends ConsumerState<StaffProgramForm> {
     return Scaffold(
       appBar: const AppPageHeader(
         large: true,
+        showEmptyAccent: true,
+        accentTitleText: 'Tạo chương trình',
         title: StaffWorkflowTitle(
           title: 'Tạo chương trình',
           role: 'Dành cho Cha xứ',

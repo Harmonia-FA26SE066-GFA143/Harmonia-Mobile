@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/widgets/app_page_header.dart';
+import '../../../app/widgets/harmonia_svg_art.dart';
 import '../../../core/errors/error_messages.dart';
 import '../data/staff_operations_api.dart';
 
@@ -13,16 +14,33 @@ class OpsPage extends StatelessWidget {
     required this.title,
     required this.child,
     this.actions,
+    this.showEmptyAccent = false,
+    this.showChantMotif = false,
+    this.showAntiphonaryBackground = true,
   });
   final String title;
   final Widget child;
   final List<Widget>? actions;
+  final bool showEmptyAccent;
+  final bool showChantMotif;
+  final bool showAntiphonaryBackground;
 
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: AppColors.background,
-    appBar: AppPageHeader(title: Text(title), actions: actions),
-    body: SafeArea(child: child),
+    appBar: AppPageHeader(
+      title: Text(title),
+      actions: actions,
+      showEmptyAccent: showEmptyAccent,
+      showChantMotif: showChantMotif,
+      accentTitleText: title,
+    ),
+    body: SafeArea(
+      child: AntiphonaryBackground(
+        enabled: showAntiphonaryBackground,
+        child: child,
+      ),
+    ),
   );
 }
 

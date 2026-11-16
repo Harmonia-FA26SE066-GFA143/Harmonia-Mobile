@@ -3,13 +3,16 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app/theme/app_colors.dart';
 import '../../../app/widgets/harmonia_logo.dart';
+import '../../../app/widgets/harmonia_svg_art.dart';
 import '../../../app/widgets/member_choir_visuals.dart';
 import '../../../app/widgets/stitch_entrance.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/errors/error_messages.dart';
 import '../data/calendar_repository.dart';
 import '../data/liturgical_models.dart';
+import 'calendar_period_button.dart';
 import 'calendar_timeline_cards.dart';
 import 'liturgical_month_calendar.dart';
 
@@ -182,10 +185,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           body: SafeArea(
             top: true,
             bottom: false,
-            child: ColoredBox(
-              color: isMonthTab
-                  ? const Color(0xFFFAF8F5)
-                  : MemberChoirStyle.paper,
+            child: AntiphonaryBackground(
+              backgroundColor: AppColors.background,
               child: RefreshIndicator(
                 color: MemberChoirStyle.accent,
                 onRefresh: _refresh,
@@ -269,7 +270,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                             if (eventsState.hasError)
                               _sourceError(
                                 eventsState.error!,
-                                'Thử lại lịch phục vụ',
+                                'Thử lại lịch phụng vụ',
                                 () => ref
                                     .read(calendarNotifierProvider.notifier)
                                     .loadEvents(),
@@ -523,18 +524,6 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   );
 
   Widget _weekNavigator(DateTime today, String weekSeason) {
-    final navStyle = IconButton.styleFrom(
-      foregroundColor: const Color(0xFF111C2D),
-      disabledForegroundColor: const Color(0x6676767E),
-      hoverColor: const Color(0xFFF0F3FF),
-      highlightColor: const Color(0xFFE7EEFF),
-      minimumSize: const Size(36, 36),
-      padding: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: const BorderSide(color: Color(0x66C6C6CE)),
-      ),
-    );
     final seasonColor = calendarSeasonColor(weekSeason);
     return _panel(
       padding: const EdgeInsets.all(12),
@@ -543,16 +532,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         children: [
           Row(
             children: [
-              IconButton(
+              CalendarPeriodButton(
+                isPrevious: true,
                 tooltip: 'Tuần trước',
                 onPressed: _weekStart.isAfter(_monday(today))
                     ? () => _moveWeek(-7)
                     : null,
-                style: navStyle,
-                icon: const Text(
-                  'Trước',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                ),
               ),
               Expanded(
                 child: Padding(
@@ -584,14 +569,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                   ),
                 ),
               ),
-              IconButton(
+              CalendarPeriodButton(
+                isPrevious: false,
                 tooltip: 'Tuần sau',
                 onPressed: () => _moveWeek(7),
-                style: navStyle,
-                icon: const Text(
-                  'Sau',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                ),
               ),
             ],
           ),
@@ -920,10 +901,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                           ? _stitchGold
                           : MemberChoirStyle.accent,
                       shape: BoxShape.circle,
-                      border: Border.all(
-                        color: MemberChoirStyle.paper,
-                        width: 2,
-                      ),
+                      border: Border.all(color: AppColors.background, width: 2),
                       boxShadow: const [
                         BoxShadow(
                           color: Color(0x1F05102B),

@@ -13,6 +13,7 @@ import 'package:go_router/go_router.dart';
 import 'package:harmonia_mobile/features/calendar/data/calendar_dto.dart';
 import 'package:harmonia_mobile/features/calendar/data/calendar_repository.dart'
     show publicAppSettingsProvider;
+import 'package:harmonia_mobile/app/widgets/harmonia_svg_art.dart';
 import 'package:harmonia_mobile/app/widgets/member_choir_visuals.dart'
     show MemberChoirArt, MemberChoirArtwork;
 import 'package:harmonia_mobile/features/music/presentation/music_library_screen.dart';
@@ -296,6 +297,21 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+
+      final toolbar = find.byType(AppBar);
+      final chant = find.descendant(
+        of: toolbar,
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is HarmoniaSvgGraphic &&
+              widget.assetPath == HarmoniaSvgAsset.chantIncipit,
+        ),
+      );
+      expect(tester.widget<AppBar>(toolbar).titleSpacing, 20);
+      expect(
+        tester.getRect(toolbar).right - tester.getRect(chant).right,
+        closeTo(7, 0.01),
+      );
 
       final score = find.text('Bản tương tác của Ca viên');
       await tester.scrollUntilVisible(score, 160);
@@ -905,6 +921,25 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      final toolbar = find.byType(AppBar);
+      final chant = find.descendant(
+        of: toolbar,
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is HarmoniaSvgGraphic &&
+              widget.assetPath == HarmoniaSvgAsset.chantIncipit,
+        ),
+      );
+      void expectLibraryTitle(String label) {
+        final title = find.descendant(of: toolbar, matching: find.text(label));
+        expect(title, findsOneWidget);
+        final style = DefaultTextStyle.of(tester.element(title)).style;
+        expect(style.fontFamily, 'Playfair Display');
+        expect(style.fontSize, 20);
+        expect(chant, findsNothing);
+      }
+
+      expectLibraryTitle('Thư viện thánh ca');
       final verticalList = find.byWidgetPredicate(
         (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
       );
@@ -925,6 +960,7 @@ void main() {
 
       final searchField = find.byKey(const ValueKey('library-header-search'));
       expect(searchField, findsOneWidget);
+      expect(chant, findsNothing);
       expect(
         find.text('Gõ từ 1 ký tự để hiển thị bài hát cần tìm'),
         findsOneWidget,
@@ -957,6 +993,7 @@ void main() {
       await tester.tap(find.text('Tài liệu học của tôi'));
       await tester.pumpAndSettle();
       expect(searchField, findsOneWidget);
+      expect(chant, findsNothing);
       expect(repo.materialKeywords.last, 'V');
       final matchingMaterial = find.text(
         'Bản phổ tương tác bài Thánh Vịnh Tôn Vinh Đấng Cứu Thế Cho Bốn Bè Hợp Xướng',
@@ -972,6 +1009,7 @@ void main() {
       await tester.tap(find.byTooltip('Đóng tìm kiếm'));
       await tester.pumpAndSettle();
       expect(searchField, findsNothing);
+      expectLibraryTitle('Tài liệu học của tôi');
       expect(repo.materialKeywords.last, '');
       await tester.scrollUntilVisible(
         find.text('Tổng phổ PDF Lễ Tro - Ca Đoàn'),

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/widgets/app_page_header.dart';
+import '../../../app/widgets/harmonia_svg_art.dart';
 import '../../../app/widgets/member_choir_visuals.dart';
 import '../../../app/widgets/stitch_entrance.dart';
 import '../../../app/theme/app_typography.dart';
@@ -50,100 +51,103 @@ class _PracticeHistoryScreenState extends ConsumerState<PracticeHistoryScreen> {
     final count = state.totalCount > 0 ? state.totalCount : state.items.length;
 
     final scaffold = Scaffold(
-      backgroundColor: MemberChoirStyle.paper,
+      backgroundColor: AppColors.background,
       appBar: const AppPageHeader(
         large: true,
         gradient: MemberChoirStyle.header,
         titleFontFamily: MemberChoirStyle.displayFont,
         title: Text('Lịch sử luyện tập'),
+        showEmptyAccent: true,
       ),
       body: SafeArea(
         top: false,
-        child: RefreshIndicator(
-          onRefresh: notifier.refresh,
-          child: state.items.isEmpty && state.isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : ListView.builder(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(16),
-                  itemCount:
-                      1 +
-                      (visible.isEmpty ? 1 : visible.length) +
-                      (state.hasNextPage ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    if (index == 0) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        spacing: 12,
-                        children: [
-                          if (state.errorMessage == null ||
-                              state.items.isNotEmpty)
-                            _HistorySummary(name: userName, count: count),
-                          if (state.items.isNotEmpty)
-                            SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: Row(
-                                spacing: 8,
-                                children: [
-                                  for (final filter in _HistoryFilter.values)
-                                    ChoiceChip(
-                                      label: Text(
-                                        '${filter.label} (${filter == _HistoryFilter.all ? count : state.items.where((item) => item.status == filter.status).length})',
+        child: AntiphonaryBackground(
+          child: RefreshIndicator(
+            onRefresh: notifier.refresh,
+            child: state.items.isEmpty && state.isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : ListView.builder(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(16),
+                    itemCount:
+                        1 +
+                        (visible.isEmpty ? 1 : visible.length) +
+                        (state.hasNextPage ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index == 0) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          spacing: 12,
+                          children: [
+                            if (state.errorMessage == null ||
+                                state.items.isNotEmpty)
+                              _HistorySummary(name: userName, count: count),
+                            if (state.items.isNotEmpty)
+                              SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: Row(
+                                  spacing: 8,
+                                  children: [
+                                    for (final filter in _HistoryFilter.values)
+                                      ChoiceChip(
+                                        label: Text(
+                                          '${filter.label} (${filter == _HistoryFilter.all ? count : state.items.where((item) => item.status == filter.status).length})',
+                                        ),
+                                        selected: _filter == filter,
+                                        onSelected: (_) =>
+                                            setState(() => _filter = filter),
                                       ),
-                                      selected: _filter == filter,
-                                      onSelected: (_) =>
-                                          setState(() => _filter = filter),
-                                    ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
-                          if (state.items.isNotEmpty && state.hasNextPage)
-                            const Text(
-                              'Số liệu theo trạng thái tính trên các bản thu đã tải.',
-                            ),
-                          const SizedBox(height: 2),
-                        ],
-                      );
-                    }
-                    if (state.hasNextPage &&
-                        index == (visible.isEmpty ? 2 : visible.length + 1)) {
-                      return _LoadMoreButton(
-                        isLoading: state.isLoadingMore,
-                        error: state.loadMoreErrorMessage,
-                        onPressed: notifier.loadMore,
-                      );
-                    }
-                    if (visible.isEmpty) {
-                      return _HistoryMessage(
-                        icon: state.errorMessage == null
-                            ? Icons.library_music_outlined
-                            : Icons.error_outline_rounded,
-                        message:
-                            state.errorMessage ??
-                            (state.items.isEmpty
-                                ? 'Bạn chưa có bản thu luyện tập nào.'
-                                : 'Không có bản thu đã tải thuộc trạng thái này.'),
-                        actionLabel: state.errorMessage == null
-                            ? null
-                            : 'Thử lại',
-                        onPressed: state.errorMessage == null
-                            ? null
-                            : notifier.refresh,
-                      );
-                    }
-                    final submission = visible[index - 1];
-                    return Padding(
-                      key: ValueKey(submission.id),
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _PracticeSubmissionCard(
-                        submission: submission,
-                        onTap: () => context.push(
-                          '/practice-submission/${Uri.encodeComponent(submission.id)}',
+                            if (state.items.isNotEmpty && state.hasNextPage)
+                              const Text(
+                                'Số liệu theo trạng thái tính trên các bản thu đã tải.',
+                              ),
+                            const SizedBox(height: 2),
+                          ],
+                        );
+                      }
+                      if (state.hasNextPage &&
+                          index == (visible.isEmpty ? 2 : visible.length + 1)) {
+                        return _LoadMoreButton(
+                          isLoading: state.isLoadingMore,
+                          error: state.loadMoreErrorMessage,
+                          onPressed: notifier.loadMore,
+                        );
+                      }
+                      if (visible.isEmpty) {
+                        return _HistoryMessage(
+                          icon: state.errorMessage == null
+                              ? Icons.library_music_outlined
+                              : Icons.error_outline_rounded,
+                          message:
+                              state.errorMessage ??
+                              (state.items.isEmpty
+                                  ? 'Bạn chưa có bản thu luyện tập nào.'
+                                  : 'Không có bản thu đã tải thuộc trạng thái này.'),
+                          actionLabel: state.errorMessage == null
+                              ? null
+                              : 'Thử lại',
+                          onPressed: state.errorMessage == null
+                              ? null
+                              : notifier.refresh,
+                        );
+                      }
+                      final submission = visible[index - 1];
+                      return Padding(
+                        key: ValueKey(submission.id),
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _PracticeSubmissionCard(
+                          submission: submission,
+                          onTap: () => context.push(
+                            '/practice-submission/${Uri.encodeComponent(submission.id)}',
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                ),
+                      );
+                    },
+                  ),
+          ),
         ),
       ),
     );

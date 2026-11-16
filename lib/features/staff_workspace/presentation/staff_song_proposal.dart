@@ -152,6 +152,8 @@ class _StaffSongProposalState extends ConsumerState<StaffSongProposal> {
         child: Scaffold(
           appBar: AppPageHeader(
             large: true,
+            showEmptyAccent: true,
+            accentTitleText: 'Đề xuất bài hát',
             title: const StaffWorkflowTitle(
               title: 'Đề xuất bài hát',
               role: 'Dành cho Ca trưởng',
@@ -396,6 +398,7 @@ class _SongPickerState extends ConsumerState<StaffSongPicker> {
       child: Scaffold(
         appBar: AppPageHeader(
           title: const Text('Chọn bài hát'),
+          showEmptyAccent: true,
           leading: const CloseButton(),
         ),
         body: SafeArea(

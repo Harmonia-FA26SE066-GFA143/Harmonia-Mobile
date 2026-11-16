@@ -19,12 +19,29 @@ enum MemberStatus {
   }
 }
 
+enum MemberGender {
+  male('Male', 'Nam'),
+  female('Female', 'Nữ');
+
+  const MemberGender(this.wireName, this.label);
+
+  final String wireName;
+  final String label;
+
+  static MemberGender? fromWire(Object? value) => switch (value) {
+    'Male' => male,
+    'Female' => female,
+    _ => null,
+  };
+}
+
 class MemberProfileDto {
   final String id;
   final String fullName;
   final String email;
   final String? phone;
   final String? saintName;
+  final MemberGender? gender;
   final String? dateOfBirth; // ISO Date YYYY-MM-DD
   final String joinedDate; // ISO Date YYYY-MM-DD
   final MemberStatus status;
@@ -36,8 +53,9 @@ class MemberProfileDto {
     required this.fullName,
     required this.email,
     this.phone,
-    this.saintName,
     this.dateOfBirth,
+    this.saintName,
+    this.gender,
     required this.joinedDate,
     required this.status,
     this.avatarUrl,
@@ -50,8 +68,9 @@ class MemberProfileDto {
       fullName: json['fullName']?.toString() ?? '',
       email: json['email']?.toString() ?? '',
       phone: json['phone']?.toString(),
-      saintName: json['saintName'] as String?,
       dateOfBirth: json['dateOfBirth']?.toString(),
+      saintName: json['saintName'] as String?,
+      gender: MemberGender.fromWire(json['gender']),
       joinedDate: json['joinedDate']?.toString() ?? '',
       status: MemberStatus.fromWire(json['status']),
       avatarUrl: json['avatarUrl']?.toString(),
@@ -67,8 +86,9 @@ class MemberProfileDto {
     'fullName': fullName,
     'email': email,
     'phone': phone,
-    'saintName': saintName,
     'dateOfBirth': dateOfBirth,
+    'saintName': saintName,
+    'gender': gender?.wireName,
     'joinedDate': joinedDate,
     'status': status.wireName,
     'avatarUrl': avatarUrl,
@@ -79,21 +99,24 @@ class MemberProfileDto {
 class UpdateMyMemberProfileRequest {
   final String fullName;
   final String? phone;
-  final String? saintName;
   final String? dateOfBirth; // ISO Date YYYY-MM-DD
+  final String? saintName;
+  final MemberGender? gender;
 
   const UpdateMyMemberProfileRequest({
     required this.fullName,
     this.phone,
-    this.saintName,
     this.dateOfBirth,
+    this.saintName,
+    this.gender,
   });
 
   Map<String, dynamic> toJson() {
     final map = <String, dynamic>{'fullName': fullName};
     if (phone != null) map['phone'] = phone;
-    if (saintName != null) map['saintName'] = saintName;
     if (dateOfBirth != null) map['dateOfBirth'] = dateOfBirth;
+    if (saintName != null) map['saintName'] = saintName;
+    if (gender != null) map['gender'] = gender!.wireName;
     return map;
   }
 }

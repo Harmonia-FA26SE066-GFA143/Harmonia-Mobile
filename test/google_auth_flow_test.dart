@@ -99,7 +99,7 @@ void main() {
       final fakeGoogleService = MockGoogleAuthService(
         errorToThrow: const AppException(
           code: 'GOOGLE_TOKEN_EMPTY',
-          message: 'Không nhận được ID Token từ Google SDK.',
+          message: 'No ID token returned by Google SDK.',
         ),
       );
       final storage = SecureStorageService();
@@ -131,7 +131,7 @@ void main() {
       expect(fakeApiService.loginWithGoogleCalled, false);
       final state = container.read(authNotifierProvider);
       expect(state.isLoading, false);
-      expect(state.errorMessage, 'Không nhận được ID Token từ Google SDK.');
+      expect(state.errorMessage, 'Google chưa trả thông tin xác thực. Vui lòng thử lại.');
       expect(sessionManager.isAuthenticated, false);
     });
 

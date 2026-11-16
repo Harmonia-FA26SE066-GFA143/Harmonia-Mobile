@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/theme/app_colors.dart';
 import '../../../app/widgets/app_page_header.dart';
+import '../../../app/widgets/harmonia_svg_art.dart';
 import '../../../app/widgets/member_choir_visuals.dart';
 import '../../../core/di/core_providers.dart';
 import '../../../core/session/session_manager.dart';
@@ -52,14 +54,14 @@ class _NominationPage extends StatelessWidget {
     return Theme(
       data: MemberChoirStyle.theme(context),
       child: Scaffold(
-        backgroundColor: MemberChoirStyle.paper,
+        backgroundColor: AppColors.background,
         appBar: AppPageHeader(
           title: Text(title),
           titleFontFamily: MemberChoirStyle.displayFont,
           gradient: MemberChoirStyle.header,
           actions: actions,
         ),
-        body: SafeArea(child: child),
+        body: SafeArea(child: AntiphonaryBackground(child: child)),
       ),
     );
   }

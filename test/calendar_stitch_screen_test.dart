@@ -299,6 +299,8 @@ void main() {
     expect(find.text('MÙA THƯỜNG NIÊN'), findsOneWidget);
     expect(find.text('Điểm danh'), findsNothing);
     expect(find.byTooltip('Tuần sau'), findsOneWidget);
+    expect(find.byIcon(Icons.chevron_left_rounded), findsOneWidget);
+    expect(find.text('Sau'), findsOneWidget);
     expect(find.text('Hôm nay'), findsOneWidget);
     expect(find.textContaining('hoạt động trong ngày'), findsNothing);
     expect(find.text('Lịch lễ 7 ngày tới'), findsNothing);
@@ -382,6 +384,10 @@ void main() {
       repo.day.month,
       repo.day.day + repo.eventOffsetDays,
     );
+    if (repo.day.weekday + repo.eventOffsetDays > DateTime.sunday) {
+      await tester.tap(find.byTooltip('Tuần sau'));
+      await tester.pumpAndSettle();
+    }
     await tester.tap(find.byKey(ValueKey('calendar-day-${dateKey(eventDay)}')));
     await tester.pumpAndSettle();
 
@@ -588,7 +594,7 @@ void main() {
       );
 
       // Legend and selected-day cards display title & rehearsal note from API data.
-      expect(find.text('Lịch phục vụ'), findsOneWidget);
+      expect(find.text('Lịch phụng vụ'), findsOneWidget);
       expect(find.text('Lịch tập'), findsOneWidget);
       expect(find.text('MÙA THƯỜNG NIÊN'), findsOneWidget);
       expect(find.text('Thánh lễ từ API'), findsOneWidget);
@@ -634,7 +640,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         find.text(
-          'Chưa có lịch phục vụ hoặc buổi tập được công bố cho ngày này.',
+          'Chưa có lịch phụng vụ hoặc buổi tập được công bố cho ngày này.',
         ),
         findsOneWidget,
       );

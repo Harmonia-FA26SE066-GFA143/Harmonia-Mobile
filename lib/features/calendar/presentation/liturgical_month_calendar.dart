@@ -8,6 +8,7 @@ import '../../../app/theme/app_typography.dart';
 import '../../../app/widgets/member_choir_visuals.dart';
 import '../data/calendar_repository.dart';
 import '../data/liturgical_models.dart';
+import 'calendar_period_button.dart';
 import 'liturgical_day_dialog.dart';
 
 // Stitch tokens from "Harmonia Mobile 03 - Lịch tháng phụng vụ (Nhận diện Ca đoàn)"
@@ -167,17 +168,12 @@ class _LiturgicalMonthCalendarState
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         IconButton(
+                          tooltip: 'Năm trước',
                           style: IconButton.styleFrom(
                             foregroundColor: _stitchPrimary,
                             hoverColor: _stitchSurfaceContainer,
                           ),
-                          icon: const Text(
-                            'Trước',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                          icon: const Icon(Icons.chevron_left_rounded),
                           onPressed: () =>
                               setDialogState(() => tempYear = tempYear - 1),
                         ),
@@ -193,6 +189,7 @@ class _LiturgicalMonthCalendarState
                           ),
                         ),
                         IconButton(
+                          tooltip: 'Năm sau',
                           style: IconButton.styleFrom(
                             foregroundColor: _stitchPrimary,
                             hoverColor: _stitchSurfaceContainer,
@@ -365,14 +362,6 @@ class _LiturgicalMonthCalendarState
         !rehearsalState.isLoading &&
         !rehearsalState.hasError;
 
-    final navIconStyle = IconButton.styleFrom(
-      foregroundColor: _stitchPrimary,
-      hoverColor: _stitchSurfaceContainer,
-      highlightColor: _stitchSurfaceContainerHigh,
-      minimumSize: const Size(38, 38),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-    );
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 16,
@@ -393,17 +382,10 @@ class _LiturgicalMonthCalendarState
               children: [
                 Row(
                   children: [
-                    IconButton(
+                    CalendarPeriodButton(
+                      isPrevious: true,
                       tooltip: 'Tháng trước',
                       onPressed: _previousMonth,
-                      style: navIconStyle,
-                      icon: const Text(
-                        'Trước',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
                     ),
                     Expanded(
                       child: Center(
@@ -447,17 +429,10 @@ class _LiturgicalMonthCalendarState
                         ),
                       ),
                     ),
-                    IconButton(
+                    CalendarPeriodButton(
+                      isPrevious: false,
                       tooltip: 'Tháng sau',
                       onPressed: _nextMonth,
-                      style: navIconStyle,
-                      icon: const Text(
-                        'Sau',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
                     ),
                   ],
                 ),
@@ -607,7 +582,7 @@ class _LiturgicalMonthCalendarState
                   children: [
                     _CalendarLegend(
                       color: MemberChoirStyle.wine,
-                      label: 'Lịch phục vụ',
+                      label: 'Lịch phụng vụ',
                     ),
                     _CalendarLegend(color: _stitchSecondary, label: 'Lịch tập'),
                   ],
@@ -670,7 +645,7 @@ class _LiturgicalMonthCalendarState
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(
-                  'Chưa có lịch phục vụ hoặc buổi tập được công bố cho ngày này.',
+                  'Chưa có lịch phụng vụ hoặc buổi tập được công bố cho ngày này.',
                   style: AppTypography.bodyMedium.copyWith(
                     color: _stitchOnSurfaceVariant,
                   ),
@@ -1359,7 +1334,7 @@ class _CalendarDayCell extends StatelessWidget {
     final label = [
       DateFormat('dd/MM/yyyy').format(date),
       if (isToday) 'Hôm nay',
-      if (hasEvent) 'Có lịch phục vụ',
+      if (hasEvent) 'Có lịch phụng vụ',
       if (hasRehearsal) 'Có lịch tập',
     ].join(' · ');
 

@@ -118,7 +118,7 @@ void main() {
     await tester.tap(save);
     await tester.pumpAndSettle();
     expect(find.text('Têrêsa'), findsNothing);
-    expect(find.text('Chưa cập nhật'), findsOneWidget);
+    expect(find.text('Chưa cập nhật'), findsNWidgets(2));
     expect(tester.takeException(), isNull);
   });
 }

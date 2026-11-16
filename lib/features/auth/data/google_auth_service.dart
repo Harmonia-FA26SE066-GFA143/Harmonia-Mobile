@@ -83,15 +83,15 @@ class GoogleAuthServiceImpl implements GoogleAuthService {
         );
       }
 
-      throw AppException(
+      throw const AppException(
         code: 'GOOGLE_AUTH_FAILED',
-        message: e.description ?? 'Xác thực tài khoản Google thất bại.',
+        message: 'Không thể đăng nhập bằng Google. Vui lòng thử lại.',
       );
     } catch (e) {
       if (e is AppException) rethrow;
-      throw AppException(
+      throw const AppException(
         code: 'GOOGLE_AUTH_FAILED',
-        message: 'Đã có lỗi xảy ra khi gọi Google SDK: $e',
+        message: 'Không thể đăng nhập bằng Google. Vui lòng thử lại.',
       );
     }
   }

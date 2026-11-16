@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../app/app_env.dart';
 import '../errors/app_exceptions.dart';
+import '../errors/error_messages.dart';
 import '../session/session_manager.dart';
 import '../storage/secure_storage_service.dart';
 import 'auth_interceptor.dart';
@@ -51,7 +52,7 @@ class ApiClient {
 
     final response = e.response;
     if (response == null) {
-      return NetworkException(message: e.message ?? 'Lỗi kết nối mạng.');
+      return const NetworkException();
     }
 
     final statusCode = response.statusCode ?? 500;
@@ -59,8 +60,16 @@ class ApiClient {
 
     // Check if error response matches standard backend error shape
     if (data is Map<String, dynamic>) {
-      final code = data['code']?.toString() ?? 'UNKNOWN_ERROR';
-      final message = data['message']?.toString() ?? 'Đã có lỗi xảy ra.';
+      final rawCode = data['code'];
+      final code = rawCode is String && rawCode.trim().isNotEmpty
+          ? rawCode.trim()
+          : statusCode == 400
+          ? 'VALIDATION_FAILED'
+          : 'HTTP_$statusCode';
+      final message = ErrorMessages.getMessage(
+        code,
+        fallback: ErrorMessages.forHttpStatus(statusCode),
+      );
 
       Map<String, List<String>>? fieldErrors;
       if (data['errors'] is Map) {
@@ -106,7 +115,7 @@ class ApiClient {
 
     return AppException(
       code: 'HTTP_$statusCode',
-      message: 'Lỗi máy chủ ($statusCode)',
+      message: ErrorMessages.forHttpStatus(statusCode),
       statusCode: statusCode,
     );
   }

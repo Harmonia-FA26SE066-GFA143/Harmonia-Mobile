@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/di/core_providers.dart';
 import '../../../core/errors/app_exceptions.dart';
+import '../../../core/errors/error_messages.dart';
 import '../../../core/session/session_manager.dart';
 import '../../notifications/data/notification_dto.dart';
 import 'practice_api_service.dart';
@@ -391,7 +392,10 @@ class PracticeListNotifier extends Notifier<AsyncValue<PracticeListState>> {
       state = AsyncValue.data(
         currentState.copyWith(
           isLoadingMore: false,
-          loadMoreError: 'Không thể tải thêm bài tập: $e',
+          loadMoreError: ErrorMessages.forException(
+            e,
+            defaultMessage: 'Không thể tải thêm bài tập. Vui lòng thử lại.',
+          ),
         ),
       );
     }
@@ -551,7 +555,10 @@ class PracticeSubmissionsNotifier extends Notifier<PracticeSubmissionsState> {
       );
     } on AppException catch (e) {
       if (_requestId != reqId) return;
-      state = state.copyWith(isLoading: false, errorMessage: e.message);
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: ErrorMessages.forException(e),
+      );
     } catch (_) {
       if (_requestId != reqId) return;
       state = state.copyWith(

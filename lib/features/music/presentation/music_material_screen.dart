@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../app/widgets/app_page_header.dart';
+import '../../../app/widgets/harmonia_svg_art.dart';
 import '../../../app/widgets/member_choir_visuals.dart';
 import '../../../app/widgets/stitch_entrance.dart';
 import '../../../core/di/core_providers.dart';
@@ -307,10 +308,11 @@ class _MusicMaterialScreenState extends ConsumerState<MusicMaterialScreen> {
     final detail = ref.watch(provider);
     final pdf = _pdf;
     final scaffold = Scaffold(
-      backgroundColor: MemberChoirStyle.paper,
+      backgroundColor: AppColors.background,
       appBar: AppPageHeader(
         gradient: MemberChoirStyle.header,
         titleFontFamily: MemberChoirStyle.displayFont,
+        showChantMotif: !_readingMode,
         title: Text(_readingMode ? 'Chế độ đọc nốt' : 'Tài liệu học'),
         leading: _readingMode
             ? IconButton(
@@ -361,7 +363,10 @@ class _MusicMaterialScreenState extends ConsumerState<MusicMaterialScreen> {
             if (pdf != null && _readingMode) {
               return _pdfReader(pdf, material);
             }
-            return _materialContents(material, pdf);
+            return AntiphonaryBackground(
+              enabled: pdf == null,
+              child: _materialContents(material, pdf),
+            );
           },
         ),
       ),
@@ -740,10 +745,7 @@ class _MaterialPdfReaderState extends State<_MaterialPdfReader> {
                 onPressed: _turning || _controller == null || _page <= 0
                     ? null
                     : () => _goToPage(_page - 1),
-                icon: const Text(
-                  'Trước',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                ),
+                icon: const Icon(Icons.chevron_left_rounded),
               ),
               Flexible(
                 child: Text(

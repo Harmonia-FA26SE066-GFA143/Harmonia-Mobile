@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/di/core_providers.dart';
 import '../../../core/errors/app_exceptions.dart';
+import '../../../core/errors/error_messages.dart';
 import '../../notifications/data/notification_dto.dart';
 import 'member_profile_api_service.dart';
 import 'member_profile_dto.dart';
@@ -368,7 +369,10 @@ class MemberSkillsNotifier extends Notifier<MemberSkillsState> {
       );
     } on AppException catch (e) {
       if (!ref.mounted || _requestId != reqId) return;
-      state = state.copyWith(isLoading: false, errorMessage: e.message);
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: ErrorMessages.forException(e),
+      );
     } catch (_) {
       if (!ref.mounted || _requestId != reqId) return;
       state = state.copyWith(

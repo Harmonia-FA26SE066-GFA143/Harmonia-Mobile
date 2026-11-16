@@ -158,7 +158,7 @@ class NotificationNotifier extends Notifier<NotificationState> {
       if (_notifierEpoch != currentEpoch) return;
       state = state.copyWith(
         isLoading: false,
-        errorMessage: ErrorMessages.getMessage(e.code, fallback: e.message),
+        errorMessage: ErrorMessages.forException(e),
       );
     } catch (_) {
       if (_notifierEpoch != currentEpoch) return;
