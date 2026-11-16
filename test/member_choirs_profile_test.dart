@@ -91,11 +91,24 @@ void main() {
       findsOneWidget,
     );
 
+    final dobField = find.widgetWithText(TextField, 'dd/mm/yyyy');
+    await tester.ensureVisible(dobField);
+    await tester.enterText(dobField, '31022004');
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Ngày sinh không hợp lệ (ngày không tồn tại).'),
+      findsOneWidget,
+    );
+    await tester.enterText(dobField, '16052004');
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(dobField).controller?.text, '16/05/2004');
+
     await tester.enterText(saintNameField, '  Têrêsa  ');
     await tester.ensureVisible(save);
     await tester.tap(save);
     await tester.pumpAndSettle();
     expect(find.text('Têrêsa'), findsOneWidget);
+    expect(find.text('16/05/2004'), findsOneWidget);
 
     await tester.ensureVisible(edit);
     await tester.tap(edit);

@@ -20,12 +20,124 @@ import '../../lookups/data/lookup_dto.dart';
 import '../../lookups/data/lookups_api_service.dart';
 import '../../calendar/data/calendar_repository.dart'
     show publicAppSettingsProvider;
+import '../../practice/data/practice_models.dart' show PracticeSubmissionDetail;
 import '../../practice/data/practice_repository.dart'
     show practiceSubmissionsNotifierProvider;
 import '../data/avatar_image_picker.dart';
 import '../data/member_skill_evidence_picker.dart';
 import '../data/profile_models.dart';
 import '../data/profile_repository.dart';
+
+/// Converts an ISO date or calendar date string (e.g. `2004-05-16` or `2004-05-16T...`)
+/// into user-facing `dd/MM/yyyy` format. Returns null if input is null or blank.
+String? formatProfileDateOfBirthDisplay(String? dateStr) {
+  if (dateStr == null || dateStr.trim().isEmpty) return null;
+  final trimmed = dateStr.trim();
+  if (RegExp(r'^\d{1,2}/\d{1,2}/\d{4}$').hasMatch(trimmed)) {
+    try {
+      final d = DateFormat('dd/MM/yyyy').parseStrict(trimmed);
+      return DateFormat('dd/MM/yyyy').format(d);
+    } catch (_) {
+      return trimmed;
+    }
+  }
+  final isoMatch = RegExp(r'^(\d{4})-(\d{1,2})-(\d{1,2})').firstMatch(trimmed);
+  if (isoMatch != null) {
+    final year = int.tryParse(isoMatch.group(1)!);
+    final month = int.tryParse(isoMatch.group(2)!);
+    final day = int.tryParse(isoMatch.group(3)!);
+    if (year != null && month != null && day != null) {
+      final dd = day.toString().padLeft(2, '0');
+      final mm = month.toString().padLeft(2, '0');
+      final yyyy = year.toString().padLeft(4, '0');
+      return '$dd/$mm/$yyyy';
+    }
+  }
+  try {
+    final parsed = DateTime.parse(trimmed).toUtc();
+    return DateFormat('dd/MM/yyyy').format(parsed);
+  } catch (_) {
+    return trimmed;
+  }
+}
+
+final _profileDateOfBirthFormatter = TextInputFormatter.withFunction((
+  oldValue,
+  newValue,
+) {
+  if (!newValue.composing.isCollapsed) return newValue;
+
+  final input = newValue.text;
+  final digits = input.replaceAll('/', '');
+  if (!RegExp(r'^[0-9]{0,8}$').hasMatch(digits)) return oldValue;
+
+  final formatted = StringBuffer();
+  for (var index = 0; index < digits.length; index++) {
+    if (index == 2 || index == 4) formatted.write('/');
+    formatted.write(digits[index]);
+  }
+  final text = formatted.toString();
+  if (text == input) return newValue;
+
+  int mapOffset(int offset) {
+    final digitCount = input.substring(0, offset).replaceAll('/', '').length;
+    return digitCount + (digitCount > 2 ? 1 : 0) + (digitCount > 4 ? 1 : 0);
+  }
+
+  final selection = newValue.selection;
+  return TextEditingValue(
+    text: text,
+    selection: selection.isValid
+        ? selection.copyWith(
+            baseOffset: mapOffset(selection.baseOffset),
+            extentOffset: mapOffset(selection.extentOffset),
+          )
+        : selection,
+  );
+});
+
+/// Validates user input date string for date of birth.
+/// Returns null if valid (or empty since dateOfBirth is optional).
+/// Returns a Vietnamese error message if invalid.
+String? validateProfileDateOfBirthInput(String? input) {
+  if (input == null || input.trim().isEmpty) return null;
+  final text = input.trim();
+  final regex = RegExp(r'^(\d{1,2})/(\d{1,2})/(\d{4})$');
+  if (!regex.hasMatch(text)) {
+    return 'Ngày sinh không đúng định dạng dd/mm/yyyy.';
+  }
+
+  DateTime parsed;
+  try {
+    parsed = DateFormat('dd/MM/yyyy').parseStrict(text);
+  } catch (_) {
+    return 'Ngày sinh không hợp lệ (ngày không tồn tại).';
+  }
+
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final calendarDate = DateTime(parsed.year, parsed.month, parsed.day);
+  if (calendarDate.isAfter(today)) {
+    return 'Ngày sinh không được ở trong tương lai.';
+  }
+  if (parsed.year < 1900) {
+    return 'Năm sinh không hợp lệ.';
+  }
+
+  return null;
+}
+
+/// Converts a validated `dd/MM/yyyy` string to `yyyy-MM-dd` wire format.
+/// Treats parts purely as calendar fields to prevent timezone shifts.
+String? convertProfileDisplayDateToIso(String? input) {
+  if (input == null || input.trim().isEmpty) return null;
+  final text = input.trim();
+  final parsed = DateFormat('dd/MM/yyyy').parseStrict(text);
+  final y = parsed.year.toString().padLeft(4, '0');
+  final m = parsed.month.toString().padLeft(2, '0');
+  final d = parsed.day.toString().padLeft(2, '0');
+  return '$y-$m-$d';
+}
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -187,10 +299,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final nameController = TextEditingController(text: profile.fullName);
     final phoneController = TextEditingController(text: profile.phone ?? '');
     final dobController = TextEditingController(
-      text: profile.dateOfBirth ?? '',
+      text: formatProfileDateOfBirthDisplay(profile.dateOfBirth) ?? '',
     );
     var saintName = profile.saintName ?? '';
     bool isSaving = false;
+    String? dobError;
     String? errorMessage;
 
     showModalBottomSheet(
@@ -267,11 +380,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     const SizedBox(height: 6),
                     TextField(
                       controller: dobController,
-                      keyboardType: TextInputType.datetime,
-                      decoration: const InputDecoration(
-                        hintText: 'YYYY-MM-DD (VD: 1995-05-15)',
-                        prefixIcon: Icon(Icons.calendar_today_outlined),
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [_profileDateOfBirthFormatter],
+                      decoration: InputDecoration(
+                        hintText: 'dd/mm/yyyy',
+                        prefixIcon: const Icon(Icons.calendar_today_outlined),
+                        errorText: dobError,
                       ),
+                      onChanged: (input) {
+                        final validation = input.length == 10
+                            ? validateProfileDateOfBirthInput(input)
+                            : null;
+                        if (dobError != validation) {
+                          setModalState(() => dobError = validation);
+                        }
+                      },
                     ),
                     if (errorMessage != null) ...[
                       const SizedBox(height: 10),
@@ -308,8 +431,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 return;
                               }
 
+                              final dobValidation =
+                                  validateProfileDateOfBirthInput(
+                                    dobController.text,
+                                  );
+                              if (dobValidation != null) {
+                                setModalState(() {
+                                  dobError = dobValidation;
+                                  errorMessage = null;
+                                });
+                                return;
+                              }
+
                               setModalState(() {
                                 isSaving = true;
+                                dobError = null;
                                 errorMessage = null;
                               });
 
@@ -319,7 +455,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                   this.context,
                                 );
                                 final phone = phoneController.text.trim();
-                                final dob = dobController.text.trim();
+                                final dob = convertProfileDisplayDateToIso(
+                                  dobController.text,
+                                );
 
                                 // Update profile via MemberProfiles
                                 await repo.updateProfile(
@@ -329,9 +467,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                     phone: phone.isNotEmpty
                                         ? phone
                                         : profile.phone,
-                                    dateOfBirth: dob.isNotEmpty
-                                        ? dob
-                                        : profile.dateOfBirth,
+                                    dateOfBirth: dob ?? profile.dateOfBirth,
                                   ),
                                 );
 
@@ -348,9 +484,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                   );
                                 }
                               } catch (e) {
+                                if (!context.mounted) return;
                                 setModalState(() {
                                   isSaving = false;
-                                  errorMessage = 'Không thể cập nhật hồ sơ: $e';
+                                  errorMessage = ErrorMessages.forException(
+                                    e,
+                                    defaultMessage: 'Không thể cập nhật hồ sơ. Vui lòng thử lại.',
+                                  );
                                 });
                               }
                             },
@@ -1282,6 +1422,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final skills = ref.watch(memberSkillsNotifierProvider);
     final skillsNotifier = ref.read(memberSkillsNotifierProvider.notifier);
     final profileFuture = ref.watch(currentMemberProfileProvider.future);
+    final hasProfile = ref.watch(
+      currentMemberProfileProvider.select((profile) => profile.hasValue),
+    );
+    final recentSubmissions = hasProfile
+        ? ref.watch(
+            practiceSubmissionsNotifierProvider(null)
+                .select((state) => state.items),
+          )
+        : const <PracticeSubmissionDetail>[];
     final settings = ref.watch(publicAppSettingsProvider).asData?.value;
     final parishName = settings?.parishName.trim() ?? '';
     final busy = ref.watch(
@@ -1390,8 +1539,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ),
                         const SizedBox(height: 20),
                         _ProfileSectionHeading(
-                          title: 'Kỹ năng & Thẩm định chuyên môn',
+                          title: 'Kỹ năng & Thẩm định\nchuyên môn',
+                          inlineAction: true,
                           action: TextButton.icon(
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                              ),
+                            ),
                             onPressed: () =>
                                 _showDeclareSkillDialog(context, repo),
                             icon: const Icon(Icons.add_rounded, size: 18),
@@ -1459,7 +1614,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               ),
                         ],
                         const SizedBox(height: 20),
-                        const _ProfileRecentPractice(),
+                        _ProfileRecentPractice(submissions: recentSubmissions),
+                        const _ProfileSectionHeading(
+                          title: 'Cài đặt tài khoản',
+                        ),
                         Card(
                           child: ListTile(
                             leading: const Icon(
@@ -1473,27 +1631,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             onTap: () => context.push('/director-nominations'),
                           ),
                         ),
-                        if (profile.id.isNotEmpty)
-                          Card(
-                            child: ListTile(
-                              leading: const Icon(
-                                Icons.copy_outlined,
-                                color: MemberChoirStyle.wine,
-                              ),
-                              title: const Text('Sao chép mã hồ sơ ca viên'),
-                              onTap: () async {
-                                await Clipboard.setData(
-                                  ClipboardData(text: profile.id),
-                                );
-                                if (!context.mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Đã sao chép mã hồ sơ.'),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
                         Card(
                           child: ListTile(
                             leading: const Icon(
@@ -1507,10 +1644,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             onTap: () => context.push('/profile/history'),
                           ),
                         ),
-                        const SizedBox(height: 20),
-                        const _ProfileSectionHeading(
-                          title: 'Cài đặt tài khoản',
-                        ),
+
                         Card(
                           child: ListTile(
                             enabled: !busy,
@@ -1529,6 +1663,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.statusDanger,
+                            backgroundColor: AppColors.statusDangerSoft,
+                            minimumSize: const Size(0, 48),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            side: BorderSide(
+                              color: AppColors.statusDanger.withValues(
+                                alpha: 0.35,
+                              ),
+                            ),
                           ),
                           onPressed: busy
                               ? null
@@ -1739,7 +1884,11 @@ class _ProfileSummary extends StatelessWidget {
       (Icons.email_outlined, 'Email', profile.email),
       (Icons.badge_outlined, 'Tên thánh', profile.saintName),
       (Icons.phone_outlined, 'Số điện thoại', profile.phone),
-      (Icons.cake_outlined, 'Ngày sinh', profile.dateOfBirth),
+      (
+        Icons.cake_outlined,
+        'Ngày sinh',
+        formatProfileDateOfBirthDisplay(profile.dateOfBirth),
+      ),
       (Icons.calendar_month_outlined, 'Ngày tham gia', profile.joinedDate),
       if (profile.choirNames case final names?)
         (
@@ -1873,19 +2022,27 @@ class _ProfileSummary extends StatelessWidget {
 }
 
 class _ProfileSectionHeading extends StatelessWidget {
-  const _ProfileSectionHeading({required this.title, this.action});
+  const _ProfileSectionHeading({
+    required this.title,
+    this.action,
+    this.inlineAction = false,
+  });
 
   final String title;
   final Widget? action;
+  final bool inlineAction;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 8),
-    child: Row(
+  Widget build(BuildContext context) {
+    final heading = Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: inlineAction
+          ? CrossAxisAlignment.start
+          : CrossAxisAlignment.center,
       spacing: 8,
       children: [
         Container(width: 3, height: 20, color: MemberChoirStyle.wine),
-        Expanded(
+        Flexible(
           child: Text(
             title,
             style: AppTypography.titleLarge.copyWith(
@@ -1893,10 +2050,29 @@ class _ProfileSectionHeading extends StatelessWidget {
             ),
           ),
         ),
-        if (action case final widget?) Flexible(child: widget),
       ],
-    ),
-  );
+    );
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: inlineAction
+          ? Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              spacing: 8,
+              children: [
+                Expanded(flex: 3, child: heading),
+                if (action case final button?) Flexible(flex: 2, child: button),
+              ],
+            )
+          : OverflowBar(
+              spacing: 8,
+              overflowSpacing: 4,
+              alignment: MainAxisAlignment.spaceBetween,
+              children: [heading, ?action],
+            ),
+    );
+  }
 }
 
 class _ProfileBadge extends StatelessWidget {
@@ -2025,16 +2201,14 @@ class _ProfileSkillCard extends StatelessWidget {
   }
 }
 
-class _ProfileRecentPractice extends ConsumerWidget {
-  const _ProfileRecentPractice();
+class _ProfileRecentPractice extends StatelessWidget {
+  const _ProfileRecentPractice({required this.submissions});
+
+  final List<PracticeSubmissionDetail> submissions;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final recent = ref
-        .watch(practiceSubmissionsNotifierProvider(null))
-        .items
-        .take(3);
-    if (recent.isEmpty) return const SizedBox.shrink();
+  Widget build(BuildContext context) {
+    if (submissions.isEmpty) return const SizedBox.shrink();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -2048,7 +2222,7 @@ class _ProfileRecentPractice extends ConsumerWidget {
         Card(
           child: Column(
             children: [
-              for (final submission in recent)
+              for (final submission in submissions.take(3))
                 ListTile(
                   leading: const Icon(
                     Icons.headphones_rounded,
