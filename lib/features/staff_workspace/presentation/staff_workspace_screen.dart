@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../app/router/role_routes.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/widgets/app_page_header.dart';
+import '../../../app/widgets/harmonia_svg_art.dart';
 import '../../../core/di/core_providers.dart';
 import '../../../core/errors/error_messages.dart';
 import '../../../core/session/session_manager.dart';
@@ -976,7 +977,7 @@ class _SongListReviewState extends ConsumerState<_SongListReview> {
               maxLines: 3,
               decoration: const InputDecoration(
                 hintText: 'Nhập ý kiến chỉ đạo hoặc lý do cần chỉnh sửa…',
-                fillColor: AppColors.surfaceContainerLow,
+                fillColor: AppColors.surface,
               ),
             ),
             if (_error != null)
@@ -1311,6 +1312,8 @@ class _StaffPage extends StatelessWidget {
                 subtitle: workflowSubtitle,
               ),
         large: backPath == null || workflowRole != null,
+        showEmptyAccent: true,
+        accentTitleText: title,
         actions: [
           if (workflowRole != null && onRefresh != null)
             IconButton(
@@ -1326,9 +1329,11 @@ class _StaffPage extends StatelessWidget {
       bottomNavigationBar: footer,
       body: SafeArea(
         bottom: footer == null,
-        child: onRefresh == null
-            ? list
-            : RefreshIndicator(onRefresh: onRefresh!, child: list),
+        child: AntiphonaryBackground(
+          child: onRefresh == null
+              ? list
+              : RefreshIndicator(onRefresh: onRefresh!, child: list),
+        ),
       ),
     );
   }

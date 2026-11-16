@@ -140,12 +140,15 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      // Verify bottom navigation bar tabs
-      expect(find.text('Trang chủ'), findsOneWidget);
-      expect(find.text('Lịch tuần'), findsOneWidget);
-      expect(find.text('Luyện tập'), findsOneWidget);
-      expect(find.text('Thông báo'), findsOneWidget);
-      expect(find.text('Cá nhân'), findsOneWidget);
+      final navigation = tester.widget<NavigationBar>(
+        find.byType(NavigationBar),
+      );
+      expect(
+        navigation.destinations.cast<NavigationDestination>().map(
+          (destination) => destination.label,
+        ),
+        ['Trang chủ', 'Lịch', 'Tài liệu', 'Luyện tập', 'Cá nhân'],
+      );
 
       final container = ProviderScope.containerOf(
         tester.element(find.byType(HarmoniaApp)),
@@ -155,10 +158,12 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.text('Thư viện thánh ca'), findsOneWidget);
-      expect(find.text('Thư viện'), findsOneWidget);
-      expect(find.text('Luyện tập'), findsNothing);
+      final libraryNavigation = tester.widget<NavigationBar>(
+        find.byType(NavigationBar),
+      );
+      expect(libraryNavigation.selectedIndex, 2);
 
-      expect(find.text('Về'), findsOneWidget);
+      expect(find.byType(BackButtonIcon), findsOneWidget);
       await tester.tap(find.byTooltip('Quay lại'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));

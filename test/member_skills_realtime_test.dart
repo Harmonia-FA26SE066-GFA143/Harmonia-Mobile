@@ -47,9 +47,11 @@ class _SkillLookups extends LookupsApiService {
   _SkillLookups(super.client);
 
   @override
-  Future<List<SkillDto>> getSkills({String? categoryId}) async => const [
-    SkillDto(id: 'singing', categoryId: 'voice', name: 'Xướng đáp ca'),
-    SkillDto(id: 'organ', categoryId: 'instrument', name: 'Đàn organ'),
+  Future<List<SkillDto>> getSkills({String? categoryId}) async => [
+    const SkillDto(id: 'singing', categoryId: 'voice', name: 'Xướng đáp ca'),
+    for (var index = 1; index <= 6; index++)
+      SkillDto(id: 'voice-$index', categoryId: 'voice', name: 'Giọng $index'),
+    const SkillDto(id: 'organ', categoryId: 'instrument', name: 'Đàn organ'),
   ];
 }
 
@@ -345,7 +347,7 @@ void main() {
   );
 
   testWidgets(
-    'the skill sheet submits the selected catalog skill on a narrow phone',
+    'the skill sheet scroll buttons reach the last catalog skill on a narrow phone',
     (tester) async {
       tester.view.physicalSize = const Size(360, 720);
       tester.view.devicePixelRatio = 1;
@@ -375,8 +377,31 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Khai báo kỹ năng mới'), findsOneWidget);
 
-      final organ = find.text('Đàn organ');
-      await tester.ensureVisible(organ);
+      final organ = find.widgetWithText(RadioListTile<SkillDto>, 'Đàn organ');
+      final down = find.byTooltip('Cuộn xuống danh sách kỹ năng');
+      final up = find.byTooltip('Cuộn lên danh sách kỹ năng');
+      final downButton = find.byWidgetPredicate(
+        (widget) =>
+            widget is IconButton &&
+            widget.tooltip == 'Cuộn xuống danh sách kỹ năng',
+      );
+      await Scrollable.ensureVisible(
+        tester.element(down),
+        alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+      );
+      await tester.pumpAndSettle();
+      expect(organ.hitTestable(), findsNothing);
+      for (var tap = 0; tap < 8; tap++) {
+        if (tester.widget<IconButton>(downButton).onPressed == null) break;
+        await tester.tap(down);
+        await tester.pumpAndSettle();
+      }
+      expect(tester.widget<IconButton>(downButton).onPressed, isNull);
+      expect(organ.hitTestable(), findsOneWidget);
+      await tester.tap(up);
+      await tester.pumpAndSettle();
+      expect(organ.hitTestable(), findsNothing);
+      await tester.tap(down);
       await tester.pumpAndSettle();
       await tester.tap(organ);
       await tester.pumpAndSettle();

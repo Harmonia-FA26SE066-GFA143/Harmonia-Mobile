@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/errors/error_messages.dart';
 import '../../lookups/data/lookup_dto.dart';
 import '../../lookups/data/lookups_api_service.dart';
 import '../data/profile_repository.dart';
@@ -104,7 +105,10 @@ class _ParticipationHistoryScreenState
     } catch (e) {
       if (!mounted || gen != _requestGen) return;
       setState(() {
-        _errorMessage = 'Không thể tải lịch sử tham gia: $e';
+        _errorMessage = ErrorMessages.forException(
+          e,
+          defaultMessage: 'Không thể tải lịch sử tham gia. Vui lòng thử lại.',
+        );
         _isLoading = false;
       });
     }

@@ -41,6 +41,7 @@ class _StaffScoresScreenState extends ConsumerState<StaffScoresScreen> {
     final provider = _materials((widget.songId, _page));
     return OpsPage(
       title: 'Bản nhạc tương tác',
+      showChantMotif: true,
       child: OpsAsync(
         value: ref.watch(provider),
         onRetry: () => ref.invalidate(provider),
@@ -126,7 +127,7 @@ class InteractiveScoreScreen extends ConsumerWidget {
       return Theme(
         data: MemberChoirStyle.theme(context),
         child: Scaffold(
-          backgroundColor: MemberChoirStyle.paper,
+          backgroundColor: AppColors.background,
           appBar: AppPageHeader(
             title: const Text(
               'Trình phát nốt',
@@ -135,6 +136,7 @@ class InteractiveScoreScreen extends ConsumerWidget {
             ),
             titleFontFamily: MemberChoirStyle.displayFont,
             gradient: MemberChoirStyle.header,
+            showChantMotif: true,
             actions: [reload],
           ),
           body: SafeArea(top: false, child: content),
@@ -143,6 +145,8 @@ class InteractiveScoreScreen extends ConsumerWidget {
     }
     return OpsPage(
       title: 'Bản nhạc tương tác',
+      showChantMotif: true,
+      showAntiphonaryBackground: false,
       actions: [reload],
       child: content,
     );

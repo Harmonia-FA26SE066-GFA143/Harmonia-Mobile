@@ -6,10 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../../../app/widgets/app_back_label.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../app/widgets/app_page_header.dart';
+import '../../../app/widgets/harmonia_svg_art.dart';
 import '../../../app/widgets/member_choir_visuals.dart';
 import '../../../app/widgets/stitch_entrance.dart';
 import '../../../core/errors/error_messages.dart';
@@ -1146,11 +1146,41 @@ class _MusicLibraryScreenState extends ConsumerState<MusicLibraryScreen> {
       ],
     );
 
+    final headerActions = <Widget>[
+      if (!materials)
+        IconButton(
+          tooltip: 'Bộ lọc',
+          icon: Badge(
+            isLabelVisible: state.hasSongFilters,
+            backgroundColor: const Color(0xFFFFD36D),
+            child: Icon(
+              _showSongFilters
+                  ? Icons.filter_alt_off_outlined
+                  : Icons.tune_rounded,
+            ),
+          ),
+          onPressed: _toggleSongFilters,
+        ),
+      if (searchActive)
+        IconButton(
+          tooltip: 'Đóng tìm kiếm',
+          icon: const Icon(Icons.close_rounded),
+          onPressed: () => _clearSearch(notifier, close: true),
+        )
+      else
+        IconButton(
+          tooltip: 'Tìm kiếm',
+          icon: const Icon(Icons.search_rounded),
+          onPressed: _openSearch,
+        ),
+    ];
+
     final scaffold = Scaffold(
-      backgroundColor: MemberChoirStyle.paper,
+      backgroundColor: AppColors.background,
       appBar: AppPageHeader(
         gradient: MemberChoirStyle.header,
         titleFontFamily: MemberChoirStyle.displayFont,
+        titleSpacing: 8,
         title: searchActive
             ? _headerSearchField(notifier, materials: materials)
             : Column(
@@ -1189,14 +1219,14 @@ class _MusicLibraryScreenState extends ConsumerState<MusicLibraryScreen> {
                   ],
                   Text(
                     materials ? 'Tài liệu học của tôi' : 'Thư viện thánh ca',
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
         leading: IconButton(
           tooltip: 'Quay lại',
-          icon: const AppBackLabel(),
+          icon: const BackButtonIcon(),
           onPressed: () {
             if (context.canPop()) {
               context.pop();
@@ -1205,34 +1235,7 @@ class _MusicLibraryScreenState extends ConsumerState<MusicLibraryScreen> {
             }
           },
         ),
-        actions: [
-          if (!materials)
-            IconButton(
-              tooltip: 'Bộ lọc',
-              icon: Badge(
-                isLabelVisible: state.hasSongFilters,
-                backgroundColor: const Color(0xFFFFD36D),
-                child: Icon(
-                  _showSongFilters
-                      ? Icons.filter_alt_off_outlined
-                      : Icons.tune_rounded,
-                ),
-              ),
-              onPressed: _toggleSongFilters,
-            ),
-          if (searchActive)
-            IconButton(
-              tooltip: 'Đóng tìm kiếm',
-              icon: const Icon(Icons.close_rounded),
-              onPressed: () => _clearSearch(notifier, close: true),
-            )
-          else
-            IconButton(
-              tooltip: 'Tìm kiếm',
-              icon: const Icon(Icons.search_rounded),
-              onPressed: _openSearch,
-            ),
-        ],
+        actions: headerActions,
       ),
       body: SafeArea(
         top: false,
@@ -1289,10 +1292,12 @@ class _MusicLibraryScreenState extends ConsumerState<MusicLibraryScreen> {
               onSelect: (tab) => _switchTab(tab, notifier),
             ),
             Expanded(
-              child: RefreshIndicator(
-                color: MemberChoirStyle.wine,
-                onRefresh: () => notifier.refresh(),
-                child: listView,
+              child: AntiphonaryBackground(
+                child: RefreshIndicator(
+                  color: MemberChoirStyle.wine,
+                  onRefresh: () => notifier.refresh(),
+                  child: listView,
+                ),
               ),
             ),
           ],

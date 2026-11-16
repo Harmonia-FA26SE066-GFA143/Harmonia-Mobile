@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../widgets/app_back_label.dart';
 import 'app_colors.dart';
 import 'app_typography.dart';
 
@@ -31,9 +30,6 @@ class AppTheme {
 
     return ThemeData(
       useMaterial3: true,
-      actionIconTheme: ActionIconThemeData(
-        backButtonIconBuilder: (_) => const AppBackLabel(),
-      ),
       fontFamily: 'Be Vietnam Pro',
       colorScheme: colorScheme,
       textTheme: TextTheme(
@@ -264,6 +260,16 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
         ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      ),
+      dataTableTheme: const DataTableThemeData(
+        decoration: BoxDecoration(color: AppColors.surface),
+        headingRowColor: WidgetStatePropertyAll(AppColors.surface),
+        dataRowColor: WidgetStatePropertyAll(AppColors.surface),
       ),
     );
   }

@@ -47,6 +47,9 @@ final _shellNavigatorHome = GlobalKey<NavigatorState>(debugLabel: 'shellHome');
 final _shellNavigatorCalendar = GlobalKey<NavigatorState>(
   debugLabel: 'shellCalendar',
 );
+final _shellNavigatorMusic = GlobalKey<NavigatorState>(
+  debugLabel: 'shellMusic',
+);
 final _shellNavigatorPractice = GlobalKey<NavigatorState>(
   debugLabel: 'shellPractice',
 );
@@ -188,10 +191,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
-          return MainNavigationShell(
-            navigationShell: navigationShell,
-            inMusicLibrary: state.uri.path == '/music-library',
-          );
+          return MainNavigationShell(navigationShell: navigationShell);
         },
         branches: [
           StatefulShellBranch(
@@ -222,15 +222,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
           StatefulShellBranch(
+            navigatorKey: _shellNavigatorMusic,
+            routes: [
+              GoRoute(
+                path: '/music-library',
+                builder: (context, state) => const MusicLibraryScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
             navigatorKey: _shellNavigatorPractice,
             routes: [
               GoRoute(
                 path: '/practice',
                 builder: (context, state) => const PracticeListScreen(),
-              ),
-              GoRoute(
-                path: '/music-library',
-                builder: (context, state) => const MusicLibraryScreen(),
               ),
               GoRoute(
                 path: '/manage',

@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../app/widgets/app_page_header.dart';
+import '../../../app/widgets/harmonia_svg_art.dart';
 import '../../../app/widgets/member_choir_visuals.dart';
 import '../../../app/widgets/stitch_entrance.dart';
 import '../../../core/errors/error_messages.dart';
@@ -53,10 +55,12 @@ class SongDetailScreen extends ConsumerWidget {
     }
 
     final scaffold = Scaffold(
-      backgroundColor: MemberChoirStyle.paper,
+      backgroundColor: AppColors.background,
       appBar: AppPageHeader(
         gradient: MemberChoirStyle.header,
         titleFontFamily: MemberChoirStyle.displayFont,
+        showChantMotif: true,
+        chantRightPadding: 7,
         title: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -84,110 +88,115 @@ class SongDetailScreen extends ConsumerWidget {
       body: SafeArea(
         top: false,
         bottom: false,
-        child: detail.when(
-          loading: () => const Center(
-            child: CircularProgressIndicator(color: MemberChoirStyle.wine),
-          ),
-          error: (error, _) => Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    ErrorMessages.forException(error),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  TextButton(
-                    style: TextButton.styleFrom(
-                      foregroundColor: MemberChoirStyle.wine,
+        child: AntiphonaryBackground(
+          child: detail.when(
+            loading: () => const Center(
+              child: CircularProgressIndicator(color: MemberChoirStyle.wine),
+            ),
+            error: (error, _) => Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      ErrorMessages.forException(error),
+                      textAlign: TextAlign.center,
                     ),
-                    onPressed: () => ref.invalidate(provider),
-                    child: const Text('Thử lại'),
-                  ),
-                ],
+                    const SizedBox(height: 8),
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        foregroundColor: MemberChoirStyle.wine,
+                      ),
+                      onPressed: () => ref.invalidate(provider),
+                      child: const Text('Thử lại'),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          data: (song) {
-            if (song == null) {
-              return const Center(child: Text('Không tìm thấy bài hát'));
-            }
-            final audio = song.materials
-                .where((item) => item.materialType == MaterialType.sampleAudio)
-                .toList();
-            final scores = song.materials
-                .where(
-                  (item) => item.materialType == MaterialType.interactiveScore,
-                )
-                .toList();
-            final sheets = song.materials
-                .where((item) => item.materialType == MaterialType.sheetMusic)
-                .toList();
-            final documents = song.materials
-                .where(
-                  (item) =>
-                      item.materialType != MaterialType.interactiveScore &&
-                      item.materialType != MaterialType.sheetMusic &&
-                      item.materialType != MaterialType.sampleAudio,
-                )
-                .toList();
-            final hasDirectorNote =
-                song.lyrics.trim().isNotEmpty ||
-                (song.note?.trim().isNotEmpty == true) ||
-                (assignment?.instruction.trim().isNotEmpty == true) ||
-                (assignment?.feedbackComment?.trim().isNotEmpty == true);
+            data: (song) {
+              if (song == null) {
+                return const Center(child: Text('Không tìm thấy bài hát'));
+              }
+              final audio = song.materials
+                  .where(
+                    (item) => item.materialType == MaterialType.sampleAudio,
+                  )
+                  .toList();
+              final scores = song.materials
+                  .where(
+                    (item) =>
+                        item.materialType == MaterialType.interactiveScore,
+                  )
+                  .toList();
+              final sheets = song.materials
+                  .where((item) => item.materialType == MaterialType.sheetMusic)
+                  .toList();
+              final documents = song.materials
+                  .where(
+                    (item) =>
+                        item.materialType != MaterialType.interactiveScore &&
+                        item.materialType != MaterialType.sheetMusic &&
+                        item.materialType != MaterialType.sampleAudio,
+                  )
+                  .toList();
+              final hasDirectorNote =
+                  song.lyrics.trim().isNotEmpty ||
+                  (song.note?.trim().isNotEmpty == true) ||
+                  (assignment?.instruction.trim().isNotEmpty == true) ||
+                  (assignment?.feedbackComment?.trim().isNotEmpty == true);
 
-            return RefreshIndicator(
-              color: MemberChoirStyle.wine,
-              onRefresh: () async => await ref.refresh(provider.future),
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                children: [
-                  StitchEntrance(child: _SongOverview(song: song)),
-                  if (audio.isNotEmpty) ...[
-                    const SizedBox(height: 16),
-                    EmbeddedReferenceAudioCard(
-                      songId: songId,
-                      tracks: audio,
-                      onOpenMaterial: (id) =>
-                          _openMaterial(context, id, songId),
-                    ),
+              return RefreshIndicator(
+                color: MemberChoirStyle.wine,
+                onRefresh: () async => await ref.refresh(provider.future),
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                  children: [
+                    StitchEntrance(child: _SongOverview(song: song)),
+                    if (audio.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      EmbeddedReferenceAudioCard(
+                        songId: songId,
+                        tracks: audio,
+                        onOpenMaterial: (id) =>
+                            _openMaterial(context, id, songId),
+                      ),
+                    ],
+                    if (scores.isNotEmpty || sheets.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      _ScoreAndSheetSection(
+                        song: song,
+                        songId: songId,
+                        scores: scores,
+                        sheets: sheets,
+                        onOpenScore: (id) => _openScore(context, id),
+                        onOpenMaterial: (id) =>
+                            _openMaterial(context, id, songId),
+                      ),
+                    ],
+                    if (assignment != null ||
+                        documents.isNotEmpty ||
+                        song.materials.isEmpty) ...[
+                      const SizedBox(height: 16),
+                      _AssignmentAndDocumentsSection(
+                        songId: songId,
+                        songHasNoMaterials: song.materials.isEmpty,
+                        assignment: assignment,
+                        documents: documents,
+                        onOpenPractice: openPractice,
+                      ),
+                    ],
+                    if (hasDirectorNote) ...[
+                      const SizedBox(height: 16),
+                      _DirectorNoteSection(song: song, assignment: assignment),
+                    ],
                   ],
-                  if (scores.isNotEmpty || sheets.isNotEmpty) ...[
-                    const SizedBox(height: 16),
-                    _ScoreAndSheetSection(
-                      song: song,
-                      songId: songId,
-                      scores: scores,
-                      sheets: sheets,
-                      onOpenScore: (id) => _openScore(context, id),
-                      onOpenMaterial: (id) =>
-                          _openMaterial(context, id, songId),
-                    ),
-                  ],
-                  if (assignment != null ||
-                      documents.isNotEmpty ||
-                      song.materials.isEmpty) ...[
-                    const SizedBox(height: 16),
-                    _AssignmentAndDocumentsSection(
-                      songId: songId,
-                      songHasNoMaterials: song.materials.isEmpty,
-                      assignment: assignment,
-                      documents: documents,
-                      onOpenPractice: openPractice,
-                    ),
-                  ],
-                  if (hasDirectorNote) ...[
-                    const SizedBox(height: 16),
-                    _DirectorNoteSection(song: song, assignment: assignment),
-                  ],
-                ],
-              ),
-            );
-          },
+                ),
+              );
+            },
+          ),
         ),
       ),
       bottomNavigationBar: assignment == null && sheet == null && score == null

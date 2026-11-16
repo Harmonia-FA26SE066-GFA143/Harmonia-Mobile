@@ -76,7 +76,6 @@ flutter:
     - assets/score/
     - assets/images/harmonia_logo.png
     - assets/images/google_g.png
-    - assets/illustrations/rose_window/
     - assets/images/choir_practice.png
     - assets/images/choir_service.png
     - assets/images/choir_home.png
@@ -84,6 +83,11 @@ flutter:
     - assets/images/choir_library.jpg
     - assets/images/choir_song.jpg
     - assets/images/choir_materials.jpg
+    - assets/illustrations/antiphonary-ground.svg
+    - assets/illustrations/no-results.svg
+    - assets/illustrations/neume-spinner.svg
+    - assets/illustrations/rose_window/
+    - assets/illustrations/chant-incipit.svg
     - assets/fonts/be_vietnam_pro/OFL.txt
     - assets/fonts/stitch/PlayfairDisplay-OFL.txt
     - assets/fonts/stitch/PlusJakartaSans-OFL.txt

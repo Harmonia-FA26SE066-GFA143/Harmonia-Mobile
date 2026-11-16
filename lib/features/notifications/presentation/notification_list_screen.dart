@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../app/router/role_routes.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/widgets/app_page_header.dart';
+import '../../../app/widgets/harmonia_svg_art.dart';
 import '../../../app/widgets/member_choir_visuals.dart';
 import '../../../app/widgets/stitch_entrance.dart';
 import '../../../app/theme/app_typography.dart';
@@ -186,184 +187,209 @@ class _NotificationListScreenState
       (groups[group] ??= []).add(item);
     }
 
-    return Theme(
-      data: MemberChoirStyle.theme(context),
-      child: Scaffold(
-        backgroundColor: MemberChoirStyle.serviceCanvas,
-        appBar: AppPageHeader(
-          large: true,
-          gradient: const LinearGradient(
-            colors: [MemberChoirStyle.wine, MemberChoirStyle.accent],
-          ),
-          titleFontFamily: MemberChoirStyle.displayFont,
-          title: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            spacing: 4,
-            children: [
-              if (showChoir)
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        } else {
+          context.go('/home');
+        }
+      },
+      child: Theme(
+        data: MemberChoirStyle.theme(context),
+        child: Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: AppPageHeader(
+            large: true,
+            gradient: const LinearGradient(
+              colors: [MemberChoirStyle.wine, MemberChoirStyle.accent],
+            ),
+            leading: IconButton(
+              color: Colors.white,
+              icon: const BackButtonIcon(),
+              tooltip: 'Quay lại',
+              onPressed: () {
+                if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                } else {
+                  context.go('/home');
+                }
+              },
+            ),
+            titleFontFamily: MemberChoirStyle.displayFont,
+            title: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 4,
+              children: [
+                if (showChoir)
+                  Text(
+                    choir,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.labelSmall.copyWith(
+                      color: MemberChoirStyle.softGold,
+                    ),
+                  ),
                 Text(
-                  choir,
-                  maxLines: 1,
+                  'Thông báo phụng vụ',
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: AppTypography.labelSmall.copyWith(
-                    color: MemberChoirStyle.softGold,
+                  style: AppTypography.headlineSmall.copyWith(
+                    color: Colors.white,
+                    fontFamily: MemberChoirStyle.displayFont,
+                    height: 1.05,
                   ),
                 ),
-              Text(
-                'Thông báo phụng vụ',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: AppTypography.headlineSmall.copyWith(
-                  color: Colors.white,
-                  fontFamily: MemberChoirStyle.displayFont,
-                  height: 1.05,
+              ],
+            ),
+            actions: [
+              if (state.unreadCount > 0)
+                IconButton(
+                  tooltip: 'Đánh dấu tất cả đã đọc',
+                  onPressed: notifier.markAllAsRead,
+                  icon: const Icon(Icons.done_all_rounded),
+                ),
+              IconButton(
+                tooltip: _unreadOnly
+                    ? 'Hiện cả thông báo đã đọc'
+                    : 'Chỉ hiện chưa đọc',
+                onPressed: () => setState(() => _unreadOnly = !_unreadOnly),
+                icon: Icon(
+                  _unreadOnly ? Icons.filter_alt_rounded : Icons.tune_rounded,
                 ),
               ),
             ],
-          ),
-          actions: [
-            if (state.unreadCount > 0)
-              IconButton(
-                tooltip: 'Đánh dấu tất cả đã đọc',
-                onPressed: notifier.markAllAsRead,
-                icon: const Icon(Icons.done_all_rounded),
-              ),
-            IconButton(
-              tooltip: _unreadOnly
-                  ? 'Hiện cả thông báo đã đọc'
-                  : 'Chỉ hiện chưa đọc',
-              onPressed: () => setState(() => _unreadOnly = !_unreadOnly),
-              icon: Icon(
-                _unreadOnly ? Icons.filter_alt_rounded : Icons.tune_rounded,
-              ),
-            ),
-          ],
-          bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(44),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-              child: Row(
-                spacing: 8,
-                children: [
-                  const Icon(
-                    Icons.circle,
-                    color: MemberChoirStyle.gold,
-                    size: 8,
-                  ),
-                  Expanded(
-                    child: Text(
-                      '${state.unreadCount} thông báo chưa đọc',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.labelMedium.copyWith(
-                        color: MemberChoirStyle.softGold,
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(44),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                child: Row(
+                  spacing: 8,
+                  children: [
+                    const Icon(
+                      Icons.circle,
+                      color: MemberChoirStyle.gold,
+                      size: 8,
+                    ),
+                    Expanded(
+                      child: Text(
+                        '${state.unreadCount} thông báo chưa đọc',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.labelMedium.copyWith(
+                          color: MemberChoirStyle.softGold,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-        body: SafeArea(
-          top: false,
-          child: RefreshIndicator(
-            onRefresh: notifier.refresh,
-            child: ListView(
-              controller: _scrollController,
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-              children: [
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    spacing: 8,
-                    children: [
-                      for (final filter in _MemberNotificationFilter.values)
-                        ChoiceChip(
-                          label: Text(filter.label),
-                          selected: filter == _memberFilter,
-                          onSelected: (_) =>
-                              setState(() => _memberFilter = filter),
-                        ),
-                    ],
-                  ),
-                ),
-                if (_unreadOnly)
-                  Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: InputChip(
-                      label: const Text('Chỉ hiện chưa đọc'),
-                      onDeleted: () => setState(() => _unreadOnly = false),
-                    ),
-                  ),
-                if (state.isLoading && state.items.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.all(28),
-                    child: Center(child: CircularProgressIndicator()),
-                  )
-                else if (state.errorMessage != null && state.items.isEmpty)
-                  _MemberNotificationMessage(
-                    message: state.errorMessage!,
-                    onRetry: notifier.loadInitial,
-                  )
-                else if (groups.isEmpty)
-                  _MemberNotificationMessage(
-                    message: state.items.isEmpty
-                        ? 'Bạn chưa có thông báo'
-                        : 'Chưa có thông báo đã tải phù hợp với bộ lọc.',
-                  ),
-                for (final group in ['Hôm nay', 'Hôm qua', 'Trước đó'])
-                  if (groups[group] case final items?) ...[
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(0, 14, 0, 8),
+          body: SafeArea(
+            top: false,
+            child: AntiphonaryBackground(
+              child: RefreshIndicator(
+                onRefresh: notifier.refresh,
+                child: ListView(
+                  controller: _scrollController,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                  children: [
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
                       child: Row(
                         spacing: 8,
                         children: [
-                          Expanded(
-                            child: Text(
-                              group.toUpperCase(),
-                              style: AppTypography.labelMedium.copyWith(
-                                color: AppColors.muted,
-                              ),
+                          for (final filter in _MemberNotificationFilter.values)
+                            ChoiceChip(
+                              label: Text(filter.label),
+                              selected: filter == _memberFilter,
+                              onSelected: (_) =>
+                                  setState(() => _memberFilter = filter),
                             ),
-                          ),
-                          Text(
-                            '${items.length} tin',
-                            style: AppTypography.labelSmall,
-                          ),
                         ],
                       ),
                     ),
-                    for (final item in items)
-                      Padding(
-                        key: ValueKey(item.id),
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: StitchEntrance(
-                          child: _MemberNotificationCard(
-                            item: item,
-                            icon: _getIconForType(item.type),
-                            time: _formatTime(item.createdAt),
-                            onOpen: () => _handleNotificationTap(item),
-                          ),
+                    if (_unreadOnly)
+                      Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: InputChip(
+                          label: const Text('Chỉ hiện chưa đọc'),
+                          onDeleted: () => setState(() => _unreadOnly = false),
                         ),
                       ),
+                    if (state.isLoading && state.items.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.all(28),
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    else if (state.errorMessage != null && state.items.isEmpty)
+                      _MemberNotificationMessage(
+                        message: state.errorMessage!,
+                        onRetry: notifier.loadInitial,
+                      )
+                    else if (groups.isEmpty)
+                      _MemberNotificationMessage(
+                        message: state.items.isEmpty
+                            ? 'Bạn chưa có thông báo'
+                            : 'Chưa có thông báo đã tải phù hợp với bộ lọc.',
+                      ),
+                    for (final group in ['Hôm nay', 'Hôm qua', 'Trước đó'])
+                      if (groups[group] case final items?) ...[
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(0, 14, 0, 8),
+                          child: Row(
+                            spacing: 8,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  group.toUpperCase(),
+                                  style: AppTypography.labelMedium.copyWith(
+                                    color: AppColors.muted,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                '${items.length} tin',
+                                style: AppTypography.labelSmall,
+                              ),
+                            ],
+                          ),
+                        ),
+                        for (final item in items)
+                          Padding(
+                            key: ValueKey(item.id),
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: StitchEntrance(
+                              child: _MemberNotificationCard(
+                                item: item,
+                                icon: _getIconForType(item.type),
+                                time: _formatTime(item.createdAt),
+                                onOpen: () => _handleNotificationTap(item),
+                              ),
+                            ),
+                          ),
+                      ],
+                    if (state.isLoadingMore)
+                      const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    else if (state.hasNextPage)
+                      OutlinedButton(
+                        onPressed: notifier.loadMore,
+                        child: const Text('Tải thêm thông báo'),
+                      ),
                   ],
-                if (state.isLoadingMore)
-                  const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Center(
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  )
-                else if (state.hasNextPage)
-                  OutlinedButton(
-                    onPressed: notifier.loadMore,
-                    child: const Text('Tải thêm thông báo'),
-                  ),
-              ],
+                ),
+              ),
             ),
           ),
         ),
@@ -427,222 +453,228 @@ class _NotificationListScreenState
             ),
         ],
       ),
-      body: Builder(
-        builder: (context) {
-          if (state.isLoading && state.items.isEmpty) {
-            return const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
-            );
-          }
+      body: AntiphonaryBackground(
+        child: Builder(
+          builder: (context) {
+            if (state.isLoading && state.items.isEmpty) {
+              return const Center(
+                child: CircularProgressIndicator(color: AppColors.primary),
+              );
+            }
 
-          if (state.errorMessage != null && state.items.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
+            if (state.errorMessage != null && state.items.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.cloud_off_rounded,
+                        size: 56,
+                        color: AppColors.muted,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        state.errorMessage!,
+                        style: AppTypography.bodyMedium,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 20),
+                      ElevatedButton(
+                        onPressed: () => notifier.loadInitial(),
+                        child: const Text('Thử lại'),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            if (state.items.isEmpty) {
+              return RefreshIndicator(
+                onRefresh: () => notifier.refresh(),
+                color: AppColors.primary,
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   children: [
-                    const Icon(
-                      Icons.cloud_off_rounded,
-                      size: 56,
-                      color: AppColors.muted,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      state.errorMessage!,
-                      style: AppTypography.bodyMedium,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: () => notifier.loadInitial(),
-                      child: const Text('Thử lại'),
+                    SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.65,
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 68,
+                              height: 68,
+                              decoration: const BoxDecoration(
+                                color: AppColors.surfaceContainerLow,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.notifications_none_rounded,
+                                size: 36,
+                                color: AppColors.muted,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Bạn chưa có thông báo',
+                              style: AppTypography.titleLarge,
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Các cập nhật phụng vụ và lịch tập sẽ xuất hiện tại đây.',
+                              style: AppTypography.bodySmall,
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),
-              ),
-            );
-          }
+              );
+            }
 
-          if (state.items.isEmpty) {
             return RefreshIndicator(
               onRefresh: () => notifier.refresh(),
               color: AppColors.primary,
-              child: ListView(
+              child: ListView.separated(
+                controller: _scrollController,
                 physics: const AlwaysScrollableScrollPhysics(),
-                children: [
-                  SizedBox(
-                    height: MediaQuery.of(context).size.height * 0.65,
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 68,
-                            height: 68,
-                            decoration: const BoxDecoration(
-                              color: AppColors.surfaceContainerLow,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.notifications_none_rounded,
-                              size: 36,
-                              color: AppColors.muted,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Bạn chưa có thông báo',
-                            style: AppTypography.titleLarge,
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Các cập nhật phụng vụ và lịch tập sẽ xuất hiện tại đây.',
-                            style: AppTypography.bodySmall,
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 20,
+                ),
+                itemCount: state.items.length + (state.isLoadingMore ? 1 : 0),
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 16),
+                itemBuilder: (context, index) {
+                  if (index == state.items.length) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.primary,
+                        ),
                       ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
+                    );
+                  }
 
-          return RefreshIndicator(
-            onRefresh: () => notifier.refresh(),
-            color: AppColors.primary,
-            child: ListView.separated(
-              controller: _scrollController,
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-              itemCount: state.items.length + (state.isLoadingMore ? 1 : 0),
-              separatorBuilder: (context, index) => const SizedBox(height: 16),
-              itemBuilder: (context, index) {
-                if (index == state.items.length) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.primary,
+                  final item = state.items[index];
+                  final tone = switch (item.type) {
+                    NotificationType.eventCancelled => AppColors.statusWarning,
+                    NotificationType.skillReview
+                        when item.title == 'Kỹ năng đã được duyệt' =>
+                      AppColors.statusSuccess,
+                    _ => item.isRead ? AppColors.body : AppColors.primary,
+                  };
+                  return StitchEntrance(
+                    key: ValueKey(item.id),
+                    child: InkWell(
+                      onTap: () => _handleNotificationTap(item),
+                      borderRadius: BorderRadius.circular(24),
+                      child: Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: item.isRead
+                              ? AppColors.surface
+                              : Color.alphaBlend(
+                                  tone.withValues(alpha: .026),
+                                  AppColors.surface,
+                                ),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: item.isRead && tone == AppColors.body
+                                ? AppColors.border
+                                : tone.withValues(alpha: .16),
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Type Icon
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: tone.withValues(alpha: .065),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: tone.withValues(alpha: .15),
+                                ),
+                              ),
+                              child: Icon(
+                                _getIconForType(item.type),
+                                color: tone,
+                                size: 22,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+
+                            // Title, Content, Timestamp
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          item.title,
+                                          style: AppTypography.titleMedium
+                                              .copyWith(
+                                                color: AppColors.onSurface,
+                                                fontWeight: item.isRead
+                                                    ? FontWeight.w600
+                                                    : FontWeight.w700,
+                                              ),
+                                        ),
+                                      ),
+                                      if (!item.isRead) ...[
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          width: 8,
+                                          height: 8,
+                                          decoration: const BoxDecoration(
+                                            color: AppColors.primary,
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    item.content,
+                                    style: AppTypography.bodyMedium.copyWith(
+                                      color: AppColors.body,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    _formatTime(item.createdAt),
+                                    style: AppTypography.labelSmall.copyWith(
+                                      color: AppColors.muted,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   );
-                }
-
-                final item = state.items[index];
-                final tone = switch (item.type) {
-                  NotificationType.eventCancelled => AppColors.statusWarning,
-                  NotificationType.skillReview
-                      when item.title == 'Kỹ năng đã được duyệt' =>
-                    AppColors.statusSuccess,
-                  _ => item.isRead ? AppColors.body : AppColors.primary,
-                };
-                return StitchEntrance(
-                  key: ValueKey(item.id),
-                  child: InkWell(
-                    onTap: () => _handleNotificationTap(item),
-                    borderRadius: BorderRadius.circular(24),
-                    child: Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: item.isRead
-                            ? AppColors.surface
-                            : Color.alphaBlend(
-                                tone.withValues(alpha: .026),
-                                AppColors.surface,
-                              ),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                          color: item.isRead && tone == AppColors.body
-                              ? AppColors.border
-                              : tone.withValues(alpha: .16),
-                        ),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Type Icon
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: tone.withValues(alpha: .065),
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: tone.withValues(alpha: .15),
-                              ),
-                            ),
-                            child: Icon(
-                              _getIconForType(item.type),
-                              color: tone,
-                              size: 22,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-
-                          // Title, Content, Timestamp
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        item.title,
-                                        style: AppTypography.titleMedium
-                                            .copyWith(
-                                              color: AppColors.onSurface,
-                                              fontWeight: item.isRead
-                                                  ? FontWeight.w600
-                                                  : FontWeight.w700,
-                                            ),
-                                      ),
-                                    ),
-                                    if (!item.isRead) ...[
-                                      const SizedBox(width: 6),
-                                      Container(
-                                        width: 8,
-                                        height: 8,
-                                        decoration: const BoxDecoration(
-                                          color: AppColors.primary,
-                                          shape: BoxShape.circle,
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  item.content,
-                                  style: AppTypography.bodyMedium.copyWith(
-                                    color: AppColors.body,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  _formatTime(item.createdAt),
-                                  style: AppTypography.labelSmall.copyWith(
-                                    color: AppColors.muted,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          );
-        },
+                },
+              ),
+            );
+          },
+        ),
       ),
     );
   }

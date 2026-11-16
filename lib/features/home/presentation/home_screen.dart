@@ -6,6 +6,8 @@ import 'package:intl/intl.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/errors/error_messages.dart';
+import '../../../app/widgets/harmonia_svg_art.dart';
 import '../../../app/widgets/stitch_entrance.dart';
 import '../../../app/widgets/harmonia_logo.dart';
 import '../../../app/widgets/member_choir_visuals.dart';
@@ -208,8 +210,8 @@ class HomeScreen extends ConsumerWidget {
           backgroundColor: MemberChoirStyle.wine,
           body: SafeArea(
             bottom: false,
-            child: ColoredBox(
-              color: MemberChoirStyle.paper,
+            child: AntiphonaryBackground(
+              backgroundColor: AppColors.background,
               child: RefreshIndicator(
                 color: MemberChoirStyle.accent,
                 onRefresh: () async {
@@ -251,44 +253,60 @@ class HomeScreen extends ConsumerWidget {
 
                             // Upcoming service
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                  child: Row(
                                     children: [
-                                      Text(
-                                        'Chương trình phục vụ sắp tới',
-                                        style: AppTypography.titleMedium
-                                            .copyWith(
-                                              fontWeight: FontWeight.w700,
-                                            ),
+                                      Container(
+                                        width: 8,
+                                        height: 8,
+                                        decoration: const BoxDecoration(
+                                          color: MemberChoirStyle.accent,
+                                          shape: BoxShape.circle,
+                                        ),
                                       ),
-                                      Text(
-                                        'Chỉ hiển thị sự kiện sắp tới được cha xứ công bố.',
-                                        style: AppTypography.bodySmall,
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          'Chương trình phục vụ sắp tới',
+                                          style: AppTypography.titleMedium
+                                              .copyWith(
+                                                fontWeight: FontWeight.w700,
+                                                color: const Color(0xFF201C21),
+                                              ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ),
                                     ],
                                   ),
                                 ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.surfaceContainerHigh,
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Text(
-                                    DateFormat('dd/MM').format(DateTime.now()),
-                                    style: AppTypography.labelSmall.copyWith(
-                                      color: AppColors.body,
-                                      fontWeight: FontWeight.bold,
+                                if (calendarState.maybeWhen(
+                                  data: (events) => events.isNotEmpty,
+                                  orElse: () => false,
+                                )) ...[
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: MemberChoirStyle.accent.withValues(
+                                        alpha: 0.10,
+                                      ),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      'ƯU TIÊN',
+                                      style: AppTypography.labelSmall.copyWith(
+                                        color: MemberChoirStyle.accent,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 0.6,
+                                      ),
                                     ),
                                   ),
-                                ),
+                                ],
                               ],
                             ),
                             const SizedBox(height: 16),
@@ -310,7 +328,13 @@ class HomeScreen extends ConsumerWidget {
                                   borderRadius: BorderRadius.circular(24),
                                   border: Border.all(color: AppColors.border),
                                 ),
-                                child: Text('Không thể tải lịch: $e'),
+                                child: Text(
+                                  ErrorMessages.forException(
+                                    e,
+                                    defaultMessage:
+                                        'Không thể tải lịch. Vui lòng thử lại.',
+                                  ),
+                                ),
                               ),
                               data: (events) {
                                 if (events.isEmpty) {
@@ -551,10 +575,15 @@ class HomeScreen extends ConsumerWidget {
                                                             ),
                                                       ),
                                                       const Text(' • '),
-                                                      Text(
-                                                        mainEvent.timeRange,
-                                                        style: AppTypography
-                                                            .bodySmall,
+                                                      Flexible(
+                                                        child: Text(
+                                                          mainEvent.timeRange,
+                                                          style: AppTypography
+                                                              .bodySmall,
+                                                          maxLines: 1,
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                        ),
                                                       ),
                                                     ],
                                                   ),
@@ -578,23 +607,57 @@ class HomeScreen extends ConsumerWidget {
                                                       ),
                                                     ],
                                                   ),
-                                                  const SizedBox(height: 6),
-                                                  Row(
-                                                    children: [
-                                                      const Icon(
-                                                        Icons.groups_rounded,
-                                                        size: 16,
-                                                        color:
-                                                            AppColors.secondary,
-                                                      ),
-                                                      const SizedBox(width: 8),
-                                                      Text(
-                                                        'Phân công giọng hát: ',
-                                                        style: AppTypography
-                                                            .bodySmall,
-                                                      ),
-                                                      Flexible(
-                                                        child: Text(
+                                                ],
+                                              ),
+                                            ),
+                                            const SizedBox(height: 10),
+
+                                            // Khung phân công cá nhân riêng biệt theo Stitch
+                                            Container(
+                                              padding: const EdgeInsets.all(10),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFFBF8F5),
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                border: Border.all(
+                                                  color: _stitchBorder,
+                                                  width: 1,
+                                                ),
+                                              ),
+                                              child: Row(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  const Icon(
+                                                    Icons.music_note_rounded,
+                                                    size: 20,
+                                                    color: _stitchBadgeGold,
+                                                  ),
+                                                  const SizedBox(width: 10),
+                                                  Expanded(
+                                                    child: Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        Text(
+                                                          'Phân công cá nhân:',
+                                                          style: AppTypography
+                                                              .labelMedium
+                                                              .copyWith(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                                color:
+                                                                    const Color(
+                                                                      0xFF111C2D,
+                                                                    ),
+                                                              ),
+                                                        ),
+                                                        const SizedBox(
+                                                          height: 2,
+                                                        ),
+                                                        Text(
                                                           mainEvent
                                                                   .assignedVocalPart
                                                                   .isNotEmpty
@@ -602,42 +665,30 @@ class HomeScreen extends ConsumerWidget {
                                                                     .assignedVocalPart
                                                               : 'Chưa có phân công',
                                                           style: AppTypography
-                                                              .labelMedium
+                                                              .bodySmall
                                                               .copyWith(
-                                                                color: AppColors
-                                                                    .primary,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .w600,
+                                                                color:
+                                                                    _stitchDisabledText,
                                                               ),
                                                         ),
-                                                      ),
-                                                    ],
+                                                      ],
+                                                    ),
                                                   ),
                                                 ],
                                               ),
                                             ),
                                             const SizedBox(height: 14),
 
-                                            // Button: Xem chi tiết phụng vụ & bài hát
+                                            // Button: Xem chi tiết phục vụ
                                             ElevatedButton(
                                               onPressed: () {
                                                 context.push(
                                                   '/event-detail/${mainEvent.id}',
                                                 );
                                               },
-                                              child: Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.center,
-                                                children: [
-                                                  const Flexible(
-                                                    child: Text(
-                                                      'Xem chi tiết phụng vụ & bài hát',
-                                                      textAlign:
-                                                          TextAlign.center,
-                                                    ),
-                                                  ),
-                                                ],
+                                              child: const Text(
+                                                'Xem chi tiết phục vụ',
+                                                textAlign: TextAlign.center,
                                               ),
                                             ),
                                           ],
@@ -656,9 +707,10 @@ class HomeScreen extends ConsumerWidget {
                                 side: const BorderSide(color: _stitchBorder),
                               ),
                               child: ListTile(
+                                dense: true,
                                 contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 8,
+                                  horizontal: 14,
+                                  vertical: 2,
                                 ),
                                 hoverColor: MemberChoirStyle.accent.withValues(
                                   alpha: 0.04,
@@ -667,23 +719,35 @@ class HomeScreen extends ConsumerWidget {
                                   alpha: 0.08,
                                 ),
                                 leading: Container(
-                                  width: 46,
-                                  height: 46,
+                                  width: 44,
+                                  height: 44,
                                   decoration: BoxDecoration(
                                     color: _stitchLibraryIconBg,
-                                    shape: BoxShape.circle,
+                                    borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
                                       color: _stitchLibraryIconBorder,
                                     ),
                                   ),
                                   child: const Icon(
                                     Icons.menu_book_outlined,
+                                    size: 22,
                                     color: _stitchLibraryIconFg,
                                   ),
                                 ),
-                                title: const Text('Thư viện thánh ca'),
-                                subtitle: const Text(
-                                  'Tìm bài hát và tài liệu học của bạn',
+                                title: Text(
+                                  'Thư viện thánh ca',
+                                  style: AppTypography.titleMedium.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFF111C2D),
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  'Tìm bài hát, phổ nhạc và tài liệu học của bạn',
+                                  style: AppTypography.bodySmall.copyWith(
+                                    color: _stitchDisabledText,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                                 onTap: () => context.go('/music-library'),
                               ),
@@ -841,30 +905,37 @@ class HomeScreen extends ConsumerWidget {
                                                 ),
                                               ],
                                             ),
-                                            ElevatedButton.icon(
-                                              onPressed: !nextEvent.canRespond
-                                                  ? null
-                                                  : () =>
-                                                        _showParticipationDialog(
-                                                          context,
-                                                          ref,
-                                                          nextEvent,
-                                                        ),
-                                              style: ElevatedButton.styleFrom(
-                                                minimumSize: const Size(
-                                                  104,
-                                                  44,
+                                            Flexible(
+                                              child: ElevatedButton.icon(
+                                                onPressed: !nextEvent.canRespond
+                                                    ? null
+                                                    : () =>
+                                                          _showParticipationDialog(
+                                                            context,
+                                                            ref,
+                                                            nextEvent,
+                                                          ),
+                                                style: ElevatedButton.styleFrom(
+                                                  minimumSize: const Size(
+                                                    0,
+                                                    44,
+                                                  ),
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 10,
+                                                      ),
                                                 ),
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 14,
-                                                    ),
+                                                icon: const Icon(
+                                                  Icons.reply_rounded,
+                                                  size: 16,
+                                                ),
+                                                label: const Text(
+                                                  'Phản hồi',
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
                                               ),
-                                              icon: const Icon(
-                                                Icons.reply_rounded,
-                                                size: 16,
-                                              ),
-                                              label: const Text('Phản hồi'),
                                             ),
                                           ],
                                         ),
@@ -980,28 +1051,35 @@ class HomeScreen extends ConsumerWidget {
                                                 ),
                                               ],
                                             ),
-                                            ElevatedButton.icon(
-                                              onPressed: () {
-                                                context.push(
-                                                  '/practice-detail/${pendingAssignment.id}',
-                                                );
-                                              },
-                                              style: ElevatedButton.styleFrom(
-                                                minimumSize: const Size(
-                                                  124,
-                                                  44,
+                                            Flexible(
+                                              child: ElevatedButton.icon(
+                                                onPressed: () {
+                                                  context.push(
+                                                    '/practice-detail/${pendingAssignment.id}',
+                                                  );
+                                                },
+                                                style: ElevatedButton.styleFrom(
+                                                  minimumSize: const Size(
+                                                    0,
+                                                    44,
+                                                  ),
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 10,
+                                                      ),
                                                 ),
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 14,
-                                                    ),
+                                                icon: const Icon(
+                                                  Icons
+                                                      .fiber_manual_record_rounded,
+                                                  size: 14,
+                                                ),
+                                                label: const Text(
+                                                  'Thu âm ngay',
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
                                               ),
-                                              icon: const Icon(
-                                                Icons
-                                                    .fiber_manual_record_rounded,
-                                                size: 14,
-                                              ),
-                                              label: const Text('Thu âm ngay'),
                                             ),
                                           ],
                                         ),
@@ -1017,21 +1095,28 @@ class HomeScreen extends ConsumerWidget {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.event_note_rounded,
-                                      color: MemberChoirStyle.accent,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      'Buổi tập hát',
-                                      style: AppTypography.titleLarge.copyWith(
-                                        fontWeight: FontWeight.w700,
+                                Expanded(
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.event_note_rounded,
+                                        color: MemberChoirStyle.accent,
+                                        size: 20,
                                       ),
-                                    ),
-                                  ],
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          'Buổi tập hát',
+                                          style: AppTypography.titleLarge
+                                              .copyWith(
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                                 TextButton(
                                   onPressed: () => context.go('/calendar'),
@@ -1126,16 +1211,26 @@ class _HomeGreeting extends StatelessWidget {
                     ],
                   ),
                 ),
-                Badge(
-                  isLabelVisible: unreadCount > 0,
-                  backgroundColor: _stitchBadgeGold,
-                  textColor: _stitchBadgeText,
-                  label: Text('$unreadCount'),
-                  child: IconButton(
-                    tooltip: 'Thông báo',
-                    onPressed: onNotifications,
-                    style: headerIconButtonStyle,
-                    icon: const Icon(Icons.notifications_none_rounded),
+                IconButton(
+                  tooltip: 'Thông báo',
+                  onPressed: onNotifications,
+                  style: headerIconButtonStyle,
+                  icon: Badge(
+                    isLabelVisible: unreadCount > 0,
+                    backgroundColor: _stitchBadgeGold,
+                    textColor: _stitchBadgeText,
+                    offset: const Offset(4, -4),
+                    label: Text(
+                      unreadCount > 99 ? '99+' : '$unreadCount',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.notifications_none_rounded,
+                      size: 24,
+                    ),
                   ),
                 ),
                 IconButton(
@@ -1166,14 +1261,79 @@ class _HomeGreeting extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 18),
-            Text(
-              'Chào $name',
-              style: AppTypography.titleLarge.copyWith(color: Colors.white),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Ca viên',
-              style: AppTypography.bodySmall.copyWith(color: Colors.white70),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Chào $name',
+                        style: AppTypography.titleLarge.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Chúc một ngày phụng vụ bình an',
+                        style: AppTypography.bodySmall.copyWith(
+                          color: Colors.white.withValues(alpha: 0.85),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 170),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.20),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFFECE57),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            'Ca viên',
+                            style: AppTypography.labelSmall.copyWith(
+                              color: Colors.white.withValues(alpha: 0.95),
+                              fontWeight: FontWeight.w600,
+                            ),
+                            softWrap: true,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
             if (choirNames case final names?) ...[
               const SizedBox(height: 10),

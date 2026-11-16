@@ -10,6 +10,7 @@ import 'package:intl/intl.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../app/widgets/app_page_header.dart';
+import '../../../app/widgets/harmonia_svg_art.dart';
 import '../../../app/widgets/member_choir_visuals.dart';
 import '../../../app/widgets/stitch_entrance.dart';
 import '../../../core/di/core_providers.dart';
@@ -20,12 +21,124 @@ import '../../lookups/data/lookup_dto.dart';
 import '../../lookups/data/lookups_api_service.dart';
 import '../../calendar/data/calendar_repository.dart'
     show publicAppSettingsProvider;
+import '../../practice/data/practice_models.dart' show PracticeSubmissionDetail;
 import '../../practice/data/practice_repository.dart'
     show practiceSubmissionsNotifierProvider;
 import '../data/avatar_image_picker.dart';
 import '../data/member_skill_evidence_picker.dart';
 import '../data/profile_models.dart';
 import '../data/profile_repository.dart';
+
+/// Converts an ISO date or calendar date string (e.g. `2004-05-16` or `2004-05-16T...`)
+/// into user-facing `dd/MM/yyyy` format. Returns null if input is null or blank.
+String? formatProfileDateOfBirthDisplay(String? dateStr) {
+  if (dateStr == null || dateStr.trim().isEmpty) return null;
+  final trimmed = dateStr.trim();
+  if (RegExp(r'^\d{1,2}/\d{1,2}/\d{4}$').hasMatch(trimmed)) {
+    try {
+      final d = DateFormat('dd/MM/yyyy').parseStrict(trimmed);
+      return DateFormat('dd/MM/yyyy').format(d);
+    } catch (_) {
+      return trimmed;
+    }
+  }
+  final isoMatch = RegExp(r'^(\d{4})-(\d{1,2})-(\d{1,2})').firstMatch(trimmed);
+  if (isoMatch != null) {
+    final year = int.tryParse(isoMatch.group(1)!);
+    final month = int.tryParse(isoMatch.group(2)!);
+    final day = int.tryParse(isoMatch.group(3)!);
+    if (year != null && month != null && day != null) {
+      final dd = day.toString().padLeft(2, '0');
+      final mm = month.toString().padLeft(2, '0');
+      final yyyy = year.toString().padLeft(4, '0');
+      return '$dd/$mm/$yyyy';
+    }
+  }
+  try {
+    final parsed = DateTime.parse(trimmed).toUtc();
+    return DateFormat('dd/MM/yyyy').format(parsed);
+  } catch (_) {
+    return trimmed;
+  }
+}
+
+final _profileDateOfBirthFormatter = TextInputFormatter.withFunction((
+  oldValue,
+  newValue,
+) {
+  if (!newValue.composing.isCollapsed) return newValue;
+
+  final input = newValue.text;
+  final digits = input.replaceAll('/', '');
+  if (!RegExp(r'^[0-9]{0,8}$').hasMatch(digits)) return oldValue;
+
+  final formatted = StringBuffer();
+  for (var index = 0; index < digits.length; index++) {
+    if (index == 2 || index == 4) formatted.write('/');
+    formatted.write(digits[index]);
+  }
+  final text = formatted.toString();
+  if (text == input) return newValue;
+
+  int mapOffset(int offset) {
+    final digitCount = input.substring(0, offset).replaceAll('/', '').length;
+    return digitCount + (digitCount > 2 ? 1 : 0) + (digitCount > 4 ? 1 : 0);
+  }
+
+  final selection = newValue.selection;
+  return TextEditingValue(
+    text: text,
+    selection: selection.isValid
+        ? selection.copyWith(
+            baseOffset: mapOffset(selection.baseOffset),
+            extentOffset: mapOffset(selection.extentOffset),
+          )
+        : selection,
+  );
+});
+
+/// Validates user input date string for date of birth.
+/// Returns null if valid (or empty since dateOfBirth is optional).
+/// Returns a Vietnamese error message if invalid.
+String? validateProfileDateOfBirthInput(String? input) {
+  if (input == null || input.trim().isEmpty) return null;
+  final text = input.trim();
+  final regex = RegExp(r'^(\d{1,2})/(\d{1,2})/(\d{4})$');
+  if (!regex.hasMatch(text)) {
+    return 'Ngày sinh không đúng định dạng dd/mm/yyyy.';
+  }
+
+  DateTime parsed;
+  try {
+    parsed = DateFormat('dd/MM/yyyy').parseStrict(text);
+  } catch (_) {
+    return 'Ngày sinh không hợp lệ (ngày không tồn tại).';
+  }
+
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final calendarDate = DateTime(parsed.year, parsed.month, parsed.day);
+  if (calendarDate.isAfter(today)) {
+    return 'Ngày sinh không được ở trong tương lai.';
+  }
+  if (parsed.year < 1900) {
+    return 'Năm sinh không hợp lệ.';
+  }
+
+  return null;
+}
+
+/// Converts a validated `dd/MM/yyyy` string to `yyyy-MM-dd` wire format.
+/// Treats parts purely as calendar fields to prevent timezone shifts.
+String? convertProfileDisplayDateToIso(String? input) {
+  if (input == null || input.trim().isEmpty) return null;
+  final text = input.trim();
+  final parsed = DateFormat('dd/MM/yyyy').parseStrict(text);
+  final y = parsed.year.toString().padLeft(4, '0');
+  final m = parsed.month.toString().padLeft(2, '0');
+  final d = parsed.day.toString().padLeft(2, '0');
+  return '$y-$m-$d';
+}
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -61,7 +174,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         'AVATAR_FILE_REQUIRED' => 'Không tìm thấy tệp ảnh đã chọn.',
         'EXTERNAL_STORAGE_FAILED' =>
           'Máy chủ chưa lưu được ảnh. Vui lòng thử lại sau.',
-        _ => error.message,
+        _ => ErrorMessages.forException(
+          error,
+          defaultMessage: 'Không thể cập nhật ảnh đại diện. Vui lòng thử lại.',
+        ),
       };
     }
     if (error is PlatformException) {
@@ -187,10 +303,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final nameController = TextEditingController(text: profile.fullName);
     final phoneController = TextEditingController(text: profile.phone ?? '');
     final dobController = TextEditingController(
-      text: profile.dateOfBirth ?? '',
+      text: formatProfileDateOfBirthDisplay(profile.dateOfBirth) ?? '',
     );
-    var saintName = profile.saintName ?? '';
     bool isSaving = false;
+    var saintName = profile.saintName ?? '';
+    var selectedGender = profile.gender;
+    String? dobError;
     String? errorMessage;
 
     showModalBottomSheet(
@@ -267,11 +385,40 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     const SizedBox(height: 6),
                     TextField(
                       controller: dobController,
-                      keyboardType: TextInputType.datetime,
-                      decoration: const InputDecoration(
-                        hintText: 'YYYY-MM-DD (VD: 1995-05-15)',
-                        prefixIcon: Icon(Icons.calendar_today_outlined),
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [_profileDateOfBirthFormatter],
+                      decoration: InputDecoration(
+                        hintText: 'dd/mm/yyyy',
+                        prefixIcon: const Icon(Icons.calendar_today_outlined),
+                        errorText: dobError,
                       ),
+                      onChanged: (input) {
+                        final validation = input.length == 10
+                            ? validateProfileDateOfBirthInput(input)
+                            : null;
+                        if (dobError != validation) {
+                          setModalState(() => dobError = validation);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 14),
+                    DropdownButtonFormField<MemberGender>(
+                      icon: const SizedBox.shrink(),
+                      initialValue: selectedGender,
+                      isExpanded: true,
+                      decoration: const InputDecoration(labelText: 'Giới tính'),
+                      hint: const Text('Chưa cập nhật'),
+                      items: [
+                        for (final gender in MemberGender.values)
+                          DropdownMenuItem(
+                            value: gender,
+                            child: Text(gender.label),
+                          ),
+                      ],
+                      onChanged: isSaving
+                          ? null
+                          : (value) =>
+                                setModalState(() => selectedGender = value),
                     ),
                     if (errorMessage != null) ...[
                       const SizedBox(height: 10),
@@ -308,8 +455,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 return;
                               }
 
+                              final dobValidation =
+                                  validateProfileDateOfBirthInput(
+                                    dobController.text,
+                                  );
+                              if (dobValidation != null) {
+                                setModalState(() {
+                                  dobError = dobValidation;
+                                  errorMessage = null;
+                                });
+                                return;
+                              }
+
                               setModalState(() {
                                 isSaving = true;
+                                dobError = null;
                                 errorMessage = null;
                               });
 
@@ -319,38 +479,45 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                   this.context,
                                 );
                                 final phone = phoneController.text.trim();
-                                final dob = dobController.text.trim();
+                                final dobText = dobController.text.trim();
+                                final dobIso = convertProfileDisplayDateToIso(
+                                  dobText,
+                                );
 
                                 // Update profile via MemberProfiles
                                 await repo.updateProfile(
                                   UpdateMyMemberProfileRequest(
                                     fullName: name,
                                     saintName: trimmedSaintName,
+                                    gender: selectedGender,
                                     phone: phone.isNotEmpty
                                         ? phone
                                         : profile.phone,
-                                    dateOfBirth: dob.isNotEmpty
-                                        ? dob
+                                    dateOfBirth: dobText.isNotEmpty
+                                        ? dobIso
                                         : profile.dateOfBirth,
                                   ),
                                 );
 
-                                if (mounted) {
-                                  nav.pop();
-                                  _refreshProfile();
-                                  messenger.showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        'Đã cập nhật hồ sơ thành công!',
-                                      ),
-                                      backgroundColor: AppColors.statusSuccess,
+                                if (!mounted) return;
+                                if (context.mounted) nav.pop();
+                                _refreshProfile();
+                                messenger.showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Đã cập nhật hồ sơ thành công!',
                                     ),
-                                  );
-                                }
+                                    backgroundColor: AppColors.statusSuccess,
+                                  ),
+                                );
                               } catch (e) {
+                                if (!context.mounted) return;
                                 setModalState(() {
                                   isSaving = false;
-                                  errorMessage = 'Không thể cập nhật hồ sơ: $e';
+                                  errorMessage = ErrorMessages.forException(
+                                    e,
+                                    defaultMessage: 'Không thể cập nhật hồ sơ. Vui lòng thử lại.',
+                                  );
                                 });
                               }
                             },
@@ -569,8 +736,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                           () => selectedSkill = skill,
                                         );
                                       },
-                                      child: Column(
-                                        spacing: 8,
+                                      child: _SkillChoiceScroller(
                                         children: [
                                           for (final skill in availableSkills)
                                             RadioListTile<SkillDto>(
@@ -630,7 +796,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                     initialValue: selectedLevel,
                                     isExpanded: true,
                                     decoration: InputDecoration(
-                                      fillColor: MemberChoirStyle.paper,
+                                      fillColor: AppColors.surface,
                                       prefixIcon: const Icon(
                                         Icons.workspace_premium_outlined,
                                         color: AppColors.statusWarning,
@@ -1282,6 +1448,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final skills = ref.watch(memberSkillsNotifierProvider);
     final skillsNotifier = ref.read(memberSkillsNotifierProvider.notifier);
     final profileFuture = ref.watch(currentMemberProfileProvider.future);
+    final hasProfile = ref.watch(
+      currentMemberProfileProvider.select((profile) => profile.hasValue),
+    );
+    final recentSubmissions = hasProfile
+        ? ref.watch(
+            practiceSubmissionsNotifierProvider(null)
+                .select((state) => state.items),
+          )
+        : const <PracticeSubmissionDetail>[];
     final settings = ref.watch(publicAppSettingsProvider).asData?.value;
     final parishName = settings?.parishName.trim() ?? '';
     final busy = ref.watch(
@@ -1297,7 +1472,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           final profile = snapshot.data;
           final loading = snapshot.connectionState == ConnectionState.waiting;
           return Scaffold(
-            backgroundColor: MemberChoirStyle.paper,
+            backgroundColor: AppColors.background,
             appBar: AppPageHeader(
               gradient: MemberChoirStyle.header,
               titleFontFamily: MemberChoirStyle.displayFont,
@@ -1375,168 +1550,173 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ),
                       ),
                     )
-                  : ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                      children: [
-                        StitchEntrance(
-                          child: _ProfileSummary(
-                            profile: profile,
-                            onEdit: () =>
-                                _showEditProfileDialog(context, repo, profile),
-                            onAvatar: _isAvatarUpdating
-                                ? null
-                                : () => _showAvatarActions(repo, profile),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        _ProfileSectionHeading(
-                          title: 'Kỹ năng & Thẩm định chuyên môn',
-                          action: TextButton.icon(
-                            onPressed: () =>
-                                _showDeclareSkillDialog(context, repo),
-                            icon: const Icon(Icons.add_rounded, size: 18),
-                            label: const Text('Khai báo'),
-                          ),
-                        ),
-                        if (skills.isLoading && skills.items.isEmpty)
-                          const Padding(
-                            padding: EdgeInsets.all(20),
-                            child: Center(child: CircularProgressIndicator()),
-                          )
-                        else if (skills.errorMessage != null &&
-                            skills.items.isEmpty)
-                          Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Column(
-                                children: [
-                                  Text(
-                                    skills.errorMessage!,
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  TextButton(
-                                    onPressed: skillsNotifier.loadInitial,
-                                    child: const Text('Thử lại'),
-                                  ),
-                                ],
+                  : AntiphonaryBackground(
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                        children: [
+                          StitchEntrance(
+                            child: _ProfileSummary(
+                              profile: profile,
+                              onEdit: () => _showEditProfileDialog(
+                                context,
+                                repo,
+                                profile,
                               ),
+                              onAvatar: _isAvatarUpdating
+                                  ? null
+                                  : () => _showAvatarActions(repo, profile),
                             ),
-                          )
-                        else if (skills.items.isEmpty)
-                          const Card(
-                            child: Padding(
-                              padding: EdgeInsets.all(16),
-                              child: Text('Bạn chưa khai báo kỹ năng nào.'),
-                            ),
-                          )
-                        else ...[
-                          for (final skill in skills.items)
-                            _ProfileSkillCard(
-                              skill: skill,
-                              onTap: () =>
-                                  _showSkillDetailDialog(context, skill.id),
-                            ),
-                          if (skills.hasNextPage)
-                            if (skills.isLoadingMore)
-                              const Center(child: CircularProgressIndicator())
-                            else if (skills.loadMoreErrorMessage != null)
-                              Column(
-                                children: [
-                                  Text(
-                                    skills.loadMoreErrorMessage!,
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  TextButton(
-                                    onPressed: skillsNotifier.loadMore,
-                                    child: const Text('Thử lại'),
-                                  ),
-                                ],
-                              )
-                            else
-                              OutlinedButton(
-                                onPressed: skillsNotifier.loadMore,
-                                child: const Text('Tải thêm kỹ năng'),
-                              ),
-                        ],
-                        const SizedBox(height: 20),
-                        const _ProfileRecentPractice(),
-                        Card(
-                          child: ListTile(
-                            leading: const Icon(
-                              Icons.workspace_premium_outlined,
-                              color: MemberChoirStyle.wine,
-                            ),
-                            title: const Text('Đề cử ca trưởng của tôi'),
-                            subtitle: const Text(
-                              'Theo dõi đề cử đã duyệt và lịch sử đào tạo',
-                            ),
-                            onTap: () => context.push('/director-nominations'),
                           ),
-                        ),
-                        if (profile.id.isNotEmpty)
+                          const SizedBox(height: 16),
+                          _PersonalInformation(profile: profile),
+                          const SizedBox(height: 20),
+                          _ProfileSectionHeading(
+                            title: 'Kỹ năng & Thẩm định\nchuyên môn',
+                            inlineAction: true,
+                            action: TextButton.icon(
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                ),
+                              ),
+                              onPressed: () =>
+                                  _showDeclareSkillDialog(context, repo),
+                              icon: const Icon(Icons.add_rounded, size: 18),
+                              label: const Text('Khai báo'),
+                            ),
+                          ),
+                          if (skills.isLoading && skills.items.isEmpty)
+                            const Padding(
+                              padding: EdgeInsets.all(20),
+                              child: Center(child: CircularProgressIndicator()),
+                            )
+                          else if (skills.errorMessage != null &&
+                              skills.items.isEmpty)
+                            Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      skills.errorMessage!,
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    TextButton(
+                                      onPressed: skillsNotifier.loadInitial,
+                                      child: const Text('Thử lại'),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          else if (skills.items.isEmpty)
+                            const Card(
+                              child: Padding(
+                                padding: EdgeInsets.all(16),
+                                child: Text('Bạn chưa khai báo kỹ năng nào.'),
+                              ),
+                            )
+                          else ...[
+                            for (final skill in skills.items)
+                              _ProfileSkillCard(
+                                skill: skill,
+                                onTap: () =>
+                                    _showSkillDetailDialog(context, skill.id),
+                              ),
+                            if (skills.hasNextPage)
+                              if (skills.isLoadingMore)
+                                const Center(child: CircularProgressIndicator())
+                              else if (skills.loadMoreErrorMessage != null)
+                                Column(
+                                  children: [
+                                    Text(
+                                      skills.loadMoreErrorMessage!,
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    TextButton(
+                                      onPressed: skillsNotifier.loadMore,
+                                      child: const Text('Thử lại'),
+                                    ),
+                                  ],
+                                )
+                              else
+                                OutlinedButton(
+                                  onPressed: skillsNotifier.loadMore,
+                                  child: const Text('Tải thêm kỹ năng'),
+                                ),
+                          ],
+                          const SizedBox(height: 20),
+                          _ProfileRecentPractice(
+                            submissions: recentSubmissions,
+                          ),
+                          const _ProfileSectionHeading(
+                            title: 'Cài đặt tài khoản',
+                          ),
                           Card(
                             child: ListTile(
                               leading: const Icon(
-                                Icons.copy_outlined,
+                                Icons.workspace_premium_outlined,
                                 color: MemberChoirStyle.wine,
                               ),
-                              title: const Text('Sao chép mã hồ sơ ca viên'),
-                              onTap: () async {
-                                await Clipboard.setData(
-                                  ClipboardData(text: profile.id),
-                                );
-                                if (!context.mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Đã sao chép mã hồ sơ.'),
-                                  ),
-                                );
-                              },
+                              title: const Text('Đề cử ca trưởng của tôi'),
+                              subtitle: const Text(
+                                'Theo dõi đề cử đã duyệt và lịch sử đào tạo',
+                              ),
+                              onTap: () =>
+                                  context.push('/director-nominations'),
                             ),
                           ),
-                        Card(
-                          child: ListTile(
-                            leading: const Icon(
-                              Icons.history_rounded,
-                              color: MemberChoirStyle.wine,
+                          Card(
+                            child: ListTile(
+                              leading: const Icon(
+                                Icons.history_rounded,
+                                color: MemberChoirStyle.wine,
+                              ),
+                              title: const Text('Lịch sử tham gia & luyện tập'),
+                              subtitle: const Text(
+                                'Xem kết quả phục vụ lễ và bài tập đã hoàn thành',
+                              ),
+                              onTap: () => context.push('/profile/history'),
                             ),
-                            title: const Text('Lịch sử tham gia & luyện tập'),
-                            subtitle: const Text(
-                              'Xem kết quả phục vụ lễ và bài tập đã hoàn thành',
-                            ),
-                            onTap: () => context.push('/profile/history'),
                           ),
-                        ),
-                        const SizedBox(height: 20),
-                        const _ProfileSectionHeading(
-                          title: 'Cài đặt tài khoản',
-                        ),
-                        Card(
-                          child: ListTile(
-                            enabled: !busy,
-                            leading: const Icon(
-                              Icons.lock_reset_rounded,
-                              color: MemberChoirStyle.wine,
+                          Card(
+                            child: ListTile(
+                              enabled: !busy,
+                              leading: const Icon(
+                                Icons.lock_reset_rounded,
+                                color: MemberChoirStyle.wine,
+                              ),
+                              title: const Text('Đổi mật khẩu'),
+                              subtitle: const Text(
+                                'Cập nhật mật khẩu đăng nhập Harmonia',
+                              ),
+                              onTap: () => context.push('/change-password'),
                             ),
-                            title: const Text('Đổi mật khẩu'),
-                            subtitle: const Text(
-                              'Cập nhật mật khẩu đăng nhập Harmonia',
+                          ),
+                          const SizedBox(height: 10),
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.statusDanger,
+                              backgroundColor: AppColors.statusDangerSoft,
+                              minimumSize: const Size(0, 48),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              side: BorderSide(
+                                color: AppColors.statusDanger.withValues(
+                                  alpha: 0.35,
+                                ),
+                              ),
                             ),
-                            onTap: () => context.push('/change-password'),
+                            onPressed: busy
+                                ? null
+                                : () => _showLogoutDialog(context),
+                            icon: const Icon(Icons.logout_rounded),
+                            label: const Text('Đăng xuất'),
                           ),
-                        ),
-                        const SizedBox(height: 10),
-                        OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.statusDanger,
-                          ),
-                          onPressed: busy
-                              ? null
-                              : () => _showLogoutDialog(context),
-                          icon: const Icon(Icons.logout_rounded),
-                          label: const Text('Đăng xuất'),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
             ),
           );
@@ -1711,6 +1891,83 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 }
 
+class _SkillChoiceScroller extends StatefulWidget {
+  const _SkillChoiceScroller({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  State<_SkillChoiceScroller> createState() => _SkillChoiceScrollerState();
+}
+
+class _SkillChoiceScrollerState extends State<_SkillChoiceScroller> {
+  final _controller = ScrollController(keepScrollOffset: false);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _scroll(int direction) {
+    final position = _controller.position;
+    final offset =
+        position.pixels + direction * position.viewportDimension * .8;
+    _controller.animateTo(
+      offset.clamp(position.minScrollExtent, position.maxScrollExtent),
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      NotificationListener<ScrollMetricsNotification>(
+        onNotification: (_) {
+          setState(() {});
+          return false;
+        },
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 232),
+          child: SingleChildScrollView(
+            controller: _controller,
+            child: Column(spacing: 8, children: widget.children),
+          ),
+        ),
+      ),
+      ListenableBuilder(
+        listenable: _controller,
+        builder: (context, _) {
+          if (!_controller.hasClients) return const SizedBox.shrink();
+          final position = _controller.position;
+          if (!position.hasContentDimensions || position.maxScrollExtent == 0) {
+            return const SizedBox.shrink();
+          }
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              IconButton(
+                tooltip: 'Cuộn lên danh sách kỹ năng',
+                onPressed: position.extentBefore > 0 ? () => _scroll(-1) : null,
+                color: MemberChoirStyle.wine,
+                icon: const Icon(Icons.keyboard_arrow_up_rounded),
+              ),
+              IconButton(
+                tooltip: 'Cuộn xuống danh sách kỹ năng',
+                onPressed: position.extentAfter > 0 ? () => _scroll(1) : null,
+                color: MemberChoirStyle.wine,
+                icon: const Icon(Icons.keyboard_arrow_down_rounded),
+              ),
+            ],
+          );
+        },
+      ),
+    ],
+  );
+}
+
 class _ProfileSummary extends StatelessWidget {
   const _ProfileSummary({
     required this.profile,
@@ -1735,19 +1992,6 @@ class _ProfileSummary extends StatelessWidget {
         ),
       ),
     );
-    final contacts = [
-      (Icons.email_outlined, 'Email', profile.email),
-      (Icons.badge_outlined, 'Tên thánh', profile.saintName),
-      (Icons.phone_outlined, 'Số điện thoại', profile.phone),
-      (Icons.cake_outlined, 'Ngày sinh', profile.dateOfBirth),
-      (Icons.calendar_month_outlined, 'Ngày tham gia', profile.joinedDate),
-      if (profile.choirNames case final names?)
-        (
-          Icons.groups_outlined,
-          'Ca đoàn',
-          names.isEmpty ? 'Chưa tham gia ca đoàn' : names.join(' · '),
-        ),
-    ];
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
@@ -1804,58 +2048,14 @@ class _ProfileSummary extends StatelessWidget {
                           color: MemberChoirStyle.ink,
                         ),
                       ),
+                      Text(
+                        'Ngày tham gia: ${profile.joinedDate.trim().isEmpty ? 'Chưa cập nhật' : profile.joinedDate}',
+                        style: AppTypography.bodySmall,
+                      ),
                     ],
                   ),
                 ),
               ],
-            ),
-            const Divider(height: 1, color: MemberChoirStyle.border),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final columns =
-                    constraints.maxWidth >= 275 &&
-                        MediaQuery.textScalerOf(context).scale(14) < 21
-                    ? 2
-                    : 1;
-                final width =
-                    (constraints.maxWidth - (columns - 1) * 12) / columns;
-                return Wrap(
-                  spacing: 12,
-                  runSpacing: 10,
-                  children: [
-                    for (final (icon, label, value) in contacts)
-                      SizedBox(
-                        width: width,
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          spacing: 7,
-                          children: [
-                            Icon(icon, size: 17, color: MemberChoirStyle.wine),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    label,
-                                    style: AppTypography.labelSmall.copyWith(
-                                      color: AppColors.muted,
-                                    ),
-                                  ),
-                                  Text(
-                                    value?.trim().isNotEmpty == true
-                                        ? value!
-                                        : 'Chưa cập nhật',
-                                    style: AppTypography.bodyMedium,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                );
-              },
             ),
             OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
@@ -1872,20 +2072,133 @@ class _ProfileSummary extends StatelessWidget {
   }
 }
 
+class _PersonalInformation extends StatelessWidget {
+  const _PersonalInformation({required this.profile});
+
+  final MemberProfileDto profile;
+
+  @override
+  Widget build(BuildContext context) {
+    final fields = [
+      (Icons.email_outlined, 'Email', profile.email),
+      (Icons.badge_outlined, 'Tên thánh', profile.saintName),
+      (Icons.phone_outlined, 'Số điện thoại', profile.phone),
+      (
+        Icons.calendar_today_outlined,
+        'Ngày sinh',
+        formatProfileDateOfBirthDisplay(profile.dateOfBirth),
+      ),
+      (Icons.person_outline, 'Giới tính', profile.gender?.label),
+      if (profile.choirNames case final names?)
+        (
+          Icons.groups_outlined,
+          'Ca đoàn',
+          names.isEmpty ? 'Chưa tham gia ca đoàn' : names.join(' · '),
+        ),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: 8,
+      children: [
+        Row(
+          spacing: 6,
+          children: [
+            Container(
+              width: 4,
+              height: 14,
+              decoration: BoxDecoration(
+                color: MemberChoirStyle.accent,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Expanded(
+              child: Semantics(
+                header: true,
+                child: Text(
+                  'THÔNG TIN CÁ NHÂN',
+                  style: AppTypography.labelMedium.copyWith(
+                    color: const Color(0xFF615558),
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        Card(
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            child: Column(
+              children: [
+                for (final (index, (icon, label, value)) in fields.indexed) ...[
+                  if (index > 0)
+                    const Divider(height: 1, color: MemberChoirStyle.border),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
+                      spacing: 10,
+                      children: [
+                        Icon(icon, size: 18, color: MemberChoirStyle.accent),
+                        Expanded(
+                          flex: 2,
+                          child: Text(
+                            label,
+                            style: AppTypography.labelMedium.copyWith(
+                              color: const Color(0xFF615558),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          flex: 3,
+                          child: Text(
+                            value?.trim().isNotEmpty == true
+                                ? value!
+                                : 'Chưa cập nhật',
+                            textAlign: TextAlign.end,
+                            style: AppTypography.labelMedium.copyWith(
+                              color: AppColors.onSurface,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _ProfileSectionHeading extends StatelessWidget {
-  const _ProfileSectionHeading({required this.title, this.action});
+  const _ProfileSectionHeading({
+    required this.title,
+    this.action,
+    this.inlineAction = false,
+  });
 
   final String title;
   final Widget? action;
+  final bool inlineAction;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 8),
-    child: Row(
+  Widget build(BuildContext context) {
+    final heading = Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: inlineAction
+          ? CrossAxisAlignment.start
+          : CrossAxisAlignment.center,
       spacing: 8,
       children: [
         Container(width: 3, height: 20, color: MemberChoirStyle.wine),
-        Expanded(
+        Flexible(
           child: Text(
             title,
             style: AppTypography.titleLarge.copyWith(
@@ -1893,10 +2206,29 @@ class _ProfileSectionHeading extends StatelessWidget {
             ),
           ),
         ),
-        if (action case final widget?) Flexible(child: widget),
       ],
-    ),
-  );
+    );
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: inlineAction
+          ? Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              spacing: 8,
+              children: [
+                Expanded(flex: 3, child: heading),
+                if (action case final button?) Flexible(flex: 2, child: button),
+              ],
+            )
+          : OverflowBar(
+              spacing: 8,
+              overflowSpacing: 4,
+              alignment: MainAxisAlignment.spaceBetween,
+              children: [heading, ?action],
+            ),
+    );
+  }
 }
 
 class _ProfileBadge extends StatelessWidget {
@@ -2025,16 +2357,14 @@ class _ProfileSkillCard extends StatelessWidget {
   }
 }
 
-class _ProfileRecentPractice extends ConsumerWidget {
-  const _ProfileRecentPractice();
+class _ProfileRecentPractice extends StatelessWidget {
+  const _ProfileRecentPractice({required this.submissions});
+
+  final List<PracticeSubmissionDetail> submissions;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final recent = ref
-        .watch(practiceSubmissionsNotifierProvider(null))
-        .items
-        .take(3);
-    if (recent.isEmpty) return const SizedBox.shrink();
+  Widget build(BuildContext context) {
+    if (submissions.isEmpty) return const SizedBox.shrink();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -2048,7 +2378,7 @@ class _ProfileRecentPractice extends ConsumerWidget {
         Card(
           child: Column(
             children: [
-              for (final submission in recent)
+              for (final submission in submissions.take(3))
                 ListTile(
                   leading: const Icon(
                     Icons.headphones_rounded,

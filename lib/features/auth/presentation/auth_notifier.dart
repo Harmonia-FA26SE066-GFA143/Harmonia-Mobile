@@ -173,7 +173,7 @@ class AuthNotifier extends Notifier<AuthState> {
     } on AppException catch (e) {
       if (!ref.mounted || _activeAction != AuthAction.login) return false;
       _activeAction = AuthAction.none;
-      final msg = ErrorMessages.getMessage(e.code, fallback: e.message);
+      final msg = ErrorMessages.forException(e);
       state = state.copyWith(
         isLoading: false,
         errorMessage: msg,
@@ -233,7 +233,7 @@ class AuthNotifier extends Notifier<AuthState> {
       } else if (e.code == 'AUTH_ACCOUNT_INACTIVE') {
         msg = 'Tài khoản Harmonia liên kết với email này đã bị vô hiệu hoá.';
       } else {
-        msg = ErrorMessages.getMessage(e.code, fallback: e.message);
+        msg = ErrorMessages.forException(e);
       }
       state = state.copyWith(
         isLoading: false,
@@ -276,7 +276,7 @@ class AuthNotifier extends Notifier<AuthState> {
       } else if (e.code == 'AUTH_ACCOUNT_INACTIVE') {
         msg = 'Tài khoản Harmonia liên kết với email này đã bị vô hiệu hoá.';
       } else {
-        msg = ErrorMessages.getMessage(e.code, fallback: e.message);
+        msg = ErrorMessages.forException(e);
       }
       state = state.copyWith(
         isLoading: false,
@@ -311,7 +311,7 @@ class AuthNotifier extends Notifier<AuthState> {
       state = state.copyWith(isLoading: false);
       return true;
     } on AppException catch (e) {
-      final msg = ErrorMessages.getMessage(e.code, fallback: e.message);
+      final msg = ErrorMessages.forException(e);
       state = state.copyWith(
         isLoading: false,
         errorMessage: msg,
@@ -350,7 +350,7 @@ class AuthNotifier extends Notifier<AuthState> {
         return false;
       }
       _activeAction = AuthAction.none;
-      final msg = ErrorMessages.getMessage(e.code, fallback: e.message);
+      final msg = ErrorMessages.forException(e);
       state = state.copyWith(
         isLoading: false,
         errorMessage: msg,
@@ -396,7 +396,7 @@ class AuthNotifier extends Notifier<AuthState> {
         return false;
       }
       _activeAction = AuthAction.none;
-      final msg = ErrorMessages.getMessage(e.code, fallback: e.message);
+      final msg = ErrorMessages.forException(e);
       state = state.copyWith(
         isLoading: false,
         errorMessage: msg,

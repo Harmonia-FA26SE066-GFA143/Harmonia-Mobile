@@ -53,7 +53,32 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final passedFilter = find.text('Đã đạt (1)');
+      expect(
+        find.text('Sổ luyện thanh và đánh giá chất giọng cá nhân'),
+        findsOneWidget,
+      );
+      expect(find.byType(FilterChip), findsNothing);
+
+      final verticalScroll = find.byWidgetPredicate(
+        (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
+      );
+      final initialBannerTop = tester
+          .getTopLeft(
+            find.text('Sổ luyện thanh và đánh giá chất giọng cá nhân'),
+          )
+          .dy;
+      await tester.drag(verticalScroll, const Offset(0, -140));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .getTopLeft(
+              find.text('Sổ luyện thanh và đánh giá chất giọng cá nhân'),
+            )
+            .dy,
+        lessThan(initialBannerTop),
+      );
+
+      final passedFilter = find.text('Đã đạt');
       await tester.ensureVisible(passedFilter);
       await tester.pumpAndSettle();
       await tester.tap(passedFilter);
@@ -63,10 +88,7 @@ void main() {
       await tester.scrollUntilVisible(
         openRecording,
         100,
-        scrollable: find.descendant(
-          of: find.byType(ListView),
-          matching: find.byType(Scrollable),
-        ),
+        scrollable: verticalScroll,
       );
       await tester.pumpAndSettle();
       await tester.tap(openRecording);

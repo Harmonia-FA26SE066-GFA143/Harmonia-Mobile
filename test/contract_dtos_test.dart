@@ -195,6 +195,8 @@ void main() {
         'email': 'teresa.huong@harmonia.org',
         'phone': '0901234567',
         'dateOfBirth': '1998-12-25',
+        'saintName': 'Têrêsa',
+        'gender': 'Female',
         'joinedDate': '2023-01-15T00:00:00Z',
         'status': 'Active',
         'avatarUrl': 'https://storage.harmonia.org/avatars/teresa.png',
@@ -207,6 +209,8 @@ void main() {
       expect(profile.email, 'teresa.huong@harmonia.org');
       expect(profile.phone, '0901234567');
       expect(profile.dateOfBirth, '1998-12-25');
+      expect(profile.gender, MemberGender.female);
+      expect(profile.saintName, 'Têrêsa');
       expect(profile.choirNames, json['choirNames']);
       expect(profile.toJson()['choirNames'], json['choirNames']);
       expect(
@@ -215,6 +219,14 @@ void main() {
       );
       expect(
         MemberProfileDto.fromJson({...json}..remove('choirNames')).choirNames,
+        isNull,
+      );
+      expect(
+        MemberProfileDto.fromJson({...json, 'gender': null}).gender,
+        isNull,
+      );
+      expect(
+        MemberProfileDto.fromJson({...json}..remove('gender')).gender,
         isNull,
       );
       expect(profile.joinedDate, '2023-01-15T00:00:00Z');
@@ -228,11 +240,19 @@ void main() {
         fullName: 'Têrêsa Trần Thị Hương (Cập nhật)',
         phone: '0909999888',
         dateOfBirth: '1998-12-25',
+        saintName: profile.saintName,
+        gender: MemberGender.male,
       );
       final updateJson = updateReq.toJson();
       expect(updateJson['fullName'], 'Têrêsa Trần Thị Hương (Cập nhật)');
       expect(updateJson['phone'], '0909999888');
       expect(updateJson['dateOfBirth'], '1998-12-25');
+      expect(updateJson['gender'], 'Male');
+      expect(updateJson['saintName'], 'Têrêsa');
+      expect(
+        const UpdateMyMemberProfileRequest(fullName: 'Ca viên').toJson(),
+        isNot(contains('gender')),
+      );
     });
 
     test(

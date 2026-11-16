@@ -141,20 +141,216 @@ class ErrorMessages {
         'Không thể kết nối máy chủ. Vui lòng kiểm tra kết nối mạng.',
     'TIMEOUT_ERROR': 'Kết nối mất nhiều thời gian. Vui lòng thử lại.',
     'SERVER_ERROR': 'Đã có lỗi hệ thống xảy ra. Vui lòng thử lại sau.',
+    // Additional codes from the backend error catalogue.
+    'UNAUTHORIZED': 'Bạn cần đăng nhập.',
+    'FORBIDDEN': 'Bạn không có quyền thực hiện thao tác này.',
+    'NOT_FOUND': 'Không tìm thấy dữ liệu.',
+    'CONFLICT': 'Thao tác xung đột với trạng thái hiện tại.',
+    'INTERNAL_ERROR': 'Lỗi hệ thống, vui lòng thử lại.',
+    'RATE_LIMIT_EXCEEDED':
+        'Bạn gửi quá nhiều lần, vui lòng thử lại sau ít phút.',
+    'LOOKUP_NOT_FOUND': 'Không tìm thấy mục danh mục.',
+    'LOOKUP_NAME_DUPLICATE': 'Tên này đã tồn tại.',
+    'LOOKUP_IN_USE': 'Mục này đang được sử dụng, không thể vô hiệu hoá.',
+    'LOOKUP_INACTIVE': 'Mục này đã bị vô hiệu hoá.',
+    'AUTH_PASSWORD_CHANGE_REQUIRED': 'Bạn cần đổi mật khẩu trước khi tiếp tục.',
+    'AUTH_TOKEN_INVALID': 'Phiên đăng nhập không hợp lệ.',
+    'AUTH_TOKEN_EXPIRED': 'Phiên đăng nhập đã hết hạn.',
+    'AUTH_REFRESH_TOKEN_NOT_FOUND': 'Phiên đăng nhập không tồn tại.',
+    'AUTH_REFRESH_TOKEN_REVOKED': 'Phiên đăng nhập đã bị thu hồi.',
+    'AUTH_GOOGLE_TOKEN_INVALID':
+        'Đăng nhập Google không hợp lệ, vui lòng thử lại.',
+    'AUTH_EMAIL_REQUIRED': 'Vui lòng nhập email.',
+    'AUTH_REFRESH_TOKEN_REQUIRED': 'Thiếu refresh token.',
+    'AUTH_GOOGLE_TOKEN_REQUIRED': 'Thiếu Google ID token.',
+    'USER_NOT_FOUND': 'Không tìm thấy tài khoản.',
+    'USER_EMAIL_ALREADY_EXISTS': 'Email này đã được sử dụng.',
+    'USER_ALREADY_INACTIVE': 'Tài khoản đã ở trạng thái vô hiệu.',
+    'USER_ALREADY_ACTIVE': 'Tài khoản đang hoạt động.',
+    'USER_CANNOT_MODIFY_SELF':
+        'Không thể tự đổi quyền hoặc vô hiệu hoá chính mình.',
+    'USER_LAST_ADMIN': 'Không thể xoá quyền của quản trị viên cuối cùng.',
+    'USER_STILL_DIRECTING': 'Người này còn đang phụ trách ca đoàn hoặc là ca trưởng thay thế của sự kiện sắp tới, hãy giao cho người khác trước.',
+    'ROLE_NOT_FOUND': 'Không tìm thấy vai trò.',
+    'MEMBER_REGISTRATION_NOT_FOUND': 'Không tìm thấy đăng ký gia nhập.',
+    'AVATAR_FILE_REQUIRED': 'Vui lòng chọn ảnh đại diện.',
+    'AVATAR_FILE_TYPE_NOT_ALLOWED': 'Ảnh đại diện chỉ nhận JPG, PNG hoặc WEBP.',
+    'AVATAR_FILE_TOO_LARGE': 'Ảnh đại diện tối đa 2 MB.',
+    'MEMBER_PROFILE_ALREADY_EXISTS': 'Tài khoản này đã có hồ sơ ca viên.',
+    'SKILL_NOT_FOUND': 'Không tìm thấy kỹ năng.',
+    'SKILL_NAME_DUPLICATE': 'Kỹ năng này đã tồn tại trong nhóm.',
+    'SKILL_INACTIVE': 'Kỹ năng đã bị vô hiệu hoá.',
+    'SKILL_IN_USE': 'Kỹ năng đang được bài hát sử dụng, không thể đổi nhóm.',
+    'SKILL_CATEGORY_NOT_FOUND': 'Không tìm thấy nhóm kỹ năng.',
+    'MEMBER_SKILL_NOT_APPROVED': 'Kỹ năng chưa được duyệt.',
+    'LITURGICAL_NAME_TRANSLATION_NOT_FOUND':
+        'Không tìm thấy bản dịch tên phụng vụ.',
+    'LITURGICAL_NAME_TRANSLATION_DUPLICATE':
+        'Tên tiếng Anh này đã có bản dịch.',
+    'LITURGICAL_EVENT_ALREADY_PUBLISHED': 'Sự kiện đã công bố, không thể sửa.',
+    'LITURGICAL_EVENT_NOT_PUBLISHED': 'Sự kiện chưa được công bố.',
+    'LITURGICAL_EVENT_ALREADY_PASSED': 'Sự kiện đã diễn ra.',
+    'LITURGICAL_EVENT_DATE_OUTSIDE_LITURGICAL_SEASON': 'Ngày sự kiện không thuộc mùa phụng vụ đã chọn (được phép sớm hơn ngày bắt đầu mùa 1 ngày cho lễ vọng).',
+    'LITURGICAL_EVENT_GENERATION_RANGE_INVALID': 'Khoảng ngày không hợp lệ: không bắt đầu trong quá khứ và dài tối đa 62 ngày.',
+    'LITURGICAL_SEASON_DATE_OVERLAP':
+        'Khoảng thời gian trùng với mùa phụng vụ khác.',
+    'LITURGICAL_SEASON_DATE_INVALID': 'Ngày kết thúc phải sau ngày bắt đầu.',
+    'SONG_NOT_FOUND': 'Không tìm thấy bài hát.',
+    'SONG_INACTIVE': 'Bài hát đã bị vô hiệu hoá.',
+    'SONG_TITLE_DUPLICATE': 'Bài hát cùng tên đã tồn tại.',
+    'SONG_IN_USE': 'Bài hát đã được dùng trong danh sách bài hát, buổi tập hoặc bài luyện tập, không thể xoá.',
+    'SONG_CLASSIFICATION_DUPLICATE': 'Bài hát đã được phân loại theo mục này.',
+    'SONG_CLASSIFICATION_TARGET_INVALID': 'Đối tượng phân loại không hợp lệ.',
+    'SONG_THEME_PARENT_INVALID': 'Chủ đề cha không hợp lệ.',
+    'SONG_THEME_HAS_ACTIVE_CHILDREN':
+        'Chủ đề còn chủ đề con đang hoạt động, hãy tắt chủ đề con trước.',
+    'SONG_SKILL_REQUIREMENT_DUPLICATE':
+        'Kỹ năng này đã được khai báo cho bài hát.',
+    'SONG_SKILL_REQUIREMENT_CATEGORY_INVALID':
+        'Kỹ năng không thuộc đúng nhóm bè / nhạc cụ.',
+    'MATERIAL_NOT_FOUND': 'Không tìm thấy tài liệu.',
+    'MATERIAL_FILE_REQUIRED': 'Vui lòng chọn tệp.',
+    'MATERIAL_FILE_TYPE_NOT_ALLOWED': 'Định dạng tệp không được hỗ trợ.',
+    'MATERIAL_FILE_TOO_LARGE': 'Tệp vượt quá dung lượng cho phép.',
+    'MATERIAL_LYRICS_SOURCE_INVALID': 'Lời bài hát cần đúng một trong hai: tệp Word hoặc nội dung gõ trực tiếp.',
+    'MATERIAL_NOT_SHEET_MUSIC': 'Chỉ trích được lời từ bản nhạc.',
+    'MATERIAL_AUDIO_INVALID': 'Không đọc được độ dài tệp âm thanh. Tệp bị hỏng hoặc không đúng định dạng.',
+    'MATERIAL_NOT_AUDIO':
+        'Chỉ gắn lời có mốc thời gian vào audio mẫu hoặc bản nhạc tương tác.',
+    'MATERIAL_NOT_LYRICS': 'Tài liệu lời không tồn tại, không phải lời bài hát hoặc thuộc bài hát khác.',
+    'TIMED_LYRICS_NOT_FOUND': 'Audio này chưa có lời theo mốc thời gian.',
+    'TIMED_LYRICS_EXCEEDS_DURATION': 'Mốc thời gian vượt quá độ dài của audio.',
+    'TIMED_LYRICS_LINES_INVALID': 'Các dòng lời phải theo thứ tự, kết thúc sau khi bắt đầu và không chồng nhau.',
+    'LYRICS_EXTRACTION_NOT_FOUND':
+        'Không tìm thấy lượt trích lời hoặc kết quả đã hết hạn.',
+    'LYRICS_EXTRACTION_INTERRUPTED':
+        'Máy chủ khởi động lại khi đang trích lời, vui lòng thử lại.',
+    'MIDI_INVALID_FILE': 'Tệp MIDI không hợp lệ.',
+    'MIDI_FORMAT_UNSUPPORTED': 'Định dạng MIDI chưa được hỗ trợ.',
+    'MIDI_NO_PLAYABLE_NOTES': 'Tệp MIDI không có nốt nào để phát.',
+    'MIDI_LIMIT_EXCEEDED': 'Tệp MIDI quá dài hoặc quá nhiều nốt.',
+    'SONG_LIST_NOT_FOUND': 'Không tìm thấy danh sách bài hát.',
+    'SONG_LIST_ALREADY_SUBMITTED': 'Danh sách đã được gửi duyệt.',
+    'SONG_LIST_ALREADY_APPROVED': 'Danh sách đã được phê duyệt.',
+    'SONG_LIST_EVENT_HAS_APPROVED_VERSION':
+        'Sự kiện này đã có danh sách được duyệt.',
+    'SONG_LIST_ITEM_NOT_FOUND': 'Không tìm thấy bài hát trong danh sách.',
+    'SLOT_NOT_FOUND': 'Không tìm thấy vị trí phụng vụ.',
+    'SONG_LIST_CANNOT_BE_REVISED':
+        'Chỉ tạo phiên bản mới khi danh sách bị từ chối hoặc cần sửa.',
+    'EVENT_PARTICIPATION_NOT_FOUND': 'Không tìm thấy yêu cầu tham gia.',
+    'EVENT_PARTICIPATION_ALREADY_REQUESTED': 'Đã gửi yêu cầu cho ca viên này.',
+    'ROSTER_NOT_FOUND': 'Không tìm thấy bảng phân công.',
+    'ROSTER_ALREADY_EXISTS': 'Sự kiện này đã có bảng phân công.',
+    'ROSTER_NOT_FINALIZED': 'Bảng phân công chưa chốt, chưa thể gửi thông báo.',
+    'ROSTER_SONG_LIST_NOT_APPROVED':
+        'Phải duyệt danh sách bài hát trước khi chốt phân công.',
+    'ROSTER_INSUFFICIENT_MEMBERS': 'Không đủ người cho một số bè hoặc nhạc cụ.',
+    'ROSTER_ASSIGNMENT_NOT_FOUND': 'Không tìm thấy dòng phân công.',
+    'ROSTER_ASSIGNMENT_DUPLICATE': 'Ca viên đã được phân công vị trí này.',
+    'PERSONNEL_REQUIREMENT_NOT_FOUND': 'Không tìm thấy yêu cầu nhân sự.',
+    'PERSONNEL_REQUIRED_COUNT_INVALID': 'Số lượng người phải lớn hơn 0.',
+    'PERSONNEL_REQUIREMENT_DUPLICATE':
+        'Kỹ năng này đã được khai báo cho bài hát.',
+    'REHEARSAL_TIME_INVALID': 'Giờ kết thúc phải sau giờ bắt đầu.',
+    'REHEARSAL_ALREADY_PASSED': 'Buổi tập đã diễn ra.',
+    'REHEARSAL_ATTENDANCE_NOT_FOUND': 'Không tìm thấy bản ghi điểm danh.',
+    'REHEARSAL_ATTENDANCE_ALREADY_RECORDED': 'Ca viên này đã được điểm danh.',
+    'REHEARSAL_ATTENDANCE_MEMBER_DUPLICATE':
+        'Một ca viên xuất hiện nhiều lần trong danh sách điểm danh.',
+    'REHEARSAL_SONG_DUPLICATE':
+        'Một bài hát xuất hiện nhiều lần trong danh sách bài của buổi tập.',
+    'REHEARSAL_RECORDING_NOT_FOUND': 'Không tìm thấy bản thu buổi tập.',
+    'REHEARSAL_RECORDING_REQUIRED': 'Vui lòng chọn tệp ghi âm.',
+    'REHEARSAL_RECORDING_TYPE_NOT_ALLOWED': 'Định dạng ghi âm không được hỗ trợ (chỉ nhận .webm, .ogg, .m4a, .mp3, .wav).',
+    'REHEARSAL_RECORDING_TOO_LARGE': 'Tệp ghi âm vượt quá 20 MB.',
+    'PRACTICE_NOT_ASSIGNED_TO_MEMBER': 'Bài tập này không dành cho bạn.',
+    'PRACTICE_SUBMISSION_NOT_FOUND': 'Không tìm thấy bản thu.',
+    'PRACTICE_SUBMISSION_NOT_REVIEWED':
+        'Bản thu chưa được chấm, vui lòng chấm trước khi nhận xét thêm.',
+    'PRACTICE_SUBMISSION_CONFLICT':
+        'Bản thu vừa được nộp từ thao tác khác, vui lòng tải lại.',
+    'PRACTICE_AUDIO_REQUIRED': 'Vui lòng chọn tệp ghi âm.',
+    'PRACTICE_AUDIO_TYPE_NOT_ALLOWED': 'Định dạng ghi âm không được hỗ trợ.',
+    'PRACTICE_AUDIO_TOO_LARGE': 'Tệp ghi âm vượt quá dung lượng cho phép.',
+    'DIRECTOR_NOTE_TARGET_REQUIRED':
+        'Phải chọn ngày hoặc sự kiện để gửi ghi chú.',
+    'DIRECTOR_NOTE_NOT_FOUND': 'Không tìm thấy ghi chú.',
+    'DIRECTOR_NOTE_RECIPIENT_INVALID': 'Người nhận không hợp lệ — ghi chú chỉ gửi ca trưởng đang hoạt động, chat chỉ giữa cha xứ và ca trưởng.',
+    'SETTING_NOT_FOUND': 'Không tìm thấy cấu hình.',
+    'SETTING_VALUE_TYPE_MISMATCH':
+        'Giá trị không đúng kiểu dữ liệu đã khai báo.',
+    'SETTING_VALUE_OUT_OF_RANGE': 'Giá trị nằm ngoài khoảng cho phép.',
+    'REPORT_TYPE_NOT_SUPPORTED': 'Loại báo cáo không được hỗ trợ.',
+    'EXTERNAL_EMAIL_FAILED': 'Không gửi được email, vui lòng thử lại.',
+    'EXTERNAL_AI_FAILED': 'Dịch vụ AI không phản hồi, vui lòng thử lại.',
+    'CHOIR_NAME_ALREADY_EXISTS': 'Tên ca đoàn đã tồn tại.',
+    'MASS_SCHEDULE_NOT_FOUND': 'Không tìm thấy giờ lễ cố định.',
+    'MASS_SCHEDULE_SLOT_TAKEN':
+        'Đã có giờ lễ cố định khác vào thứ, giờ và nơi cử hành này.',
+    'DIRECTOR_TRAINING_CERTIFICATE_REQUIRED': 'Vui lòng chọn file chứng chỉ.',
+    'DIRECTOR_TRAINING_CERTIFICATE_TYPE_NOT_ALLOWED':
+        'Chứng chỉ chỉ nhận PDF, JPG hoặc PNG.',
+    'DIRECTOR_TRAINING_CERTIFICATE_TOO_LARGE': 'Chứng chỉ tối đa 20 MB.',
+    'GOOGLE_AUTH_FAILED': 'Không thể đăng nhập bằng Google. Vui lòng thử lại.',
+    'GOOGLE_CONFIG_ERROR': 'Tính năng đăng nhập Google chưa được cấu hình đúng. Vui lòng liên hệ quản trị viên.',
+    'GOOGLE_INTERRUPTED':
+        'Quá trình chọn tài khoản Google bị gián đoạn. Vui lòng thử lại.',
+    'GOOGLE_TOKEN_EMPTY':
+        'Google chưa trả thông tin xác thực. Vui lòng thử lại.',
+    'MATERIAL_NOTES_INVALID': 'Không thể đọc dữ liệu nốt nhạc.',
+    'MATERIAL_PDF_INVALID': 'Tệp tải về không phải PDF hợp lệ.',
+    'MATERIAL_SCORE_DOWNLOAD_FAILED':
+        'Không thể tải bản nhạc. Vui lòng thử lại.',
+    'MATERIAL_URL_INVALID': 'Liên kết tài liệu không hợp lệ.',
+    'NO_UPCOMING_EVENT': 'Không có sự kiện phụng vụ sắp tới.',
+    'PARTICIPATION_STATUS_INVALID': 'Vui lòng chọn phản hồi hợp lệ.',
+    'PLATFORM_NOT_SUPPORTED': 'Thiết bị này chưa hỗ trợ đăng nhập bằng Google.',
+    'PRACTICE_DRAFT_INVALID':
+        'Hãy chọn bản thu MP3, M4A hoặc WAV hợp lệ, tối đa 20 MB.',
+    'SESSION_CHANGED': 'Phiên đăng nhập đã thay đổi. Vui lòng thử lại.',
   };
 
+  static const _defaultMessage = 'Đã có lỗi xảy ra. Vui lòng thử lại.';
+
   static String getMessage(String code, {String? fallback}) {
-    return _codeMap[code] ?? fallback ?? 'Đã có lỗi xảy ra. Vui lòng thử lại.';
+    return _codeMap[code] ?? fallback ?? _defaultMessage;
   }
 
-  static String forException(dynamic error, {String? defaultMessage}) {
-    if (error is AppException) {
-      if (error.code.isNotEmpty) {
-        final mapped = _codeMap[error.code];
-        if (mapped != null) return mapped;
+  static String forHttpStatus(int statusCode, {String? fallback}) =>
+      switch (statusCode) {
+        400 || 422 => getMessage('VALIDATION_FAILED'),
+        401 => getMessage('UNAUTHORIZED'),
+        403 => getMessage('FORBIDDEN'),
+        404 => getMessage('NOT_FOUND'),
+        408 => getMessage('TIMEOUT_ERROR'),
+        409 => getMessage('CONFLICT'),
+        413 => 'Tệp tải lên vượt quá dung lượng cho phép.',
+        429 => getMessage('RATE_LIMIT_EXCEEDED'),
+        >= 500 => getMessage('INTERNAL_ERROR'),
+        _ => fallback ?? _defaultMessage,
+      };
+
+  static String forException(Object? error, {String? defaultMessage}) {
+    if (error is! AppException) return defaultMessage ?? _defaultMessage;
+
+    if (error.code == 'VALIDATION_FAILED') {
+      for (final codes in error.fieldErrors?.values ?? const <List<String>>[]) {
+        for (final code in codes) {
+          final message = _codeMap[code];
+          if (code != 'VALIDATION_FAILED' && message != null) {
+            return message;
+          }
+        }
       }
-      if (error.message.isNotEmpty) return error.message;
     }
-    return defaultMessage ?? 'Đã có lỗi xảy ra. Vui lòng thử lại.';
+
+    final statusCode = error.statusCode;
+    return getMessage(
+      error.code,
+      fallback: statusCode == null
+          ? defaultMessage
+          : forHttpStatus(statusCode, fallback: defaultMessage),
+    );
   }
 }
