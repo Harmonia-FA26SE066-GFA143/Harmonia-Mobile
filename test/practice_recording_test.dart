@@ -117,6 +117,7 @@ void main() {
   late List<String> recordCalls;
   late List<String> playerCalls;
   String? recordingPath;
+  Map<dynamic, dynamic>? recordingConfig;
   String? playerId;
   bool failPlayback = false;
   bool failPlayerStop = false;
@@ -144,6 +145,7 @@ void main() {
     recordCalls = [];
     playerCalls = [];
     recordingPath = null;
+    recordingConfig = null;
     playerId = null;
     failPlayback = false;
     failPlayerStop = false;
@@ -189,7 +191,8 @@ void main() {
       }
       if (call.method == 'hasPermission') return true;
       if (call.method == 'start') {
-        recordingPath = args!['path'] as String;
+        recordingConfig = args!;
+        recordingPath = args['path'] as String;
         File(recordingPath!).writeAsBytesSync(List.filled(64, 1));
       }
       if (call.method == 'stop') return recordingPath;
@@ -344,6 +347,10 @@ void main() {
   ) async {
     await open(tester);
     await start(tester);
+    expect(recordingPath, endsWith('.wav'));
+    expect(recordingConfig?['encoder'], 'wav');
+    expect(recordingConfig?['sampleRate'], 16000);
+    expect(recordingConfig?['numChannels'], 1);
     await stop(tester);
 
     expect(recordCalls, contains('stop'));

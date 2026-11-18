@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,6 +10,7 @@ import '../../../core/errors/app_exceptions.dart';
 import '../../../core/network/api_client.dart';
 import '../../music/data/music_dto.dart';
 import '../../notifications/data/notification_dto.dart';
+import '../../practice/data/practice_audio_format.dart';
 import '../../profile/data/member_profile_dto.dart';
 import 'director_nomination.dart';
 import 'staff_documents.dart';
@@ -813,17 +816,24 @@ class StaffOperationsApi {
     ))!,
   );
 
-  Future<AudioScore> scoreDraft(String assignment, String filePath) async =>
-      _score(
-        (await _request<Map<String, dynamic>>(
-          'POST',
-          '/api/practice-assignments/mine/${_id(assignment)}/score',
-          body: FormData.fromMap({
-            'file': await MultipartFile.fromFile(filePath),
-          }),
-          timeout: const Duration(seconds: 90),
-        ))!,
+  Future<AudioScore> scoreDraft(String assignment, String filePath) async {
+    final file = File(filePath);
+    final format = PracticeAudioFormat.fromFile(file);
+    if (format == null) {
+      throw const AppException(
+        code: 'PRACTICE_AUDIO_TYPE_NOT_ALLOWED',
+        message: 'Chỉ chấp nhận tệp MP3, M4A hoặc WAV.',
       );
+    }
+    return _score(
+      (await _request<Map<String, dynamic>>(
+        'POST',
+        '/api/practice-assignments/mine/${_id(assignment)}/score',
+        body: FormData.fromMap({'file': await format.toMultipart(file)}),
+        timeout: const Duration(seconds: 90),
+      ))!,
+    );
+  }
 
   Future<void> review(
     String id, {

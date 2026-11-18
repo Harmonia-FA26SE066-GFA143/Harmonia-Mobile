@@ -25,6 +25,7 @@ import '../../../core/errors/error_messages.dart';
 import '../../staff_workspace/data/staff_operations_api.dart';
 import '../../staff_workspace/presentation/staff_practice_screen.dart'
     show showAudioScore;
+import '../data/practice_audio_format.dart';
 import '../data/practice_models.dart';
 import '../data/practice_repository.dart';
 
@@ -198,13 +199,12 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
       // Permission or assignment state may change while native dialogs are open.
       if (!_ensureCanSubmit()) return;
       final filePath =
-          '${tempDir.path}/harmonia_practice_${widget.assignmentId}_${DateTime.now().millisecondsSinceEpoch}.m4a';
+          '${tempDir.path}/harmonia_practice_${widget.assignmentId}_${DateTime.now().millisecondsSinceEpoch}.wav';
 
       await _audioRecorder.start(
         const RecordConfig(
-          encoder: AudioEncoder.aacLc,
-          bitRate: 128000,
-          sampleRate: 44100,
+          encoder: AudioEncoder.wav,
+          sampleRate: 16000,
           numChannels: 1,
           androidConfig: AndroidRecordConfig(
             useLegacy: false,
@@ -483,10 +483,9 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
     try {
       final file = File(draft.filePath);
       final size = await file.length();
-      final extension = file.path.split('.').last.toLowerCase();
       if (size == 0 ||
           size > 20 * 1024 * 1024 ||
-          !const ['mp3', 'm4a', 'wav'].contains(extension)) {
+          PracticeAudioFormat.fromFile(file) == null) {
         throw const AppException(
           code: 'PRACTICE_DRAFT_INVALID',
           message: 'Hãy chọn bản thu MP3, M4A hoặc WAV hợp lệ, tối đa 20 MB.',
@@ -561,8 +560,7 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
         return;
       }
 
-      final ext = file.path.split('.').last.toLowerCase();
-      if (!['mp3', 'm4a', 'wav'].contains(ext)) {
+      if (PracticeAudioFormat.fromFile(file) == null) {
         if (mounted) {
           setState(() => _isSubmitting = false);
           ScaffoldMessenger.of(context).showSnackBar(

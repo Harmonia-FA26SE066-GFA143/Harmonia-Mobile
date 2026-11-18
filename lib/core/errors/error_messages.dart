@@ -115,7 +115,8 @@ class ErrorMessages {
     'PRACTICE_SUBMISSION_ALREADY_REVIEWED':
         'Bài nộp đã được ca trưởng nhận xét, không thể nộp lại.',
     'PRACTICE_FILE_NOT_FOUND': 'Không tìm thấy tệp bản thu trên thiết bị.',
-    'PRACTICE_FILE_INVALID': 'Tệp bản thu không đúng định dạng hỗ trợ.',
+    'PRACTICE_FILE_INVALID':
+        'Tệp bản thu không hợp lệ. Chỉ nhận MP3, M4A hoặc WAV.',
     'PRACTICE_FILE_TOO_LARGE':
         'Dung lượng tệp bản thu vượt quá giới hạn 20 MB.',
     'PRACTICE_DURATION_INVALID':
@@ -271,7 +272,7 @@ class ErrorMessages {
     'PRACTICE_SUBMISSION_CONFLICT':
         'Bản thu vừa được nộp từ thao tác khác, vui lòng tải lại.',
     'PRACTICE_AUDIO_REQUIRED': 'Vui lòng chọn tệp ghi âm.',
-    'PRACTICE_AUDIO_TYPE_NOT_ALLOWED': 'Định dạng ghi âm không được hỗ trợ.',
+    'PRACTICE_AUDIO_TYPE_NOT_ALLOWED': 'Chỉ chấp nhận tệp MP3, M4A hoặc WAV.',
     'PRACTICE_AUDIO_TOO_LARGE': 'Tệp ghi âm vượt quá dung lượng cho phép.',
     'DIRECTOR_NOTE_TARGET_REQUIRED':
         'Phải chọn ngày hoặc sự kiện để gửi ghi chú.',

@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import '../../../core/constants/api_endpoints.dart';
 import '../../../core/errors/app_exceptions.dart';
 import '../../../core/network/api_client.dart';
+import 'practice_audio_format.dart';
 
 class PracticeApiService {
   final ApiClient _client;
@@ -69,8 +70,8 @@ class PracticeApiService {
           message: 'Tệp âm thanh bản thu rỗng.',
         );
       }
-      final ext = filePath.split('.').last.toLowerCase();
-      if (!['mp3', 'm4a', 'wav'].contains(ext)) {
+      final format = PracticeAudioFormat.fromFile(file);
+      if (format == null) {
         throw AppException(
           code: 'PRACTICE_FILE_INVALID',
           message: 'Định dạng tệp không được hỗ trợ. Chỉ chấp nhận .mp3, .m4a hoặc .wav.',
@@ -88,27 +89,9 @@ class PracticeApiService {
           message: 'Thời lượng bản thu phải từ 1 giây đến 60 phút.',
         );
       }
-      final fileName = file.uri.pathSegments.last;
-      DioMediaType? mediaType;
-      switch (ext) {
-        case 'm4a':
-          mediaType = DioMediaType('audio', 'm4a');
-          break;
-        case 'mp3':
-          mediaType = DioMediaType('audio', 'mpeg');
-          break;
-        case 'wav':
-          mediaType = DioMediaType('audio', 'wav');
-          break;
-      }
-
       final formData = FormData.fromMap({
         'durationSeconds': durationSeconds,
-        'file': await MultipartFile.fromFile(
-          filePath,
-          filename: fileName,
-          contentType: mediaType,
-        ),
+        'file': await format.toMultipart(file),
       });
 
       await _client.dio.post(

@@ -10,6 +10,7 @@ import 'package:harmonia_mobile/core/storage/secure_storage_service.dart';
 import 'package:harmonia_mobile/features/practice/data/practice_api_service.dart';
 import 'package:harmonia_mobile/features/practice/data/practice_models.dart';
 import 'package:harmonia_mobile/features/practice/data/practice_repository.dart';
+import 'package:harmonia_mobile/features/staff_workspace/data/staff_operations_api.dart';
 
 class PermissionApi extends PracticeApiService {
   final Map<String, dynamic> assignment;
@@ -62,6 +63,15 @@ class UploadAdapter implements HttpClientAdapter {
   ) async {
     requests.add(options);
     await requestStream?.drain<void>();
+    if (options.path.endsWith('/score')) {
+      return ResponseBody.fromString(
+        '{"score":80}',
+        200,
+        headers: {
+          Headers.contentTypeHeader: [Headers.jsonContentType],
+        },
+      );
+    }
     return ResponseBody.fromString('', 201);
   }
 
@@ -70,6 +80,66 @@ class UploadAdapter implements HttpClientAdapter {
 }
 
 void main() {
+  test(
+    'submission and draft score send only supported audio MIME types',
+    () async {
+      final temp = Directory.systemTemp.createTempSync(
+        'harmonia-audio-format-',
+      );
+      addTearDown(() => temp.deleteSync(recursive: true));
+      final storage = UploadStorage();
+      final session = UploadSession(storage);
+      addTearDown(session.dispose);
+      final adapter = UploadAdapter();
+      final dio = Dio()..httpClientAdapter = adapter;
+      addTearDown(() => dio.close(force: true));
+      final client = ApiClient(
+        storage: storage,
+        sessionManager: session,
+        customDio: dio,
+      );
+      final practice = PracticeApiService(client);
+      final staff = StaffOperationsApi(client, session.sessionEpoch);
+
+      for (final (extension, contentType) in [
+        ('MP3', 'audio/mpeg'),
+        ('m4a', 'audio/mp4'),
+        ('wav', 'audio/wav'),
+      ]) {
+        final name = 'fixture.$extension';
+        final file = File('${temp.path}/$name')..writeAsBytesSync([1, 2, 3]);
+        await practice.submitRecording(
+          assignmentId: 'fixture',
+          filePath: file.path,
+          durationSeconds: 5,
+        );
+        await staff.scoreDraft('fixture', file.path);
+        for (final request in adapter.requests.reversed.take(2)) {
+          final part = (request.data as FormData).files.single;
+          expect(part.key, 'file');
+          expect(part.value.filename, name);
+          expect(part.value.contentType.toString(), contentType);
+        }
+      }
+
+      final other = File('${temp.path}/fixture.ogg')
+        ..writeAsBytesSync([1, 2, 3]);
+      await expectLater(
+        practice.submitRecording(
+          assignmentId: 'fixture',
+          filePath: other.path,
+          durationSeconds: 5,
+        ),
+        throwsA(isA<AppException>()),
+      );
+      await expectLater(
+        staff.scoreDraft('fixture', other.path),
+        throwsA(isA<AppException>()),
+      );
+      expect(adapter.requests, hasLength(6));
+    },
+  );
+
   for (final changeSession in [false, true]) {
     test(
       'upload remains bound to its original session: change=$changeSession',
