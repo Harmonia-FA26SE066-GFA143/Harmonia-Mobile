@@ -846,6 +846,7 @@ void main() {
         find.byType(MemberChoirArt),
       );
       expect(heroArt.artwork, MemberChoirArtwork.library);
+      expect(heroArt.alignment, Alignment.topCenter);
       expect(find.text('Bài hát và bản phổ'), findsOneWidget);
       expect(
         find.text(

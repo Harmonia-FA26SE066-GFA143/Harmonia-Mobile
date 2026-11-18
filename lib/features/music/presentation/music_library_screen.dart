@@ -856,6 +856,7 @@ class _MusicLibraryScreenState extends ConsumerState<MusicLibraryScreen> {
           MemberChoirArt(
             artwork: MemberChoirArtwork.library,
             height: 164,
+            alignment: Alignment.topCenter,
             gradient: const LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
