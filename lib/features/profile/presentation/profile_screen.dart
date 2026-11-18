@@ -77,10 +77,15 @@ final _profileDateOfBirthFormatter = TextInputFormatter.withFunction((
     if (index == 2 || index == 4) formatted.write('/');
     formatted.write(digits[index]);
   }
+  final addTrailingSeparator =
+      (digits.length == 2 || digits.length == 4) &&
+      digits.length > oldValue.text.replaceAll('/', '').length;
+  if (addTrailingSeparator) formatted.write('/');
   final text = formatted.toString();
   if (text == input) return newValue;
 
   int mapOffset(int offset) {
+    if (offset == input.length) return text.length;
     final digitCount = input.substring(0, offset).replaceAll('/', '').length;
     return digitCount + (digitCount > 2 ? 1 : 0) + (digitCount > 4 ? 1 : 0);
   }
@@ -96,6 +101,15 @@ final _profileDateOfBirthFormatter = TextInputFormatter.withFunction((
         : selection,
   );
 });
+
+final _profileActionButtonStyle = OutlinedButton.styleFrom(
+  foregroundColor: AppColors.statusDanger,
+  backgroundColor: AppColors.statusDangerSoft,
+  minimumSize: const Size(0, 48),
+  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+  side: BorderSide(color: AppColors.statusDanger.withValues(alpha: 0.35)),
+  textStyle: AppTypography.labelLarge.copyWith(fontWeight: FontWeight.bold),
+);
 
 /// Validates user input date string for date of birth.
 /// Returns null if valid (or empty since dateOfBirth is optional).
@@ -360,12 +374,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 14),
+                    Text(
+                      'Tên thánh (không bắt buộc)',
+                      style: AppTypography.labelLarge,
+                    ),
+                    const SizedBox(height: 6),
                     TextFormField(
                       initialValue: saintName,
                       enabled: !isSaving,
                       textCapitalization: TextCapitalization.words,
                       decoration: const InputDecoration(
-                        labelText: 'Tên thánh (không bắt buộc)',
                         hintText: 'Ví dụ: Giuse',
                       ),
                       onChanged: (value) => saintName = value,
@@ -402,11 +420,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       },
                     ),
                     const SizedBox(height: 14),
+                    Text('Giới tính', style: AppTypography.labelLarge),
+                    const SizedBox(height: 6),
                     DropdownButtonFormField<MemberGender>(
-                      icon: const SizedBox.shrink(),
+                      icon: const Icon(Icons.keyboard_arrow_down_rounded),
                       initialValue: selectedGender,
                       isExpanded: true,
-                      decoration: const InputDecoration(labelText: 'Giới tính'),
+                      style: Theme.of(context).textTheme.bodyLarge,
                       hint: const Text('Chưa cập nhật'),
                       items: [
                         for (final gender in MemberGender.values)
@@ -572,6 +592,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               final loading = snapshot.connectionState != ConnectionState.done;
               final availableSkills = snapshot.data ?? const <SkillDto>[];
               selectedSkill ??= availableSkills.firstOrNull;
+              final choiceDecoration = InputDecoration(
+                fillColor: AppColors.surface,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              );
               void close() => Navigator.of(context).pop();
 
               Future<void> submit() async {
@@ -701,9 +727,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 children: [
                                   Text(
                                     'Chuyên môn phụng vụ đăng ký *',
-                                    style: AppTypography.titleMedium,
+                                    style: AppTypography.labelLarge,
                                   ),
-                                  const SizedBox(height: 10),
+                                  const SizedBox(height: 6),
                                   if (loading)
                                     const Padding(
                                       padding: EdgeInsets.all(16),
@@ -726,64 +752,55 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                       ),
                                     )
                                   else
-                                    RadioGroup<SkillDto>(
-                                      groupValue: selectedSkill,
-                                      onChanged: (skill) {
-                                        if (isSubmitting || skill == null) {
-                                          return;
-                                        }
-                                        setModalState(
-                                          () => selectedSkill = skill,
-                                        );
-                                      },
-                                      child: _SkillChoiceScroller(
-                                        children: [
-                                          for (final skill in availableSkills)
-                                            RadioListTile<SkillDto>(
-                                              value: skill,
-                                              enabled: !isSubmitting,
-                                              selected: skill == selectedSkill,
-                                              controlAffinity:
-                                                  ListTileControlAffinity
-                                                      .trailing,
-                                              title: Text(
-                                                skill.name,
-                                                style:
-                                                    AppTypography.titleMedium,
-                                              ),
-                                              subtitle:
-                                                  skill.description
-                                                          ?.trim()
-                                                          .isNotEmpty ==
-                                                      true
-                                                  ? Text(skill.description!)
-                                                  : null,
-                                              secondary: const CircleAvatar(
-                                                backgroundColor:
-                                                    MemberChoirStyle
-                                                        .serviceCanvas,
-                                                foregroundColor:
-                                                    MemberChoirStyle.ink,
-                                                child: Icon(
-                                                  Icons.music_note_rounded,
-                                                  size: 20,
-                                                ),
-                                              ),
-                                              selectedTileColor:
-                                                  MemberChoirStyle.blush,
-                                              tileColor: Colors.white,
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(14),
-                                                side: BorderSide(
-                                                  color: skill == selectedSkill
-                                                      ? MemberChoirStyle.wine
-                                                      : MemberChoirStyle.border,
-                                                ),
-                                              ),
-                                            ),
-                                        ],
+                                    DropdownButtonFormField<SkillDto>(
+                                      icon: const Icon(
+                                        Icons.keyboard_arrow_down_rounded,
                                       ),
+                                      initialValue: selectedSkill,
+                                      isExpanded: true,
+                                      itemHeight: null,
+                                      decoration: choiceDecoration.copyWith(
+                                        prefixIcon: const Icon(
+                                          Icons.music_note_rounded,
+                                          color: MemberChoirStyle.wine,
+                                        ),
+                                      ),
+                                      selectedItemBuilder: (_) => [
+                                        for (final skill in availableSkills)
+                                          Text(
+                                            skill.name,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                      ],
+                                      items: [
+                                        for (final skill in availableSkills)
+                                          DropdownMenuItem(
+                                            value: skill,
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(skill.name),
+                                                if (skill.description
+                                                    case final description?
+                                                    when description
+                                                        .trim()
+                                                        .isNotEmpty)
+                                                  Text(
+                                                    description,
+                                                    style:
+                                                        AppTypography.bodySmall,
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                      ],
+                                      onChanged: isSubmitting
+                                          ? null
+                                          : (skill) => setModalState(
+                                              () => selectedSkill = skill,
+                                            ),
                                     ),
                                   const SizedBox(height: 16),
                                   Text(
@@ -792,17 +809,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                   ),
                                   const SizedBox(height: 6),
                                   DropdownButtonFormField<SkillLevel>(
-                                    icon: const SizedBox.shrink(),
+                                    icon: const Icon(
+                                      Icons.keyboard_arrow_down_rounded,
+                                    ),
                                     initialValue: selectedLevel,
                                     isExpanded: true,
-                                    decoration: InputDecoration(
-                                      fillColor: AppColors.surface,
+                                    decoration: choiceDecoration.copyWith(
                                       prefixIcon: const Icon(
                                         Icons.workspace_premium_outlined,
                                         color: AppColors.statusWarning,
-                                      ),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(14),
                                       ),
                                     ),
                                     items: SkillLevel.values
@@ -1539,12 +1554,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               onPressed: _refreshProfile,
                               child: const Text('Thử lại'),
                             ),
-                            TextButton.icon(
+                            TextButton(
                               onPressed: busy
                                   ? null
                                   : () => _showLogoutDialog(context),
-                              icon: const Icon(Icons.logout_rounded),
-                              label: const Text('Đăng xuất'),
+                              child: const Text(
+                                'Đăng xuất',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
                             ),
                           ],
                         ),
@@ -1694,26 +1712,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             ),
                           ),
                           const SizedBox(height: 10),
-                          OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.statusDanger,
-                              backgroundColor: AppColors.statusDangerSoft,
-                              minimumSize: const Size(0, 48),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
-                              ),
-                              side: BorderSide(
-                                color: AppColors.statusDanger.withValues(
-                                  alpha: 0.35,
-                                ),
-                              ),
-                            ),
+                          OutlinedButton(
+                            style: _profileActionButtonStyle,
                             onPressed: busy
                                 ? null
                                 : () => _showLogoutDialog(context),
-                            icon: const Icon(Icons.logout_rounded),
-                            label: const Text('Đăng xuất'),
+                            child: const Text(
+                              'Đăng xuất',
+                              textAlign: TextAlign.center,
+                            ),
                           ),
                         ],
                       ),
@@ -1891,83 +1898,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 }
 
-class _SkillChoiceScroller extends StatefulWidget {
-  const _SkillChoiceScroller({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  State<_SkillChoiceScroller> createState() => _SkillChoiceScrollerState();
-}
-
-class _SkillChoiceScrollerState extends State<_SkillChoiceScroller> {
-  final _controller = ScrollController(keepScrollOffset: false);
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _scroll(int direction) {
-    final position = _controller.position;
-    final offset =
-        position.pixels + direction * position.viewportDimension * .8;
-    _controller.animateTo(
-      offset.clamp(position.minScrollExtent, position.maxScrollExtent),
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOut,
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      NotificationListener<ScrollMetricsNotification>(
-        onNotification: (_) {
-          setState(() {});
-          return false;
-        },
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxHeight: 232),
-          child: SingleChildScrollView(
-            controller: _controller,
-            child: Column(spacing: 8, children: widget.children),
-          ),
-        ),
-      ),
-      ListenableBuilder(
-        listenable: _controller,
-        builder: (context, _) {
-          if (!_controller.hasClients) return const SizedBox.shrink();
-          final position = _controller.position;
-          if (!position.hasContentDimensions || position.maxScrollExtent == 0) {
-            return const SizedBox.shrink();
-          }
-          return Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              IconButton(
-                tooltip: 'Cuộn lên danh sách kỹ năng',
-                onPressed: position.extentBefore > 0 ? () => _scroll(-1) : null,
-                color: MemberChoirStyle.wine,
-                icon: const Icon(Icons.keyboard_arrow_up_rounded),
-              ),
-              IconButton(
-                tooltip: 'Cuộn xuống danh sách kỹ năng',
-                onPressed: position.extentAfter > 0 ? () => _scroll(1) : null,
-                color: MemberChoirStyle.wine,
-                icon: const Icon(Icons.keyboard_arrow_down_rounded),
-              ),
-            ],
-          );
-        },
-      ),
-    ],
-  );
-}
-
 class _ProfileSummary extends StatelessWidget {
   const _ProfileSummary({
     required this.profile,
@@ -2057,13 +1987,13 @@ class _ProfileSummary extends StatelessWidget {
                 ),
               ],
             ),
-            OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                backgroundColor: MemberChoirStyle.paper,
-              ),
+            OutlinedButton(
+              style: _profileActionButtonStyle,
               onPressed: onEdit,
-              icon: const Icon(Icons.edit_outlined, size: 17),
-              label: const Text('Chỉnh sửa thông tin cá nhân'),
+              child: const Text(
+                'Chỉnh sửa thông tin cá nhân',
+                textAlign: TextAlign.center,
+              ),
             ),
           ],
         ),
@@ -2099,34 +2029,8 @@ class _PersonalInformation extends StatelessWidget {
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: 8,
       children: [
-        Row(
-          spacing: 6,
-          children: [
-            Container(
-              width: 4,
-              height: 14,
-              decoration: BoxDecoration(
-                color: MemberChoirStyle.accent,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Expanded(
-              child: Semantics(
-                header: true,
-                child: Text(
-                  'THÔNG TIN CÁ NHÂN',
-                  style: AppTypography.labelMedium.copyWith(
-                    color: const Color(0xFF615558),
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.6,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+        const _ProfileSectionHeading(title: 'Thông tin cá nhân'),
         Card(
           margin: EdgeInsets.zero,
           child: Padding(
@@ -2182,11 +2086,13 @@ class _ProfileSectionHeading extends StatelessWidget {
     required this.title,
     this.action,
     this.inlineAction = false,
+    this.showAccent = false,
   });
 
   final String title;
   final Widget? action;
   final bool inlineAction;
+  final bool showAccent;
 
   @override
   Widget build(BuildContext context) {
@@ -2197,12 +2103,16 @@ class _ProfileSectionHeading extends StatelessWidget {
           : CrossAxisAlignment.center,
       spacing: 8,
       children: [
-        Container(width: 3, height: 20, color: MemberChoirStyle.wine),
+        if (showAccent)
+          Container(width: 3, height: 20, color: MemberChoirStyle.wine),
         Flexible(
-          child: Text(
-            title,
-            style: AppTypography.titleLarge.copyWith(
-              color: MemberChoirStyle.ink,
+          child: Semantics(
+            header: true,
+            child: Text(
+              title,
+              style: AppTypography.titleLarge.copyWith(
+                color: MemberChoirStyle.ink,
+              ),
             ),
           ),
         ),
@@ -2370,6 +2280,7 @@ class _ProfileRecentPractice extends StatelessWidget {
       children: [
         _ProfileSectionHeading(
           title: 'Luyện tập gần đây',
+          showAccent: true,
           action: TextButton(
             onPressed: () => context.push('/practice-history'),
             child: const Text('Xem tất cả'),

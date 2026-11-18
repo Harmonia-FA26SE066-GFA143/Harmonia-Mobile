@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../app/widgets/app_page_header.dart';
 import '../../../app/widgets/harmonia_blocking_progress.dart';
+import '../../../app/widgets/member_choir_visuals.dart';
 import 'auth_notifier.dart';
 
 class ChangePasswordScreen extends ConsumerStatefulWidget {
@@ -109,12 +111,12 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
       canPop: !widget.isForced,
       child: Scaffold(
         backgroundColor: AppColors.background,
-        appBar: AppBar(
+        appBar: AppPageHeader(
+          gradient: MemberChoirStyle.header,
           title: Text(
             widget.isForced ? 'Bắt buộc đổi mật khẩu' : 'Đổi mật khẩu',
-            style: AppTypography.titleMedium.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
           automaticallyImplyLeading: !widget.isForced,
           centerTitle: true,

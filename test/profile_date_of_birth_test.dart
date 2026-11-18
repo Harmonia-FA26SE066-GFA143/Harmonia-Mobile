@@ -411,9 +411,10 @@ void main() {
         final dobFieldFinder = find.byWidgetPredicate(
           (w) => w is TextField && w.decoration?.hintText == 'dd/mm/yyyy',
         );
-        final saintNameField = find.widgetWithText(
-          TextField,
-          'Tên thánh (không bắt buộc)',
+        final saintNameField = find.byWidgetPredicate(
+          (widget) =>
+              widget is TextField &&
+              widget.decoration?.hintText == 'Ví dụ: Giuse',
         );
         expect(
           tester.widget<TextField>(saintNameField).controller?.text,
@@ -421,9 +422,23 @@ void main() {
         );
         await tester.enterText(saintNameField, '  Têrêsa  ');
 
+        await tester.enterText(dobFieldFinder, '16');
+        expect(
+          tester.widget<TextField>(dobFieldFinder).controller?.text,
+          '16/',
+        );
+        await tester.enterText(dobFieldFinder, '16');
+        expect(tester.widget<TextField>(dobFieldFinder).controller?.text, '16');
+
         await tester.enterText(dobFieldFinder, '160');
         await tester.pumpAndSettle();
         expect(find.text('16/0'), findsOneWidget);
+
+        await tester.enterText(dobFieldFinder, '1605');
+        expect(
+          tester.widget<TextField>(dobFieldFinder).controller?.text,
+          '16/05/',
+        );
 
         await tester.enterText(dobFieldFinder, '16052004');
         await tester.pumpAndSettle();

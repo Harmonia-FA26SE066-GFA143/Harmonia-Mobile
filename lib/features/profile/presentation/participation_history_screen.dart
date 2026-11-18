@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../app/widgets/app_page_header.dart';
+import '../../../app/widgets/member_choir_visuals.dart';
 import '../../../core/errors/error_messages.dart';
 import '../../lookups/data/lookup_dto.dart';
 import '../../lookups/data/lookups_api_service.dart';
@@ -157,10 +159,13 @@ class _ParticipationHistoryScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
+      appBar: const AppPageHeader(
+        gradient: MemberChoirStyle.header,
+        titleFontFamily: MemberChoirStyle.displayFont,
         title: Text(
           'Lịch sử tham gia & luyện tập',
-          style: AppTypography.headlineSmall,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
         ),
       ),
       body: SafeArea(
@@ -173,12 +178,14 @@ class _ParticipationHistoryScreenState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  Text('Mùa phụng vụ', style: AppTypography.labelLarge),
+                  const SizedBox(height: 6),
                   Row(
                     children: [
                       // Season dropdown
                       Expanded(
                         child: DropdownButtonFormField<String?>(
-                          icon: const SizedBox.shrink(),
+                          icon: const Icon(Icons.keyboard_arrow_down_rounded),
                           initialValue: _selectedSeasonId,
                           isExpanded: true,
                           decoration: InputDecoration(
@@ -186,7 +193,6 @@ class _ParticipationHistoryScreenState
                               horizontal: 12,
                               vertical: 10,
                             ),
-                            labelText: 'Mùa phụng vụ',
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
                             ),

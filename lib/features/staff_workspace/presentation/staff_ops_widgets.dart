@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../app/theme/app_typography.dart';
 import '../../../app/widgets/app_page_header.dart';
 import '../../../app/widgets/harmonia_svg_art.dart';
 import '../../../core/errors/error_messages.dart';
@@ -266,6 +267,7 @@ class OpsChoiceField extends StatelessWidget {
     required this.onChanged,
     this.optional = false,
     this.emptyLabel = 'Không chọn',
+    this.labelAbove = false,
   });
   final String label;
   final List<Choice> options;
@@ -273,15 +275,17 @@ class OpsChoiceField extends StatelessWidget {
   final ValueChanged<String?>? onChanged;
   final bool optional;
   final String emptyLabel;
+  final bool labelAbove;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 12),
-    child: DropdownButtonFormField<String>(
-      icon: const SizedBox.shrink(),
+  Widget build(BuildContext context) {
+    final dropdown = DropdownButtonFormField<String>(
+      icon: labelAbove
+          ? const Icon(Icons.keyboard_arrow_down_rounded)
+          : const SizedBox.shrink(),
       key: ValueKey((label, value)),
       initialValue: options.any((choice) => choice.id == value) ? value : null,
-      decoration: InputDecoration(labelText: label),
+      decoration: InputDecoration(labelText: labelAbove ? null : label),
       isExpanded: true,
       items: [
         if (optional) DropdownMenuItem(child: Text(emptyLabel)),
@@ -292,8 +296,21 @@ class OpsChoiceField extends StatelessWidget {
           ),
       ],
       onChanged: onChanged,
-    ),
-  );
+    );
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: labelAbove
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: 6,
+              children: [
+                Text(label, style: AppTypography.labelLarge),
+                dropdown,
+              ],
+            )
+          : dropdown,
+    );
+  }
 }
 
 class OpsChoicePicker extends StatefulWidget {

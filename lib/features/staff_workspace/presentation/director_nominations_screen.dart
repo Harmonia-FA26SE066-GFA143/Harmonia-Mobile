@@ -107,6 +107,7 @@ class _DirectorNominationsState
                   ),
                 OpsChoiceField(
                   label: 'Trạng thái',
+                  labelAbove: true,
                   value: _filter?.wire ?? '',
                   options: [
                     (id: '', name: 'Tất cả'),
@@ -132,43 +133,56 @@ class _DirectorNominationsState
             child: OpsAsync(
               value: ref.watch(provider),
               onRetry: () => ref.invalidate(provider),
-              data: (page) => ListView(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
-                children: [
-                  if (page.items.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 24),
-                      child: Text(
-                        _filter != null
-                            ? 'Không có đề cử ở trạng thái này.'
-                            : member
-                            ? 'Bạn chưa có đề cử được duyệt.'
-                            : 'Chưa có đề cử ca trưởng.',
-                        textAlign: TextAlign.center,
-                      ),
+              data: (page) {
+                const padding = EdgeInsets.fromLTRB(16, 8, 16, 20);
+                final paging = OpsPaging(
+                  page: _page,
+                  previous: _page > 1 ? () => setState(() => _page--) : null,
+                  next: page.hasNextPage ? () => setState(() => _page++) : null,
+                );
+                if (page.items.isEmpty) {
+                  return Padding(
+                    padding: padding,
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: Center(
+                            child: Text(
+                              _filter != null
+                                  ? 'Không có đề cử ở trạng thái này.'
+                                  : member
+                                  ? 'Bạn chưa có đề cử được duyệt.'
+                                  : 'Chưa có đề cử ca trưởng.',
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                        paging,
+                      ],
                     ),
-                  for (final nomination in page.items)
-                    OpsTile(
-                      icon: Icons.workspace_premium_outlined,
-                      title: nomination.memberName,
-                      subtitle: [
-                        nomination.status.label,
-                        ?nomination.proposedChoir,
-                        if (nomination.createdAt case final date?) opsDay(date),
-                      ].join(' · '),
-                      onTap: () => context.push(
-                        opsPath('director-nominations', nomination.id),
+                  );
+                }
+                return ListView(
+                  padding: padding,
+                  children: [
+                    for (final nomination in page.items)
+                      OpsTile(
+                        icon: Icons.workspace_premium_outlined,
+                        title: nomination.memberName,
+                        subtitle: [
+                          nomination.status.label,
+                          ?nomination.proposedChoir,
+                          if (nomination.createdAt case final date?)
+                            opsDay(date),
+                        ].join(' · '),
+                        onTap: () => context.push(
+                          opsPath('director-nominations', nomination.id),
+                        ),
                       ),
-                    ),
-                  OpsPaging(
-                    page: _page,
-                    previous: _page > 1 ? () => setState(() => _page--) : null,
-                    next: page.hasNextPage
-                        ? () => setState(() => _page++)
-                        : null,
-                  ),
-                ],
-              ),
+                    paging,
+                  ],
+                );
+              },
             ),
           ),
         ],

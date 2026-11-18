@@ -75,9 +75,9 @@ void main() {
     await tester.tap(edit);
     await tester.pumpAndSettle();
 
-    final saintNameField = find.widgetWithText(
-      TextField,
-      'Tên thánh (không bắt buộc)',
+    final saintNameField = find.byWidgetPredicate(
+      (widget) =>
+          widget is TextField && widget.decoration?.hintText == 'Ví dụ: Giuse',
     );
     expect(tester.widget<TextField>(saintNameField).controller?.text, 'Giuse');
 
