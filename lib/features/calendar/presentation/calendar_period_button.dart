@@ -25,11 +25,9 @@ class CalendarPeriodButton extends StatelessWidget {
     tooltip: tooltip,
     onPressed: onPressed,
     style: _style,
-    icon: isPrevious
-        ? const Icon(Icons.chevron_left_rounded, size: 20)
-        : const Text(
-            'Sau',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-          ),
+    icon: Icon(
+      isPrevious ? Icons.chevron_left_rounded : Icons.chevron_right_rounded,
+      size: 20,
+    ),
   );
 }

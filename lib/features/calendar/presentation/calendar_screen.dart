@@ -148,11 +148,14 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     final timelineItems = _dayTimeline(events, rehearsals);
     final today = _today();
     final isPastDay = _selectedDay.isBefore(today);
-    final loading = eventsState.isLoading || rehearsalsState.isLoading;
-    final incomplete = eventsState.hasError || rehearsalsState.hasError;
+    final weekEnd = _addDays(_weekStart, 6);
+    final isPastWeek = weekEnd.isBefore(today);
+    final loading =
+        rehearsalsState.isLoading || (!isPastWeek && eventsState.isLoading);
+    final incomplete =
+        rehearsalsState.hasError || (!isPastWeek && eventsState.hasError);
 
     final isMonthTab = _tab == 1;
-    final weekEnd = _addDays(_weekStart, 6);
     final weekEvents = [
       for (final event in events)
         if (!DateUtils.dateOnly(event.date).isBefore(_weekStart) &&
@@ -206,7 +209,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           if (!isMonthTab) ...[
-                            _weekNavigator(today, weekSeason),
+                            _weekNavigator(weekSeason),
                             const SizedBox(height: 14),
                             _daySelector(today, events, rehearsals),
                             const SizedBox(height: 18),
@@ -221,7 +224,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                   backgroundColor: Color(0xFFE7EEFF),
                                 ),
                               ),
-                            if (eventsState.hasError)
+                            if (!isPastWeek && eventsState.hasError)
                               _sourceError(
                                 eventsState.error!,
                                 'Thử lại lịch phục vụ',
@@ -237,15 +240,11 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                   rehearsalsForRangeProvider(rehearsalRange),
                                 ),
                               ),
-                            if (isPastDay)
-                              _notice(
-                                'Chưa có lịch phục vụ hoặc lịch tập trong ngày đã qua.',
-                              )
-                            else if (timelineItems.isEmpty &&
+                            if (timelineItems.isEmpty &&
                                 !loading &&
                                 !incomplete)
                               _notice(
-                                'Chưa có lịch phục vụ hoặc lịch tập trong ngày ${DateFormat('dd/MM/yyyy').format(_selectedDay)}.',
+                                'Chưa có ${isPastDay ? 'lịch tập' : 'lịch phục vụ hoặc lịch tập'} trong ngày ${DateFormat('dd/MM/yyyy').format(_selectedDay)}.',
                               ),
                             if (timelineItems.isNotEmpty)
                               for (var i = 0; i < timelineItems.length; i++)
@@ -258,7 +257,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                 (weekEvents.isNotEmpty ||
                                     weekRehearsals.isNotEmpty))
                               _weekSummaryCard(
-                                eventCount: weekEvents.length,
+                                eventCount: isPastWeek && weekEvents.isEmpty
+                                    ? null
+                                    : weekEvents.length,
                                 rehearsalCount: weekRehearsals.length,
                               ),
                           ] else ...[
@@ -523,7 +524,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     ),
   );
 
-  Widget _weekNavigator(DateTime today, String weekSeason) {
+  Widget _weekNavigator(String weekSeason) {
     final seasonColor = calendarSeasonColor(weekSeason);
     return _panel(
       padding: const EdgeInsets.all(12),
@@ -535,9 +536,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               CalendarPeriodButton(
                 isPrevious: true,
                 tooltip: 'Tuần trước',
-                onPressed: _weekStart.isAfter(_monday(today))
-                    ? () => _moveWeek(-7)
-                    : null,
+                onPressed: () => _moveWeek(-7),
               ),
               Expanded(
                 child: Padding(
@@ -721,7 +720,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 : const Color(0xFFF0F3FF),
             onTap: () => setState(() => _selectedDay = day),
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
+              padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 2),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -734,7 +733,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
@@ -751,7 +750,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Container(
                     width: selected ? 6 : 5,
                     height: selected ? 6 : 5,
@@ -959,7 +958,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   }
 
   Widget _weekSummaryCard({
-    required int eventCount,
+    required int? eventCount,
     required int rehearsalCount,
   }) => Padding(
     padding: const EdgeInsets.only(top: 12),
@@ -993,13 +992,14 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           Row(
             spacing: 10,
             children: [
-              Expanded(
-                child: _weekStatBox(
-                  value: '$eventCount',
-                  label: 'Chương trình phục vụ',
-                  valueColor: MemberChoirStyle.accent,
+              if (eventCount != null)
+                Expanded(
+                  child: _weekStatBox(
+                    value: '$eventCount',
+                    label: 'Chương trình phục vụ',
+                    valueColor: MemberChoirStyle.accent,
+                  ),
                 ),
-              ),
               Expanded(
                 child: _weekStatBox(
                   value: '$rehearsalCount',

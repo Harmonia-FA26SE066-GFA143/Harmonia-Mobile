@@ -32,6 +32,7 @@ const _stitchSurfaceContainerLow = Color(0xFFF0F3FF);
 const _stitchSurfaceContainer = Color(0xFFE7EEFF);
 const _stitchSurfaceContainerHigh = Color(0xFFDEE8FF);
 const _stitchSurfaceContainerHighest = Color(0x66D8E3FB);
+const _outsideMonthText = Color(0xFFA4A4AB);
 
 const _stitchCardShadow = [
   BoxShadow(color: Color(0x0A1B2541), blurRadius: 20, offset: Offset(0, 4)),
@@ -194,13 +195,7 @@ class _LiturgicalMonthCalendarState
                             foregroundColor: _stitchPrimary,
                             hoverColor: _stitchSurfaceContainer,
                           ),
-                          icon: const Text(
-                            'Sau',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                          icon: const Icon(Icons.chevron_right_rounded),
                           onPressed: () =>
                               setDialogState(() => tempYear = tempYear + 1),
                         ),
@@ -323,6 +318,10 @@ class _LiturgicalMonthCalendarState
             .where((rehearsal) => _inCurrentMonth(_parishDate(rehearsal)))
             .toList();
     final eventDays = events.map((event) => event.date.day).toSet();
+    final assignmentDays = events
+        .where((event) => event.assignedVocalPart.trim().isNotEmpty)
+        .map((event) => event.date.day)
+        .toSet();
     final rehearsalDays = rehearsals
         .map((rehearsal) => _parishDate(rehearsal).day)
         .toSet();
@@ -367,117 +366,115 @@ class _LiturgicalMonthCalendarState
       spacing: 16,
       children: [
         // Month & season navigator card
-        DecoratedBox(
+        Container(
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: _stitchCardBorder),
             boxShadow: _stitchCardShadow,
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              spacing: 12,
-              children: [
-                Row(
-                  children: [
-                    CalendarPeriodButton(
-                      isPrevious: true,
-                      tooltip: 'Tháng trước',
-                      onPressed: _previousMonth,
-                    ),
-                    Expanded(
-                      child: Center(
-                        child: TextButton(
-                          onPressed: () => _pickMonthYear(context),
-                          style:
-                              TextButton.styleFrom(
-                                foregroundColor: _stitchPrimary,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 6,
-                                ),
-                                minimumSize: const Size(0, 36),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ).copyWith(
-                                overlayColor: const WidgetStatePropertyAll(
-                                  _stitchSurfaceContainer,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 12,
+            children: [
+              Row(
+                children: [
+                  CalendarPeriodButton(
+                    isPrevious: true,
+                    tooltip: 'Tháng trước',
+                    onPressed: _previousMonth,
+                  ),
+                  Expanded(
+                    child: Center(
+                      child: TextButton(
+                        onPressed: () => _pickMonthYear(context),
+                        style:
+                            TextButton.styleFrom(
+                              foregroundColor: _stitchPrimary,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              minimumSize: const Size(0, 36),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ).copyWith(
+                              overlayColor: const WidgetStatePropertyAll(
+                                _stitchSurfaceContainer,
+                              ),
+                            ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          spacing: 4,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                'Tháng ${_currentMonth.month}, ${_currentMonth.year}',
+                                textAlign: TextAlign.center,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.titleMedium.copyWith(
+                                  color: _stitchPrimary,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            spacing: 4,
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  'Tháng ${_currentMonth.month}, ${_currentMonth.year}',
-                                  textAlign: TextAlign.center,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: AppTypography.titleMedium.copyWith(
-                                    color: _stitchPrimary,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                    CalendarPeriodButton(
-                      isPrevious: false,
-                      tooltip: 'Tháng sau',
-                      onPressed: _nextMonth,
-                    ),
-                  ],
-                ),
-                if (seasons.isNotEmpty) ...[
-                  const Divider(height: 1, color: _stitchDivider),
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: _stitchSurfaceContainerLow,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: _stitchCardBorder),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 10,
-                            height: 10,
-                            decoration: BoxDecoration(
-                              color: _seasonPipColor(seasons.first),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              seasons.join(' · ').toUpperCase(),
-                              style: AppTypography.labelSmall.copyWith(
-                                color: _stitchPrimary,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.6,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                  ),
+                  CalendarPeriodButton(
+                    isPrevious: false,
+                    tooltip: 'Tháng sau',
+                    onPressed: _nextMonth,
                   ),
                 ],
+              ),
+              if (seasons.isNotEmpty) ...[
+                const Divider(height: 1, color: _stitchDivider),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: _stitchSurfaceContainerLow,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: _stitchCardBorder),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: _seasonPipColor(seasons.first),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            seasons.join(' · ').toUpperCase(),
+                            style: AppTypography.labelSmall.copyWith(
+                              color: _stitchPrimary,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.6,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
-            ),
+            ],
           ),
         ),
 
@@ -490,10 +487,10 @@ class _LiturgicalMonthCalendarState
             boxShadow: _stitchCardShadow,
           ),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
-              spacing: 8,
+              spacing: 6,
               children: [
                 const Row(
                   children: [
@@ -535,11 +532,11 @@ class _LiturgicalMonthCalendarState
                   itemCount: cells,
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 7,
-                    mainAxisSpacing: 8,
+                    mainAxisSpacing: 4,
                     crossAxisSpacing: 4,
                     mainAxisExtent:
-                        (MediaQuery.textScalerOf(context).scale(16) + 32).clamp(
-                          48.0,
+                        (MediaQuery.textScalerOf(context).scale(16) + 28).clamp(
+                          44.0,
                           82.0,
                         ),
                   ),
@@ -556,7 +553,7 @@ class _LiturgicalMonthCalendarState
                           child: Text(
                             '${date.day}',
                             style: AppTypography.bodyMedium.copyWith(
-                              color: _stitchOutline.withValues(alpha: 0.40),
+                              color: _outsideMonthText,
                               fontSize: 14,
                             ),
                           ),
@@ -569,22 +566,18 @@ class _LiturgicalMonthCalendarState
                       isSelected: DateUtils.isSameDay(date, selected),
                       hasEvent: eventDays.contains(number),
                       hasRehearsal: rehearsalDays.contains(number),
+                      hasAssignment: assignmentDays.contains(number),
                       onTap: () => _onDayTapped(date, events, rehearsals),
                     );
                   },
                 ),
-                const SizedBox(height: 4),
                 const Divider(height: 1, color: _stitchCardBorder),
-                const SizedBox(height: 2),
-                const Wrap(
-                  spacing: 16,
-                  runSpacing: 6,
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
                   children: [
-                    _CalendarLegend(
-                      color: MemberChoirStyle.wine,
-                      label: 'Lịch phụng vụ',
-                    ),
-                    _CalendarLegend(color: _stitchSecondary, label: 'Lịch tập'),
+                    for (final activity in _CalendarActivity.values)
+                      _CalendarLegend(activity: activity),
                   ],
                 ),
               ],
@@ -1239,25 +1232,46 @@ class _MonthlyStatTile extends StatelessWidget {
   );
 }
 
-class _CalendarLegend extends StatelessWidget {
-  const _CalendarLegend({required this.color, required this.label});
+enum _CalendarActivity {
+  service('Lịch phụng vụ', Color(0xFFD94267)),
+  rehearsal('Lịch tập', Color(0xFFC77A00)),
+  assignment('Được phân công', Color(0xFF1976D2));
 
-  final Color color;
+  const _CalendarActivity(this.label, this.color);
+
   final String label;
+  final Color color;
+}
+
+class _CalendarActivityDot extends StatelessWidget {
+  const _CalendarActivityDot(this.activity, {this.size = 8});
+
+  final _CalendarActivity activity;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => SizedBox.square(
+    dimension: size,
+    child: DecoratedBox(
+      decoration: BoxDecoration(color: activity.color, shape: BoxShape.circle),
+    ),
+  );
+}
+
+class _CalendarLegend extends StatelessWidget {
+  const _CalendarLegend({required this.activity});
+
+  final _CalendarActivity activity;
 
   @override
   Widget build(BuildContext context) => Row(
     mainAxisSize: MainAxisSize.min,
     spacing: 6,
     children: [
-      Container(
-        width: 10,
-        height: 10,
-        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-      ),
+      _CalendarActivityDot(activity, size: 11),
       Flexible(
         child: Text(
-          label,
+          activity.label,
           style: AppTypography.labelSmall.copyWith(
             color: _stitchOnSurfaceVariant,
             fontSize: 11,
@@ -1298,11 +1312,12 @@ class _CalendarDayCell extends StatelessWidget {
     required this.isSelected,
     required this.hasEvent,
     required this.hasRehearsal,
+    required this.hasAssignment,
     required this.onTap,
   });
 
   final DateTime date;
-  final bool isToday, isSelected, hasEvent, hasRehearsal;
+  final bool isToday, isSelected, hasEvent, hasRehearsal, hasAssignment;
   final VoidCallback onTap;
 
   @override
@@ -1327,15 +1342,12 @@ class _CalendarDayCell extends StatelessWidget {
         : (isToday || isSunday)
         ? FontWeight.w700
         : FontWeight.w500;
-    final rehearsalDotColor = (isSelected || isToday)
-        ? _stitchSecondary
-        : _stitchSecondaryContainer;
-
     final label = [
       DateFormat('dd/MM/yyyy').format(date),
       if (isToday) 'Hôm nay',
       if (hasEvent) 'Có lịch phụng vụ',
       if (hasRehearsal) 'Có lịch tập',
+      if (hasAssignment) _CalendarActivity.assignment.label,
     ].join(' · ');
 
     return Semantics(
@@ -1384,34 +1396,25 @@ class _CalendarDayCell extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 SizedBox(
-                  height: 6,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    spacing: 3,
-                    children: [
-                      if (hasEvent)
-                        const SizedBox(
-                          width: 6,
-                          height: 6,
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: MemberChoirStyle.wine,
-                              shape: BoxShape.circle,
-                            ),
+                  height: 8,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      spacing: 3,
+                      children: [
+                        if (hasEvent)
+                          const _CalendarActivityDot(_CalendarActivity.service),
+                        if (hasRehearsal)
+                          const _CalendarActivityDot(
+                            _CalendarActivity.rehearsal,
                           ),
-                        ),
-                      if (hasRehearsal)
-                        SizedBox(
-                          width: 6,
-                          height: 6,
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: rehearsalDotColor,
-                              shape: BoxShape.circle,
-                            ),
+                        if (hasAssignment)
+                          const _CalendarActivityDot(
+                            _CalendarActivity.assignment,
                           ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ],

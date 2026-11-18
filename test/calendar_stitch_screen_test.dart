@@ -298,9 +298,14 @@ void main() {
     expect(find.text('KHOẢNG THỜI GIAN PHỤNG VỤ'), findsOneWidget);
     expect(find.text('MÙA THƯỜNG NIÊN'), findsOneWidget);
     expect(find.text('Điểm danh'), findsNothing);
-    expect(find.byTooltip('Tuần sau'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byTooltip('Tuần sau'),
+        matching: find.byIcon(Icons.chevron_right_rounded),
+      ),
+      findsOneWidget,
+    );
     expect(find.byIcon(Icons.chevron_left_rounded), findsOneWidget);
-    expect(find.text('Sau'), findsOneWidget);
     expect(find.text('Hôm nay'), findsOneWidget);
     expect(find.textContaining('hoạt động trong ngày'), findsNothing);
     expect(find.text('Lịch lễ 7 ngày tới'), findsNothing);
@@ -433,14 +438,43 @@ void main() {
       await tester.tap(find.text('Hôm nay'));
       await tester.pumpAndSettle();
       expect(find.text('Buổi tập từ API'), findsOneWidget);
-      final previous = tester.widget<IconButton>(
-        find.byWidgetPredicate(
-          (widget) => widget is IconButton && widget.tooltip == 'Tuần trước',
-        ),
-      );
-      expect(previous.onPressed, isNull);
     },
   );
+
+  testWidgets('previous week loads past rehearsals and opens their details', (
+    tester,
+  ) async {
+    final pastDay = DateTime(repo.day.year, repo.day.month, repo.day.day - 7);
+    repo.rehearsalInstant = DateTime.utc(
+      pastDay.year,
+      pastDay.month,
+      pastDay.day,
+      11,
+    );
+    await open(tester);
+
+    await tester.tap(find.byTooltip('Tuần trước'));
+    await tester.pumpAndSettle();
+
+    final monday = DateTime(
+      pastDay.year,
+      pastDay.month,
+      pastDay.day - pastDay.weekday + 1,
+    );
+    expect(repo.rehearsalRanges.last, (
+      fromDate: dateKey(monday),
+      toDate: dateKey(monday.add(const Duration(days: 6))),
+    ));
+    expect(find.text('Buổi tập từ API'), findsOneWidget);
+    expect(find.textContaining('Chưa có lịch'), findsNothing);
+    expect(find.text('Chương trình phục vụ'), findsNothing);
+
+    final details = find.text('Xem chi tiết');
+    await tester.ensureVisible(details);
+    await tester.tap(details);
+    await tester.pumpAndSettle();
+    expect(find.text('REHEARSAL rehearsal-api'), findsOneWidget);
+  });
 
   testWidgets(
     'month calendar shows only published event and rehearsal details',
@@ -525,6 +559,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Chọn tháng và năm'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byTooltip('Năm sau'),
+        matching: find.byIcon(Icons.chevron_right_rounded),
+      ),
+      findsOneWidget,
+    );
     expect(find.text('Tháng 12'), findsOneWidget);
 
     // Tap Tháng 12
@@ -596,6 +637,33 @@ void main() {
       // Legend and selected-day cards display title & rehearsal note from API data.
       expect(find.text('Lịch phụng vụ'), findsOneWidget);
       expect(find.text('Lịch tập'), findsOneWidget);
+      expect(find.text('Được phân công'), findsOneWidget);
+      expect(find.text('Ngày hiện tại'), findsNothing);
+      expect(find.text('Ngày đang chọn'), findsNothing);
+      expect(find.text('Ngoài tháng'), findsNothing);
+
+      final scheduledDay = find.byKey(
+        ValueKey('calendar-month-day-${repo.day.day}'),
+      );
+      final markers = find.descendant(
+        of: scheduledDay,
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is DecoratedBox &&
+              widget.decoration is BoxDecoration &&
+              (widget.decoration as BoxDecoration).shape == BoxShape.circle,
+        ),
+      );
+      expect(
+        tester
+            .widgetList<DecoratedBox>(markers)
+            .map((marker) => (marker.decoration as BoxDecoration).color),
+        unorderedEquals(const [
+          Color(0xFFD94267),
+          Color(0xFFC77A00),
+          Color(0xFF1976D2),
+        ]),
+      );
       expect(find.text('MÙA THƯỜNG NIÊN'), findsOneWidget);
       expect(find.text('Thánh lễ từ API'), findsOneWidget);
       expect(find.text('Buổi tập từ API'), findsOneWidget);
@@ -608,7 +676,15 @@ void main() {
       final nextMonthDate = DateTime(repo.day.year, repo.day.month + 1, 1);
       final prevMonthDate = DateTime(repo.day.year, repo.day.month - 1, 1);
 
-      await tester.tap(find.byTooltip('Tháng sau'));
+      final nextMonth = find.byTooltip('Tháng sau');
+      expect(
+        find.descendant(
+          of: nextMonth,
+          matching: find.byIcon(Icons.chevron_right_rounded),
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(nextMonth);
       await tester.pumpAndSettle();
       expect(
         find.text('Tháng ${nextMonthDate.month}, ${nextMonthDate.year}'),
