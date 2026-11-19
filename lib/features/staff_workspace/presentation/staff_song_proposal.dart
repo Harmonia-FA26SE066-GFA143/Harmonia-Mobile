@@ -95,6 +95,13 @@ class _StaffSongProposalState extends ConsumerState<StaffSongProposal> {
 
   Future<void> _save(bool submit, List<LiturgicalSlotDto> slots) async {
     if (_busy) return;
+    if (!staffEventIsUpcoming(widget.event)) {
+      setState(
+        () =>
+            _error = 'Chương trình đã hủy hoặc đã bắt đầu. Danh sách đã khóa.',
+      );
+      return;
+    }
     final validSlots = slots.map((slot) => slot.id).toSet();
     if (_songs.isEmpty ||
         _songs.any((song) => !validSlots.contains(song.slot))) {

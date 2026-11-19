@@ -25,8 +25,9 @@ class LookupItemDto {
 class LiturgicalSeasonDto {
   final String id;
   final String name;
-  final String startDate;
-  final String endDate;
+  final String? startDate;
+  final String? endDate;
+  final String? calendarKey;
   final String? colorHex;
 
   const LiturgicalSeasonDto({
@@ -34,6 +35,7 @@ class LiturgicalSeasonDto {
     required this.name,
     required this.startDate,
     required this.endDate,
+    this.calendarKey,
     this.colorHex,
   });
 
@@ -41,8 +43,9 @@ class LiturgicalSeasonDto {
     return LiturgicalSeasonDto(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? '',
-      startDate: json['startDate']?.toString() ?? '',
-      endDate: json['endDate']?.toString() ?? '',
+      startDate: json['startDate'] as String?,
+      endDate: json['endDate'] as String?,
+      calendarKey: json['calendarKey'] as String?,
       colorHex: json['colorHex']?.toString(),
     );
   }
@@ -52,6 +55,7 @@ class LiturgicalSeasonDto {
     'name': name,
     'startDate': startDate,
     'endDate': endDate,
+    'calendarKey': calendarKey,
     'colorHex': colorHex,
   };
 }

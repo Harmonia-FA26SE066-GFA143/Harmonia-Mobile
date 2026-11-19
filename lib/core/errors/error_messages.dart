@@ -14,6 +14,8 @@ class ErrorMessages {
         'Bạn đã chọn trạng thái phản hồi cho sự kiện này.',
     'EVENT_PARTICIPATION_CLOSED': 'Đã hết thời gian phản hồi tham gia.',
     'EVENT_PARTICIPATION_CHANGE_CLOSED': 'Đã hết thời gian đổi phản hồi.',
+    'EVENT_PARTICIPATION_REMINDER_TOO_SOON':
+        'Ca viên đã nhận lời nhắc gần đây. Vui lòng thử lại sau.',
     'CHOIR_NOT_LEAD': 'Chỉ ca trưởng của ca đoàn phụ trách hoặc người thay có quyền thực hiện.',
     'CHOIR_LEAD_INVALID': 'Chọn ca đoàn phụ trách trong số ca đoàn phục vụ.',
     'CHOIR_CHANGE_REASON_REQUIRED':
@@ -39,6 +41,12 @@ class ErrorMessages {
     'REHEARSAL_NOT_FOUND':
         'Không tìm thấy buổi tập hoặc bạn không còn quyền truy cập.',
     'REHEARSAL_NOT_STARTED': 'Chỉ có thể điểm danh khi buổi tập đã bắt đầu.',
+    'REHEARSAL_START_IN_PAST': 'Giờ bắt đầu buổi tập phải ở tương lai.',
+    'REHEARSAL_CHOIR_SELECTION_REQUIRED':
+        'Chọn ca đoàn cho buổi tập riêng hoặc chương trình cho buổi tập chung.',
+    'REHEARSAL_NOTE_TOO_LONG': 'Ghi chú tối đa 500 ký tự.',
+    'STAFF_RESOURCE_ID_INVALID':
+        'Dữ liệu tham chiếu không hợp lệ. Vui lòng tải lại.',
     'REHEARSAL_TIME_CONFLICT': 'Thời gian này trùng với lịch tập đã có.',
     'REHEARSAL_HAS_ATTENDANCE': 'Buổi tập đã có điểm danh nên không thể xóa.',
     'ROSTER_ALREADY_FINALIZED': 'Phân công đã được chốt. Hãy tải lại.',
@@ -143,6 +151,10 @@ class ErrorMessages {
         'Thời lượng bản thu phải từ 1 giây đến 60 phút.',
     'PRACTICE_ASSIGNMENT_NOT_FOUND': 'Không tìm thấy bài tập.',
     'PRACTICE_DUE_DATE_IN_PAST': 'Hạn nộp phải sau thời điểm hiện tại.',
+    'PRACTICE_ASSIGNMENT_TEXT_INVALID':
+        'Tiêu đề cần từ 1 đến 200 ký tự và hướng dẫn tối đa 1000 ký tự.',
+    'PRACTICE_ASSIGNMENT_HAS_SUBMISSIONS':
+        'Bài tập đã có bản nộp nên không thể huỷ.',
     'PRACTICE_TARGET_REQUIRED': 'Vui lòng chọn đối tượng nhận bài tập.',
     'DIRECTOR_NOMINATION_NOT_FOUND': 'Không tìm thấy đề cử.',
     'DIRECTOR_NOMINATION_ALREADY_OPEN':
@@ -274,7 +286,7 @@ class ErrorMessages {
     'PERSONNEL_REQUIREMENT_DUPLICATE':
         'Kỹ năng này đã được khai báo cho bài hát.',
     'REHEARSAL_TIME_INVALID': 'Giờ kết thúc phải sau giờ bắt đầu.',
-    'REHEARSAL_ALREADY_PASSED': 'Buổi tập đã diễn ra.',
+    'REHEARSAL_ALREADY_PASSED': 'Buổi tập đã kết thúc. Lịch tập đã khóa.',
     'REHEARSAL_ATTENDANCE_NOT_FOUND': 'Không tìm thấy bản ghi điểm danh.',
     'REHEARSAL_ATTENDANCE_ALREADY_RECORDED': 'Ca viên này đã được điểm danh.',
     'REHEARSAL_ATTENDANCE_MEMBER_DUPLICATE':

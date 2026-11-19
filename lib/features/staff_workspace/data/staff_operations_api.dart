@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../app/app_env.dart';
 import '../../../core/constants/api_endpoints.dart';
 import '../../../core/di/core_providers.dart';
 import '../../../core/errors/app_exceptions.dart';
@@ -42,6 +41,7 @@ typedef BulkSkillReview = ({
   Map<String, String> failed,
 });
 typedef RehearsalSong = ({String id, String title, String? note});
+typedef RehearsalConflict = ({String member, String eventDate, String time});
 typedef StaffRehearsal = ({
   String id,
   String? choirId,
@@ -51,9 +51,17 @@ typedef StaffRehearsal = ({
   DateTime start,
   DateTime end,
   String? note,
+  bool isJoint,
+  bool canManage,
+  bool isPassed,
   List<RehearsalSong> songs,
 });
-typedef AttendanceRow = ({String id, String name, String? status});
+typedef AttendanceRow = ({
+  String id,
+  String name,
+  String? status,
+  bool isActive,
+});
 typedef RosterAssignment = ({
   String id,
   String memberId,
@@ -62,6 +70,7 @@ typedef RosterAssignment = ({
   String? itemId,
   String? song,
   String? note,
+  bool hasRehearsalConflict,
 });
 typedef RosterShortage = ({
   String skill,
@@ -77,7 +86,12 @@ typedef StaffRoster = ({
   List<RosterShortage> shortages,
 });
 typedef PersonnelNeed = ({String skillId, String skill, int count});
-typedef ParticipationRow = ({String id, String name, String status});
+typedef ParticipationRow = ({
+  String id,
+  String name,
+  String status,
+  bool hasTimeConflict,
+});
 
 enum StaffPracticeScope {
   all('All', 'Cả ca đoàn'),
@@ -174,6 +188,19 @@ class StaffOperationsApi {
   static const _reports = '/api/reports';
 
   String _id(String value) => Uri.encodeComponent(value);
+
+  static final _guid = RegExp(
+    r'^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$',
+    caseSensitive: false,
+  );
+
+  void _requireId(String value) {
+    if (value.length != 36 ||
+        !_guid.hasMatch(value) ||
+        value == '00000000-0000-0000-0000-000000000000') {
+      throw const ValidationException(code: 'STAFF_RESOURCE_ID_INVALID');
+    }
+  }
 
   Future<T?> _request<T>(
     String method,
@@ -511,6 +538,9 @@ class StaffOperationsApi {
           start: DateTime.parse(_str(row, 'startTime')),
           end: DateTime.parse(_str(row, 'endTime')),
           note: row['note'] as String?,
+          isJoint: row['isJoint'] == true,
+          canManage: row['canManage'] == true,
+          isPassed: row['isPassed'] == true,
           songs: _rows(row['songs']).map(_rehearsalSong).toList(),
         ),
         query: {'eventId': ?eventId},
@@ -522,21 +552,40 @@ class StaffOperationsApi {
     query: {'eventId': eventId},
   );
 
-  Future<void> saveRehearsal({
+  Future<List<RehearsalConflict>> saveRehearsal({
     String? id,
     String? eventId,
     String? choirId,
+    bool isJoint = false,
     String? locationId,
     required DateTime start,
     required DateTime end,
     String? note,
     List<RehearsalSong> songs = const [],
   }) async {
-    await _request<Object?>(
+    for (final value in <String>[?id, ?eventId, ?locationId, ?choirId]) {
+      _requireId(value);
+    }
+    if (id == null &&
+        (isJoint ? eventId == null || choirId != null : choirId == null)) {
+      throw const ValidationException(
+        code: 'REHEARSAL_CHOIR_SELECTION_REQUIRED',
+      );
+    }
+    if (!end.isAfter(start)) {
+      throw const ValidationException(code: 'REHEARSAL_TIME_INVALID');
+    }
+    if (id == null && !start.isAfter(DateTime.now())) {
+      throw const ValidationException(code: 'REHEARSAL_START_IN_PAST');
+    }
+    if ((note?.length ?? 0) > 500) {
+      throw const ValidationException(code: 'REHEARSAL_NOTE_TOO_LONG');
+    }
+    final response = await _request<Map<String, dynamic>>(
       id == null ? 'POST' : 'PUT',
       id == null ? _rehearsals : '$_rehearsals/${_id(id)}',
       body: {
-        if (id == null) 'choirId': choirId,
+        if (id == null) ...{'choirId': choirId, 'isJoint': isJoint},
         'eventId': eventId,
         'locationId': locationId,
         'startTime': start.toUtc().toIso8601String(),
@@ -545,13 +594,34 @@ class StaffOperationsApi {
         if (id == null) 'songs': _songBody(songs),
       },
     );
+    return [
+      for (final row in _rows(response?['memberConflicts']))
+        (
+          member: _str(row, 'fullName'),
+          eventDate: _str(row, 'eventDate'),
+          time: _str(row, 'time'),
+        ),
+    ];
   }
 
-  List<Map<String, String?>> _songBody(List<RehearsalSong> songs) => [
-    for (final song in songs) {'songId': song.id, 'note': song.note},
-  ];
+  List<Map<String, String?>> _songBody(List<RehearsalSong> songs) {
+    final ids = <String>{};
+    for (final song in songs) {
+      _requireId(song.id);
+      if (!ids.add(song.id.toLowerCase())) {
+        throw const ValidationException(code: 'REHEARSAL_SONG_DUPLICATE');
+      }
+      if ((song.note?.length ?? 0) > 500) {
+        throw const ValidationException(code: 'REHEARSAL_NOTE_TOO_LONG');
+      }
+    }
+    return [
+      for (final song in songs) {'songId': song.id, 'note': song.note},
+    ];
+  }
 
   Future<void> saveRehearsalSongs(String id, List<RehearsalSong> songs) async {
+    _requireId(id);
     await _request<Object?>(
       'PUT',
       '$_rehearsals/${_id(id)}/songs',
@@ -560,6 +630,7 @@ class StaffOperationsApi {
   }
 
   Future<void> deleteRehearsal(String id) async {
+    _requireId(id);
     await _request<Object?>('DELETE', '$_rehearsals/${_id(id)}');
   }
 
@@ -569,10 +640,22 @@ class StaffOperationsApi {
       id: _str(row, 'memberId'),
       name: _str(row, 'fullName'),
       status: row['status'] as String?,
+      isActive: row['isActive'] == true,
     ),
   );
 
   Future<void> saveAttendance(String id, Map<String, String> changes) async {
+    _requireId(id);
+    const statuses = {'Present', 'Absent', 'Late', 'Excused'};
+    if (changes.isEmpty ||
+        changes.keys.map((id) => id.toLowerCase()).toSet().length !=
+            changes.length ||
+        changes.values.any((status) => !statuses.contains(status))) {
+      throw const ValidationException(code: 'VALIDATION_FAILED');
+    }
+    for (final memberId in changes.keys) {
+      _requireId(memberId);
+    }
     await _request<Object?>(
       'PUT',
       '$_rehearsals/${_id(id)}/attendances',
@@ -597,6 +680,7 @@ class StaffOperationsApi {
               id: _str(row, 'memberId'),
               name: _str(row, 'memberFullName'),
               status: _str(row, 'status'),
+              hasTimeConflict: row['hasTimeConflict'] == true,
             ),
           )
           .toList();
@@ -609,12 +693,16 @@ class StaffOperationsApi {
     );
   }
 
-  Future<void> demoConfirmAll(String event) async {
-    if (!AppEnv.demoToolsEnabled) throw StateError('Demo tools are disabled.');
-    await _request<Object?>(
+  Future<({int reminded, int pending})> remindParticipants(String event) async {
+    _requireId(event);
+    final result = (await _request<Map<String, dynamic>>(
       'POST',
-      '$_participations/confirm-all',
+      '$_participations/reminders',
       query: {'eventId': event},
+    ))!;
+    return (
+      reminded: _count(result, 'remindedCount'),
+      pending: _count(result, 'pendingCount'),
     );
   }
 
@@ -635,6 +723,7 @@ class StaffOperationsApi {
               itemId: item['songListItemId'] as String?,
               song: item['songTitle'] as String?,
               note: item['note'] as String?,
+              hasRehearsalConflict: item['hasRehearsalConflict'] == true,
             ),
         ],
         shortages: _rows(row['shortages']).map(_shortage).toList(),
@@ -795,6 +884,41 @@ class StaffOperationsApi {
         if (scope == StaffPracticeScope.skillGroup) 'skillIds': skillIds,
         if (scope == StaffPracticeScope.individual) 'memberIds': memberIds,
       },
+    );
+  }
+
+  Future<void> updatePracticeAssignment(
+    String id, {
+    required String title,
+    String? instruction,
+    required DateTime dueDate,
+  }) async {
+    _requireId(id);
+    final name = title.trim();
+    if (name.isEmpty ||
+        name.length > 200 ||
+        (instruction?.length ?? 0) > 1000) {
+      throw const ValidationException(code: 'PRACTICE_ASSIGNMENT_TEXT_INVALID');
+    }
+    if (!dueDate.isAfter(DateTime.now())) {
+      throw const ValidationException(code: 'PRACTICE_DUE_DATE_IN_PAST');
+    }
+    await _request<Object?>(
+      'PUT',
+      '${ApiEndpoints.practiceAssignments}/${_id(id)}',
+      body: {
+        'title': name,
+        'instruction': instruction,
+        'dueDate': dueDate.toUtc().toIso8601String(),
+      },
+    );
+  }
+
+  Future<void> deletePracticeAssignment(String id) async {
+    _requireId(id);
+    await _request<Object?>(
+      'DELETE',
+      '${ApiEndpoints.practiceAssignments}/${_id(id)}',
     );
   }
 

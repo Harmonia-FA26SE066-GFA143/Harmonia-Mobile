@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/errors/app_exceptions.dart';
 import '../data/staff_operations_api.dart';
 import '../data/staff_practice_providers.dart';
 import '../data/staff_workspace_repository.dart';
@@ -119,9 +120,49 @@ class _AssignmentsTab extends ConsumerStatefulWidget {
   ConsumerState<_AssignmentsTab> createState() => _AssignmentsTabState();
 }
 
-class _AssignmentsTabState extends ConsumerState<_AssignmentsTab> {
+class _AssignmentsTabState extends ConsumerState<_AssignmentsTab>
+    with OpsActions<_AssignmentsTab> {
   int _page = 1;
   late String? _eventId = widget.initialEventId;
+
+  Future<void> _edit(StaffPracticeAssignment assignment) async {
+    final changed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _EditAssignmentDialog(assignment: assignment),
+    );
+    if (mounted && changed == true) _refreshAssignments();
+  }
+
+  Future<void> _delete(StaffPracticeAssignment assignment) async {
+    final api = ref.read(staffOperationsApiProvider);
+    final ready = await runAction(() async {
+      final page = await api.submissions(1, null, assignment.id);
+      if (page.items.isNotEmpty || page.totalCount > 0) {
+        throw const ConflictException(
+          code: 'PRACTICE_ASSIGNMENT_HAS_SUBMISSIONS',
+        );
+      }
+    });
+    if (!mounted || !ready) return;
+    final confirmed = await opsConfirm(
+      context,
+      'Huỷ bài tập đã giao?',
+      'Bài “${assignment.title}” sẽ được gỡ khỏi danh sách luyện tập của ca viên.',
+      'Huỷ bài tập',
+    );
+    if (!mounted || !confirmed) return;
+    if (await runAction(() => api.deletePracticeAssignment(assignment.id)) &&
+        mounted) {
+      setState(() => _page = 1);
+      _refreshAssignments();
+    }
+  }
+
+  void _refreshAssignments() {
+    ref.invalidate(staffPracticeAssignmentsProvider);
+    ref.invalidate(staffPreparationProgressProvider);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -141,6 +182,10 @@ class _AssignmentsTabState extends ConsumerState<_AssignmentsTab> {
             _eventId = event;
             _page = 1;
           }),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: actionState,
         ),
         Expanded(
           child: OpsAsync(
@@ -189,6 +234,15 @@ class _AssignmentsTabState extends ConsumerState<_AssignmentsTab> {
                         },
                       ).toString(),
                     ),
+                    trailing: PopupMenuButton<bool>(
+                      enabled: !busy,
+                      tooltip: 'Thao tác bài tập',
+                      onSelected: (edit) => edit ? _edit(row) : _delete(row),
+                      itemBuilder: (_) => const [
+                        PopupMenuItem(value: true, child: Text('Sửa bài tập')),
+                        PopupMenuItem(value: false, child: Text('Huỷ bài tập')),
+                      ],
+                    ),
                   ),
                 OpsPaging(
                   page: _page,
@@ -204,6 +258,107 @@ class _AssignmentsTabState extends ConsumerState<_AssignmentsTab> {
       ],
     );
   }
+}
+
+class _EditAssignmentDialog extends ConsumerStatefulWidget {
+  const _EditAssignmentDialog({required this.assignment});
+  final StaffPracticeAssignment assignment;
+
+  @override
+  ConsumerState<_EditAssignmentDialog> createState() =>
+      _EditAssignmentDialogState();
+}
+
+class _EditAssignmentDialogState extends ConsumerState<_EditAssignmentDialog>
+    with OpsActions<_EditAssignmentDialog> {
+  final _form = GlobalKey<FormState>();
+  late String _title = widget.assignment.title;
+  late String _instruction = widget.assignment.instruction ?? '';
+  late DateTime _deadline = widget.assignment.dueDate;
+
+  Future<void> _pickDeadline() async {
+    final now = DateTime.now();
+    final deadline = await pickOpsTime(
+      context,
+      _deadline.isAfter(now) ? _deadline : now,
+    );
+    if (mounted && deadline != null) setState(() => _deadline = deadline);
+  }
+
+  Future<void> _save() async {
+    if (!_form.currentState!.validate()) return;
+    final api = ref.read(staffOperationsApiProvider);
+    if (await runAction(
+          () => api.updatePracticeAssignment(
+            widget.assignment.id,
+            title: _title,
+            instruction: _instruction.trim().isEmpty
+                ? null
+                : _instruction.trim(),
+            dueDate: _deadline,
+          ),
+        ) &&
+        mounted) {
+      Navigator.pop(context, true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => PopScope(
+    canPop: !busy,
+    child: AlertDialog(
+      title: const Text('Sửa bài tập'),
+      scrollable: true,
+      content: Form(
+        key: _form,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextFormField(
+              initialValue: _title,
+              enabled: !busy,
+              maxLength: 200,
+              decoration: const InputDecoration(labelText: 'Tiêu đề'),
+              onChanged: (value) => _title = value,
+              validator: (value) {
+                final title = value?.trim() ?? '';
+                return title.isEmpty || title.length > 200
+                    ? 'Nhập tiêu đề từ 1 đến 200 ký tự.'
+                    : null;
+              },
+            ),
+            TextFormField(
+              initialValue: _instruction,
+              enabled: !busy,
+              maxLength: 1000,
+              maxLines: 3,
+              decoration: const InputDecoration(labelText: 'Hướng dẫn'),
+              onChanged: (value) => _instruction = value,
+              validator: (value) => (value?.length ?? 0) > 1000
+                  ? 'Hướng dẫn tối đa 1000 ký tự.'
+                  : null,
+            ),
+            OpsTile(
+              title: 'Hạn nộp',
+              subtitle: opsTime(_deadline),
+              onTap: busy ? null : _pickDeadline,
+            ),
+            if (!_deadline.isAfter(DateTime.now()))
+              const Text('Chọn hạn nộp ở tương lai.'),
+            actionState,
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: busy ? null : () => Navigator.pop(context),
+          child: const Text('Đóng'),
+        ),
+        FilledButton(onPressed: busy ? null : _save, child: const Text('Lưu')),
+      ],
+    ),
+  );
 }
 
 String _participation(String? status) => switch (status) {

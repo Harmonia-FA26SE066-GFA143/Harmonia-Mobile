@@ -130,7 +130,7 @@ class CalendarRepositoryImpl implements CalendarRepository {
 
       return RehearsalSession(
         id: id,
-        title: 'Buổi tập hát',
+        title: map['isJoint'] == true ? 'Buổi tập chung' : 'Buổi tập hát',
         note: note,
         date:
             start ??

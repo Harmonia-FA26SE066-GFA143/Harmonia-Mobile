@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../auth/presentation/auth_notifier.dart';
+import '../../calendar/data/calendar_repository.dart';
 import '../../lookups/data/lookups_api_service.dart';
 import '../../music/data/music_dto.dart' show SongDto;
 import '../data/staff_operations_api.dart';
@@ -19,10 +21,13 @@ final _rehearsals = FutureProvider.autoDispose.family(
 final _attendance = FutureProvider.autoDispose.family(
   (ref, String id) => ref.watch(staffOperationsApiProvider).attendances(id),
 );
-final _rehearsalOptions = FutureProvider.autoDispose(
-  (ref) => (
+final _rehearsalOptions = FutureProvider.autoDispose.family(
+  (ref, String? eventId) => (
     ref.watch(staffWorkspaceRepositoryProvider).choirs(),
     ref.watch(lookupsApiServiceProvider).getWorshipLocations(),
+    eventId == null
+        ? Future.value(<ServingChoir>[])
+        : ref.watch(staffWorkspaceRepositoryProvider).servingChoirs(eventId),
   ).wait,
 );
 
@@ -98,41 +103,57 @@ class _StaffRehearsalsScreenState extends ConsumerState<StaffRehearsalsScreen>
             for (final row in page.items)
               OpsTile(
                 icon: Icons.event_outlined,
-                title: 'Buổi tập hát',
+                title: row.isJoint ? 'Buổi tập chung' : 'Buổi tập hát',
                 subtitle: [
                   opsTime(row.start),
                   ?row.location,
                   ?row.note,
+                  if (row.isPassed) 'Đã kết thúc',
                 ].join('\n'),
-                onTap: () => context.push(opsPath('rehearsal', row.id)),
-                trailing: PopupMenuButton<String>(
-                  tooltip: 'Thao tác buổi tập',
-                  enabled: !busy,
-                  onSelected: (value) {
-                    switch (value) {
-                      case 'attendance':
-                        context.push(opsPath('staff-attendance', row.id));
-                      case 'edit':
-                        _edit(row);
-                      case 'songs':
-                        _edit(row, true);
-                      case 'delete':
-                        _delete(row);
-                    }
-                  },
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(
-                      value: 'attendance',
-                      child: Text('Điểm danh'),
-                    ),
-                    PopupMenuItem(value: 'edit', child: Text('Sửa lịch tập')),
-                    PopupMenuItem(
-                      value: 'songs',
-                      child: Text('Sửa bài tập hát'),
-                    ),
-                    PopupMenuItem(value: 'delete', child: Text('Xóa buổi tập')),
-                  ],
+                onTap: () => context.push(
+                  opsPath('rehearsal', row.id),
+                  extra: row.canManage,
                 ),
+                trailing: !row.canManage
+                    ? null
+                    : PopupMenuButton<String>(
+                        tooltip: 'Thao tác buổi tập',
+                        enabled: !busy,
+                        onSelected: (value) {
+                          switch (value) {
+                            case 'attendance':
+                              context.push(
+                                opsPath('staff-attendance', row.id),
+                                extra: row.start,
+                              );
+                            case 'edit':
+                              _edit(row);
+                            case 'songs':
+                              _edit(row, true);
+                            case 'delete':
+                              _delete(row);
+                          }
+                        },
+                        itemBuilder: (_) => [
+                          const PopupMenuItem(
+                            value: 'attendance',
+                            child: Text('Điểm danh'),
+                          ),
+                          if (!row.isPassed)
+                            const PopupMenuItem(
+                              value: 'edit',
+                              child: Text('Sửa lịch tập'),
+                            ),
+                          const PopupMenuItem(
+                            value: 'songs',
+                            child: Text('Sửa bài tập hát'),
+                          ),
+                          const PopupMenuItem(
+                            value: 'delete',
+                            child: Text('Xóa buổi tập'),
+                          ),
+                        ],
+                      ),
               ),
             OpsPaging(
               page: _page,
@@ -161,6 +182,7 @@ class _RehearsalFormState extends ConsumerState<_RehearsalForm>
     with OpsActions {
   late DateTime _start, _end;
   String? _choir, _location, _note;
+  bool _joint = false;
   late List<RehearsalSong> _songs;
   bool get _creating => widget.rehearsal == null;
   String? get _event => widget.rehearsal?.eventId ?? widget.eventId;
@@ -219,21 +241,48 @@ class _RehearsalFormState extends ConsumerState<_RehearsalForm>
 
   Future<void> _save() async {
     final repo = ref.read(staffOperationsApiProvider);
-    final ok = await runAction(
-      () => widget.songsOnly
-          ? repo.saveRehearsalSongs(widget.rehearsal!.id, _songs)
-          : repo.saveRehearsal(
-              id: widget.rehearsal?.id,
-              eventId: _event,
-              choirId: _choir,
-              locationId: _location,
-              start: _start,
-              end: _end,
-              note: _note?.trim().isEmpty == true ? null : _note?.trim(),
-              songs: _songs,
+    var conflicts = <RehearsalConflict>[];
+    final ok = await runAction(() async {
+      if (widget.songsOnly) {
+        await repo.saveRehearsalSongs(widget.rehearsal!.id, _songs);
+      } else {
+        conflicts = await repo.saveRehearsal(
+          id: widget.rehearsal?.id,
+          eventId: _event,
+          choirId: _joint ? null : _choir,
+          isJoint: _joint,
+          locationId: _location,
+          start: _start,
+          end: _end,
+          note: _note?.trim().isEmpty == true ? null : _note?.trim(),
+          songs: _songs,
+        );
+      }
+    });
+    if (!mounted || !ok) return;
+    if (conflicts.isNotEmpty) {
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Đã lưu buổi tập có trùng lịch'),
+          scrollable: true,
+          content: Text(
+            [
+              'Các ca viên sau đang được phân công ở lễ trùng giờ.',
+              for (final row in conflicts)
+                '${row.member} · ${row.eventDate} ${row.time}',
+            ].join('\n'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Đóng'),
             ),
-    );
-    if (mounted && ok) Navigator.pop(context, true);
+          ],
+        ),
+      );
+    }
+    if (mounted) Navigator.pop(context, true);
   }
 
   Widget _songFields() => Column(
@@ -287,7 +336,11 @@ class _RehearsalFormState extends ConsumerState<_RehearsalForm>
 
   @override
   Widget build(BuildContext context) {
-    final options = widget.songsOnly ? null : ref.watch(_rehearsalOptions);
+    final provider = _rehearsalOptions(_creating ? _event : null);
+    final options = widget.songsOnly ? null : ref.watch(provider);
+    final userId = ref.watch(
+      authNotifierProvider.select((auth) => auth.user?.id),
+    );
     final title = widget.songsOnly
         ? 'Bài hát buổi tập'
         : _creating
@@ -309,11 +362,23 @@ class _RehearsalFormState extends ConsumerState<_RehearsalForm>
               ? _fields()
               : OpsAsync(
                   value: options,
-                  onRetry: () => ref.invalidate(_rehearsalOptions),
+                  onRetry: () => ref.invalidate(provider),
                   data: (data) => _fields(
+                    canCreateJoint:
+                        userId != null &&
+                        data.$3.any(
+                          (row) =>
+                              (row.isLead || data.$3.length == 1) &&
+                              (row.directorId == userId ||
+                                  row.substituteId == userId),
+                        ),
                     choirs: [
                       for (final choir in data.$1)
-                        if (choir.isActive && choir.id.isNotEmpty)
+                        if (choir.isActive &&
+                            choir.id.isNotEmpty &&
+                            (!_creating ||
+                                _event == null ||
+                                data.$3.any((row) => row.id == choir.id)))
                           (id: choir.id, name: choir.name),
                     ],
                     places: [
@@ -337,15 +402,32 @@ class _RehearsalFormState extends ConsumerState<_RehearsalForm>
   Widget _fields({
     List<Choice> choirs = const [],
     List<Choice> places = const [],
+    bool canCreateJoint = false,
   }) {
+    final startInPast = _creating && !_start.isAfter(DateTime.now());
     final valid =
         widget.songsOnly ||
-        (_end.isAfter(_start) && (!_creating || _choir != null));
+        (!startInPast &&
+            _end.isAfter(_start) &&
+            (!_creating ||
+                (_joint
+                    ? canCreateJoint
+                    : choirs.any((row) => row.id == _choir))));
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         if (!widget.songsOnly) ...[
-          if (_creating)
+          if (_creating && canCreateJoint)
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Buổi tập chung'),
+              subtitle: const Text('Dành cho các ca đoàn phục vụ chương trình'),
+              value: _joint,
+              onChanged: busy
+                  ? null
+                  : (value) => setState(() => _joint = value),
+            ),
+          if (_creating && !_joint)
             OpsChoiceField(
               label: 'Ca đoàn',
               options: choirs,
@@ -375,6 +457,7 @@ class _RehearsalFormState extends ConsumerState<_RehearsalForm>
           ),
           if (!_end.isAfter(_start))
             const Text('Giờ kết thúc phải sau giờ bắt đầu.'),
+          if (startInPast) const Text('Giờ bắt đầu phải ở tương lai.'),
           TextFormField(
             initialValue: _note,
             enabled: !busy,
@@ -396,8 +479,13 @@ class _RehearsalFormState extends ConsumerState<_RehearsalForm>
 }
 
 class StaffAttendanceScreen extends ConsumerStatefulWidget {
-  const StaffAttendanceScreen({super.key, required this.rehearsalId});
+  const StaffAttendanceScreen({
+    super.key,
+    required this.rehearsalId,
+    this.rehearsalStart,
+  });
   final String rehearsalId;
+  final DateTime? rehearsalStart;
 
   @override
   ConsumerState<StaffAttendanceScreen> createState() =>
@@ -415,13 +503,23 @@ class _StaffAttendanceScreenState extends ConsumerState<StaffAttendanceScreen>
   final _changes = <String, String>{};
   String _search = '';
 
-  Future<void> _save() async {
+  Future<void> _save(List<AttendanceRow> rows, DateTime? opensAt) async {
+    if (opensAt != null && DateTime.now().isBefore(opensAt)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Điểm danh mở lúc ${opsTime(opensAt)}.')),
+      );
+      return;
+    }
     final id = widget.rehearsalId;
-    if (_changes.isEmpty) return;
+    final changes = {
+      for (final row in rows)
+        if (_changes[row.id] case final status? when row.isActive)
+          row.id: status,
+    };
+    if (changes.isEmpty) return;
     if (await runAction(
-          () => ref
-              .read(staffOperationsApiProvider)
-              .saveAttendance(id, Map.of(_changes)),
+          () =>
+              ref.read(staffOperationsApiProvider).saveAttendance(id, changes),
         ) &&
         mounted) {
       setState(_changes.clear);
@@ -434,6 +532,18 @@ class _StaffAttendanceScreenState extends ConsumerState<StaffAttendanceScreen>
   @override
   Widget build(BuildContext context) {
     final provider = _attendance(widget.rehearsalId);
+    final start = widget.rehearsalStart;
+    final settings = start == null
+        ? null
+        : ref.watch(publicAppSettingsProvider).asData?.value;
+    final opensAt =
+        start != null &&
+            settings != null &&
+            settings.attendanceStartCheckEnabled
+        ? start.subtract(
+            Duration(minutes: settings.attendanceOpensMinutesBefore),
+          )
+        : null;
     return OpsPage(
       title: 'Điểm danh',
       actions: [
@@ -469,37 +579,41 @@ class _StaffAttendanceScreenState extends ConsumerState<StaffAttendanceScreen>
                       Card(
                         child: ListTile(
                           title: Text(row.name),
-                          subtitle: DropdownButton<String>(
-                            icon: const SizedBox.shrink(),
-                            key: ValueKey(row.id),
-                            isExpanded: true,
-                            value:
-                                _statuses.containsKey(
-                                  _changes[row.id] ?? row.status,
+                          subtitle: !row.isActive
+                              ? Text(
+                                  '${_statuses[row.status] ?? 'Chưa điểm danh'} · Không còn hoạt động',
                                 )
-                                ? _changes[row.id] ?? row.status
-                                : null,
-                            hint: const Text('Chưa điểm danh'),
-                            items: [
-                              for (final status in _statuses.entries)
-                                DropdownMenuItem(
-                                  value: status.key,
-                                  child: Text(status.value),
+                              : DropdownButton<String>(
+                                  icon: const SizedBox.shrink(),
+                                  key: ValueKey(row.id),
+                                  isExpanded: true,
+                                  value:
+                                      _statuses.containsKey(
+                                        _changes[row.id] ?? row.status,
+                                      )
+                                      ? _changes[row.id] ?? row.status
+                                      : null,
+                                  hint: const Text('Chưa điểm danh'),
+                                  items: [
+                                    for (final status in _statuses.entries)
+                                      DropdownMenuItem(
+                                        value: status.key,
+                                        child: Text(status.value),
+                                      ),
+                                  ],
+                                  onChanged: busy
+                                      ? null
+                                      : (value) {
+                                          if (value == null) return;
+                                          setState(() {
+                                            if (value == row.status) {
+                                              _changes.remove(row.id);
+                                            } else {
+                                              _changes[row.id] = value;
+                                            }
+                                          });
+                                        },
                                 ),
-                            ],
-                            onChanged: busy
-                                ? null
-                                : (value) {
-                                    if (value == null) return;
-                                    setState(() {
-                                      if (value == row.status) {
-                                        _changes.remove(row.id);
-                                      } else {
-                                        _changes[row.id] = value;
-                                      }
-                                    });
-                                  },
-                          ),
                         ),
                       ),
                 ],
@@ -511,8 +625,17 @@ class _StaffAttendanceScreenState extends ConsumerState<StaffAttendanceScreen>
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   actionState,
+                  if (opensAt != null && DateTime.now().isBefore(opensAt))
+                    Text('Điểm danh mở lúc ${opsTime(opensAt)}.'),
                   FilledButton(
-                    onPressed: busy || _changes.isEmpty ? null : _save,
+                    onPressed:
+                        busy ||
+                            !rows.any(
+                              (row) =>
+                                  row.isActive && _changes.containsKey(row.id),
+                            )
+                        ? null
+                        : () => _save(rows, opensAt),
                     child: Text('Lưu điểm danh (${_changes.length})'),
                   ),
                 ],
