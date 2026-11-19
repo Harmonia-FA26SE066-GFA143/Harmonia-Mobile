@@ -13,13 +13,18 @@ class SignalRService {
   final _connectedStreamController = StreamController<void>.broadcast();
 
   final _directorNoteController = StreamController<int>.broadcast();
+  final _participationChanges =
+      StreamController<({String? eventId, int version})>.broadcast();
   int _directorNoteVersion = 0;
+  int _participationVersion = 0;
 
   Stream<int> get directorNoteStream => _directorNoteController.stream;
 
   Stream<Map<String, dynamic>> get notificationStream =>
       _notificationStreamController.stream;
   Stream<void> get connectedStream => _connectedStreamController.stream;
+  Stream<({String? eventId, int version})> get participationChanges =>
+      _participationChanges.stream;
 
   SignalRService(this._storage);
 
@@ -76,6 +81,19 @@ class SignalRService {
           _notificationStreamController.add(data);
         }
       });
+      connection.on('ReceiveParticipationChangedAsync', (arguments) {
+        if (!isCurrent()) return;
+        final data = arguments?.firstOrNull;
+        if (data is Map && data['eventId'] is String) {
+          final id = data['eventId'] as String;
+          if (id.isNotEmpty) {
+            _participationChanges.add((
+              eventId: id,
+              version: ++_participationVersion,
+            ));
+          }
+        }
+      });
       for (final method in [
         'ReceiveDirectorNoteAsync',
         'ReceiveDirectorNotesReadAsync',
@@ -88,6 +106,10 @@ class SignalRService {
         if (!isCurrent()) return;
         _connectedStreamController.add(null);
         _directorNoteController.add(++_directorNoteVersion);
+        _participationChanges.add((
+          eventId: null,
+          version: ++_participationVersion,
+        ));
       }
 
       connection.onreconnected(({connectionId}) => notifyConnected());
@@ -115,5 +137,6 @@ class SignalRService {
     _notificationStreamController.close();
     _connectedStreamController.close();
     _directorNoteController.close();
+    _participationChanges.close();
   }
 }

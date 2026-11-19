@@ -1,5 +1,4 @@
 import '../../core/session/session_manager.dart';
-import '../app_env.dart';
 
 String workspacePath(MobileRole role) => switch (role) {
   MobileRole.choirMember => '/practice',
@@ -18,11 +17,10 @@ bool roleAllowsRoute(MobileRole? role, Uri uri) {
     'staff-rehearsals' ||
     'staff-attendance' ||
     'staff-roster' ||
-    'staff-participation' ||
     'staff-practice' ||
     'staff-submissions' ||
     'staff-submission' => role == MobileRole.choirDirector,
-    'staff-demo' => role == MobileRole.choirDirector && AppEnv.demoToolsEnabled,
+    'staff-demo' => false,
     'director-nominations' when uri.pathSegments.elementAtOrNull(1) == 'new' =>
       role == MobileRole.choirDirector || role == MobileRole.parishPriest,
     'interactive-score' || 'director-nominations' => role != null,
@@ -32,7 +30,8 @@ bool roleAllowsRoute(MobileRole? role, Uri uri) {
     'staff-chat' ||
     'staff-chat-new' ||
     'staff-reports' ||
-    'staff-scores' =>
+    'staff-scores' ||
+    'staff-participation' =>
       role == MobileRole.choirDirector || role == MobileRole.parishPriest,
     'rehearsal' => role != MobileRole.parishPriest,
     'practice' ||

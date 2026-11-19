@@ -188,7 +188,7 @@ class MemberRehearsalDetail {
     return MemberRehearsalDetail(
       rehearsal: RehearsalSession(
         id: json['id'] as String,
-        title: 'Buổi tập hát',
+        title: json['isJoint'] == true ? 'Buổi tập chung' : 'Buổi tập hát',
         note: json['note'] as String?,
         date: start,
         endTime: end,

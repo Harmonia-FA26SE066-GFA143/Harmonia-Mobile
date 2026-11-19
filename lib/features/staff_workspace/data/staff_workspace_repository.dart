@@ -18,6 +18,13 @@ typedef StaffEvent = ({
   String? status,
   String? requirements,
 });
+
+bool staffEventIsUpcoming(StaffEvent event) {
+  final day = event.date.toIso8601String().split('T').first;
+  final start = DateTime.tryParse('${day}T${event.time}+07:00');
+  return event.status != 'Cancelled' && start?.isAfter(DateTime.now()) == true;
+}
+
 typedef StaffProgramTask = ({StaffEvent event, String? songListStatus});
 typedef StaffChoir = ({
   String id,

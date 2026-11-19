@@ -374,9 +374,11 @@ class StaffSongListScreen extends ConsumerWidget {
     );
     final list = listData.value;
     final eventId = list?.eventId;
-    final event = role == null || eventId == null || eventId.isEmpty
+    final eventProvider = role == null || eventId == null || eventId.isEmpty
         ? null
-        : ref.watch(_event((role, eventId))).asData?.value;
+        : _event((role, eventId));
+    final eventData = eventProvider == null ? null : ref.watch(eventProvider);
+    final event = eventData?.asData?.value;
     Widget page(Widget? notes, Widget? footer) => _DataPage(
       title: role == MobileRole.parishPriest
           ? 'Phê duyệt danh sách'
@@ -388,7 +390,11 @@ class StaffSongListScreen extends ConsumerWidget {
       backPath: '/notifications',
       data: listData,
       footer: footer,
-      onRefresh: () => ref.refresh(provider.future),
+      onRefresh: () async {
+        ref.invalidate(provider);
+        if (eventProvider != null) ref.invalidate(eventProvider);
+        return ref.read(provider.future);
+      },
       rows: (list) {
         final items = list.items.toList()
           ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
@@ -474,9 +480,31 @@ class StaffSongListScreen extends ConsumerWidget {
         ];
       },
     );
-    return list?.status == 'Submitted' && role == MobileRole.parishPriest
-        ? _SongListReview(key: ValueKey(list!.id), list: list, builder: page)
-        : page(null, null);
+    return list?.status == 'Submitted' &&
+            role == MobileRole.parishPriest &&
+            event != null &&
+            staffEventIsUpcoming(event)
+        ? _SongListReview(
+            key: ValueKey(list!.id),
+            list: list,
+            event: event,
+            builder: page,
+          )
+        : page(
+            event != null && !staffEventIsUpcoming(event)
+                ? const Text(
+                    'Danh sách đã khóa vì chương trình đã hủy hoặc đã bắt đầu.',
+                  )
+                : eventData?.hasError == true &&
+                      list?.status == 'Submitted' &&
+                      role == MobileRole.parishPriest
+                ? OutlinedButton(
+                    onPressed: () => ref.invalidate(eventProvider!),
+                    child: const Text('Tải lại thông tin chương trình'),
+                  )
+                : null,
+            null,
+          );
   }
 }
 
@@ -766,7 +794,15 @@ class _EventWorkflowState extends ConsumerState<_EventWorkflow> {
                     child: const Text('Chọn ca đoàn phục vụ'),
                   ),
 
-                if (published) _songSection(canPropose),
+                if (published || widget.event.status == 'Cancelled')
+                  _songSection(canPropose),
+                if (published && priest)
+                  _Tile(
+                    icon: Icons.groups_outlined,
+                    title: 'Xác nhận tham gia',
+                    onTap: () =>
+                        context.push(_detailPath('staff-participation', _id)),
+                  ),
                 if (published && widget.role == MobileRole.choirDirector) ...[
                   _Tile(
                     icon: Icons.event_outlined,
@@ -837,6 +873,7 @@ class _EventWorkflowState extends ConsumerState<_EventWorkflow> {
           data: (list) {
             final canEdit =
                 canPropose &&
+                staffEventIsUpcoming(widget.event) &&
                 (list == null ||
                     const [
                       'Draft',
@@ -870,6 +907,10 @@ class _EventWorkflowState extends ConsumerState<_EventWorkflow> {
                           : 'Đề xuất bài hát',
                     ),
                   ),
+                if (!staffEventIsUpcoming(widget.event))
+                  const Text(
+                    'Danh sách đã khóa vì chương trình đã hủy hoặc đã bắt đầu.',
+                  ),
                 if (!canPropose && widget.role == MobileRole.choirDirector)
                   const Text(
                     'Ca trưởng của ca đoàn phụ trách hoặc người thay có thể đề xuất bài hát.',
@@ -882,8 +923,14 @@ class _EventWorkflowState extends ConsumerState<_EventWorkflow> {
 }
 
 class _SongListReview extends ConsumerStatefulWidget {
-  const _SongListReview({super.key, required this.list, required this.builder});
+  const _SongListReview({
+    super.key,
+    required this.list,
+    required this.event,
+    required this.builder,
+  });
   final SongListDto list;
+  final StaffEvent event;
   final Widget Function(Widget notes, Widget footer) builder;
 
   @override
@@ -933,6 +980,10 @@ class _SongListReviewState extends ConsumerState<_SongListReview> {
       ),
     );
     if (!mounted || confirmed != true) return;
+    if (!staffEventIsUpcoming(widget.event)) {
+      setState(() => _error = 'Chương trình đã bắt đầu hoặc đã hủy.');
+      return;
+    }
     setState(() {
       _busy = true;
       _error = null;

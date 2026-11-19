@@ -276,7 +276,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => RehearsalDetailScreen(
           rehearsalId: state.pathParameters['id'] ?? '',
           showOwnAttendance: sessionManager.role == MobileRole.choirMember,
-          manageRecordings: sessionManager.role == MobileRole.choirDirector,
+          manageRecordings:
+              sessionManager.role == MobileRole.choirDirector &&
+              state.extra == true,
         ),
       ),
       GoRoute(
@@ -347,8 +349,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/staff-attendance/:id',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) =>
-            StaffAttendanceScreen(rehearsalId: state.pathParameters['id']!),
+        builder: (context, state) => StaffAttendanceScreen(
+          rehearsalId: state.pathParameters['id']!,
+          rehearsalStart: switch (state.extra) {
+            final DateTime start => start,
+            _ => null,
+          },
+        ),
       ),
       GoRoute(
         path: '/staff-roster/:id',
@@ -361,14 +368,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) =>
             StaffParticipationScreen(eventId: state.pathParameters['id']!),
-      ),
-      GoRoute(
-        path: '/staff-demo/:id',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => StaffParticipationScreen(
-          eventId: state.pathParameters['id']!,
-          demo: true,
-        ),
       ),
       GoRoute(
         path: '/staff-practice',

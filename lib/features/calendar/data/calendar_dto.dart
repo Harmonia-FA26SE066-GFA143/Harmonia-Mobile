@@ -77,10 +77,14 @@ class PublicAppSettings {
   final String choirName;
   final String parishName;
   final String announcement;
+  final bool attendanceStartCheckEnabled;
+  final int attendanceOpensMinutesBefore;
   const PublicAppSettings({
     this.choirName = '',
     this.parishName = '',
     this.announcement = '',
+    this.attendanceStartCheckEnabled = true,
+    this.attendanceOpensMinutesBefore = 0,
   });
   factory PublicAppSettings.fromList(List<Map<String, dynamic>> rows) {
     final values = {
@@ -90,6 +94,17 @@ class PublicAppSettings {
       choirName: values['Choir.Name'] ?? '',
       parishName: values['Parish.Name'] ?? '',
       announcement: values['System.Announcement'] ?? '',
+      attendanceStartCheckEnabled:
+          bool.tryParse(
+            values['Rehearsal.AttendanceStartCheckEnabled']?.trim() ?? '',
+            caseSensitive: false,
+          ) ??
+          true,
+      attendanceOpensMinutesBefore:
+          int.tryParse(
+            values['Rehearsal.AttendanceOpensMinutesBefore'] ?? '',
+          ) ??
+          0,
     );
   }
 }

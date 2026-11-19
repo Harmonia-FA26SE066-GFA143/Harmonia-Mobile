@@ -4,7 +4,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:harmonia_mobile/app/app_env.dart';
 import 'package:harmonia_mobile/app/router/role_routes.dart';
 import 'package:harmonia_mobile/core/network/api_client.dart';
 import 'package:harmonia_mobile/core/session/session_manager.dart';
@@ -31,8 +30,51 @@ StaffOperationsApi makeApi(ResponseBody Function(RequestOptions) respond) {
 }
 
 void main() {
-  const expectDemo = bool.fromEnvironment('EXPECT_DEMO_TOOLS');
-  test('staff routes keep operations, reports, chat and demo in scope', () {
+  const eventId = '10000000-0000-4000-8000-000000000001';
+  const rehearsalId = '10000000-0000-4000-8000-000000000002';
+  const memberId = '10000000-0000-4000-8000-000000000003';
+  const songId = '10000000-0000-4000-8000-000000000004';
+  test(
+    'assignment update validates text and deadline and uses the edit contract',
+    () async {
+      final requests = <RequestOptions>[];
+      final api = makeApi((request) {
+        requests.add(request);
+        return request.method == 'DELETE'
+            ? ResponseBody.fromString('', 204)
+            : jsonResponse(200, {});
+      });
+      final deadline = DateTime.utc(2090, 11, 1);
+      await expectLater(
+        api.updatePracticeAssignment(eventId, title: ' ', dueDate: deadline),
+        throwsA(anything),
+      );
+      await expectLater(
+        api.updatePracticeAssignment(
+          eventId,
+          title: 'Bài hợp lệ',
+          dueDate: DateTime.utc(2000),
+        ),
+        throwsA(anything),
+      );
+      expect(requests, isEmpty);
+      await api.updatePracticeAssignment(
+        eventId,
+        title: '  Luyện bè  ',
+        instruction: 'Tập chậm',
+        dueDate: deadline,
+      );
+      await api.deletePracticeAssignment(eventId);
+      expect(requests.map((request) => request.method), ['PUT', 'DELETE']);
+      expect(requests.first.path, '/api/practice-assignments/$eventId');
+      expect(requests.first.data, {
+        'title': 'Luyện bè',
+        'instruction': 'Tập chậm',
+        'dueDate': '2090-11-01T00:00:00.000Z',
+      });
+    },
+  );
+  test('staff routes keep operations, reports and chat in scope', () {
     for (final role in MobileRole.values) {
       expect(
         roleAllowsRoute(role, Uri.parse('/staff-attendance/a')),
@@ -55,9 +97,10 @@ void main() {
         role != MobileRole.choirMember,
       );
       expect(roleAllowsRoute(role, Uri.parse('/interactive-score/s')), isTrue);
+      expect(roleAllowsRoute(role, Uri.parse('/staff-demo/e')), isFalse);
       expect(
-        roleAllowsRoute(role, Uri.parse('/staff-demo/e')),
-        expectDemo && role == MobileRole.choirDirector,
+        roleAllowsRoute(role, Uri.parse('/staff-participation/e')),
+        role != MobileRole.choirMember,
       );
     }
     expect(roleAllowsRoute(null, Uri.parse('/interactive-score/s')), isFalse);
@@ -113,48 +156,64 @@ void main() {
   );
 
   test(
-    'rehearsal creation uses UTC and keeps song notes out of the title',
+    'joint rehearsal creation uses UTC and reads the saved conflicts',
     () async {
       final api = makeApi((request) {
         expect(request.method, 'POST');
         expect(request.path, '/api/rehearsals');
         expect(request.data, {
-          'eventId': 'event',
-          'choirId': 'choir',
+          'eventId': eventId,
+          'choirId': null,
+          'isJoint': true,
           'locationId': null,
-          'startTime': '2026-11-10T12:00:00.000Z',
-          'endTime': '2026-11-10T13:00:00.000Z',
+          'startTime': '2090-11-10T12:00:00.000Z',
+          'endTime': '2090-11-10T13:00:00.000Z',
           'note': 'Bắt đầu tập',
           'songs': [
-            {'songId': 'song', 'note': 'Tập bè nữ'},
+            {'songId': songId, 'note': 'Tập bè nữ'},
           ],
         });
-        return jsonResponse(200, {});
+        return jsonResponse(200, {
+          'memberConflicts': [
+            {
+              'fullName': 'Ca viên thử nghiệm',
+              'eventDate': '2090-11-10',
+              'time': '19:00:00',
+            },
+          ],
+        });
       });
-      await api.saveRehearsal(
-        eventId: 'event',
-        choirId: 'choir',
-        start: DateTime.parse('2026-11-10T19:00:00+07:00'),
-        end: DateTime.parse('2026-11-10T20:00:00+07:00'),
+      final conflicts = await api.saveRehearsal(
+        eventId: eventId,
+        isJoint: true,
+        start: DateTime.parse('2090-11-10T19:00:00+07:00'),
+        end: DateTime.parse('2090-11-10T20:00:00+07:00'),
         note: 'Bắt đầu tập',
-        songs: [(id: 'song', title: 'Thánh ca', note: 'Tập bè nữ')],
+        songs: [(id: songId, title: 'Thánh ca', note: 'Tập bè nữ')],
       );
+      expect(conflicts.single.member, 'Ca viên thử nghiệm');
     },
   );
 
   testWidgets('attendance sends only the changed member', (tester) async {
     final changes = <Object?>[];
     final api = makeApi((request) {
-      expect(request.path, '/api/rehearsals/rehearsal/attendances');
+      expect(request.path, '/api/rehearsals/$rehearsalId/attendances');
       if (request.method == 'PUT') {
         changes.add(request.data);
         return ResponseBody.fromString('', 204);
       }
       return jsonResponse(200, [
-        {'memberId': 'a', 'fullName': 'Ca viên A', 'status': 'Present'},
         {
-          'memberId': 'b',
+          'memberId': 'a',
+          'fullName': 'Ca viên A',
+          'status': 'Present',
+          'isActive': false,
+        },
+        {
+          'memberId': memberId,
           'fullName': 'Ca viên B',
+          'isActive': true,
           'status': changes.isEmpty ? null : 'Late',
         },
       ]);
@@ -163,13 +222,14 @@ void main() {
       ProviderScope(
         overrides: [staffOperationsApiProvider.overrideWithValue(api)],
         child: const MaterialApp(
-          home: StaffAttendanceScreen(rehearsalId: 'rehearsal'),
+          home: StaffAttendanceScreen(rehearsalId: rehearsalId),
         ),
       ),
     );
     await tester.pumpAndSettle();
     expect(find.text('Ca viên A'), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('b')));
+    expect(find.textContaining('Không còn hoạt động'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey(memberId)));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Đi muộn').last);
     await tester.pumpAndSettle();
@@ -178,7 +238,7 @@ void main() {
     expect(changes, [
       {
         'items': [
-          {'memberId': 'b', 'status': 'Late'},
+          {'memberId': memberId, 'status': 'Late'},
         ],
       },
     ]);
@@ -191,9 +251,9 @@ void main() {
       final api = makeApi((request) {
         paths.add(request.path);
         switch (request.path) {
-          case '/api/event-participations/confirm-all':
-            expect(request.queryParameters['eventId'], 'event');
-            return jsonResponse(200, {});
+          case '/api/event-participations/reminders':
+            expect(request.queryParameters['eventId'], eventId);
+            return jsonResponse(200, {'remindedCount': 2, 'pendingCount': 3});
           case '/api/service-rosters':
             expect(request.queryParameters['eventId'], 'event');
             return jsonResponse(404, {'code': 'ROSTER_NOT_FOUND'});
@@ -213,14 +273,8 @@ void main() {
       await api.suggest('event');
       await api.finalize('roster', whole: true);
       await api.sendRoster('roster');
-      expect(AppEnv.demoToolsEnabled, expectDemo);
-      if (expectDemo) {
-        await api.demoConfirmAll('event');
-        expect(paths.last, '/api/event-participations/confirm-all');
-      } else {
-        await expectLater(api.demoConfirmAll('event'), throwsStateError);
-      }
-      expect(paths, hasLength(expectDemo ? 5 : 4));
+      expect(await api.remindParticipants(eventId), (reminded: 2, pending: 3));
+      expect(paths, hasLength(5));
     },
   );
 

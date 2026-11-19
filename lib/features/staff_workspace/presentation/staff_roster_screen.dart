@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../app/app_env.dart';
+import '../../../core/di/core_providers.dart';
+import '../../../core/errors/app_exceptions.dart';
+import '../../../core/session/session_manager.dart';
 import '../../auth/presentation/auth_notifier.dart';
 import '../../lookups/data/lookups_api_service.dart';
 import '../../music/data/music_repository.dart';
@@ -10,7 +12,36 @@ import '../data/staff_operations_api.dart';
 import '../data/staff_workspace_repository.dart';
 import 'staff_ops_widgets.dart';
 
+final _participationUpdates = StreamProvider.autoDispose.family((
+  ref,
+  String id,
+) {
+  return ref
+      .watch(signalRServiceProvider)
+      .participationChanges
+      .where((change) => change.eventId == null || change.eventId == id);
+});
+
+final _participationEvent = FutureProvider.autoDispose.family((
+  ref,
+  String id,
+) async {
+  ref.watch(_participationUpdates(id));
+  final role = ref.watch(
+    sessionManagerProvider.select((session) => session.role),
+  );
+  if (role == null || role == MobileRole.choirMember) {
+    throw const ForbiddenException();
+  }
+  final (event, rows) = await (
+    ref.watch(staffWorkspaceRepositoryProvider).event(role, id),
+    ref.watch(staffOperationsApiProvider).participants(id),
+  ).wait;
+  return (event: event, rows: rows);
+});
+
 final _roster = FutureProvider.autoDispose.family((ref, String id) async {
+  ref.watch(_participationUpdates(id));
   final api = ref.watch(staffOperationsApiProvider);
   final workspace = ref.watch(staffWorkspaceRepositoryProvider);
   final music = ref.watch(musicRepositoryProvider);
@@ -223,17 +254,11 @@ class _StaffRosterScreenState extends ConsumerState<StaffRosterScreen>
                 OpsTile(
                   title: 'Xác nhận tham gia',
                   subtitle:
-                      '${members.length}/${data.participants.length} ca viên đã xác nhận',
+                      '${data.participants.where((row) => row.status == 'Confirmed').length}/${data.participants.length} ca viên đã xác nhận',
                   icon: Icons.groups_outlined,
                   onTap: () =>
                       context.push(opsPath('staff-participation', _event)),
                 ),
-                if (AppEnv.demoToolsEnabled)
-                  OpsTile(
-                    title: 'Công cụ demo',
-                    icon: Icons.science_outlined,
-                    onTap: () => context.push(opsPath('staff-demo', _event)),
-                  ),
                 OpsChoiceField(
                   label: 'Phạm vi',
                   value: item,
@@ -307,6 +332,7 @@ class _StaffRosterScreenState extends ConsumerState<StaffRosterScreen>
                     row.skill,
                     row.song ?? 'Toàn lễ',
                     if (row.note?.isNotEmpty == true) row.note!,
+                    if (row.hasRehearsalConflict) 'Trùng giờ buổi tập',
                   ].join(' • '),
                   trailing:
                       canEdit &&
@@ -471,13 +497,8 @@ class _NeedsDialogState extends State<_NeedsDialog> {
 }
 
 class StaffParticipationScreen extends ConsumerStatefulWidget {
-  const StaffParticipationScreen({
-    super.key,
-    required this.eventId,
-    this.demo = false,
-  });
+  const StaffParticipationScreen({super.key, required this.eventId});
   final String eventId;
-  final bool demo;
 
   @override
   ConsumerState<StaffParticipationScreen> createState() =>
@@ -487,67 +508,91 @@ class StaffParticipationScreen extends ConsumerStatefulWidget {
 class _StaffParticipationScreenState
     extends ConsumerState<StaffParticipationScreen>
     with OpsActions<StaffParticipationScreen> {
+  Future<void> _send(StaffEvent event, {required bool reminder}) async {
+    if (event.status != 'Published' || !staffEventIsUpcoming(event)) return;
+    final api = ref.read(staffOperationsApiProvider);
+    final title = reminder ? 'Nhắc ca viên phản hồi?' : 'Mời ca viên tham gia?';
+    final label = reminder ? 'Gửi lời nhắc' : 'Gửi lời mời';
+    final agreed = await opsConfirm(
+      context,
+      title,
+      reminder
+          ? 'Gửi thông báo cho ca viên còn chờ phản hồi và đủ điều kiện nhận lời nhắc.'
+          : 'Gửi lời mời cho các ca viên đủ điều kiện chưa nhận lời mời.',
+      label,
+    );
+    if (!mounted || !agreed || !staffEventIsUpcoming(event)) return;
+    final id = widget.eventId;
+    String message = 'Đã gửi lời mời.';
+    final sent = await runAction(() async {
+      if (reminder) {
+        final result = await api.remindParticipants(id);
+        message = result.pending == 0
+            ? 'Không còn ca viên chờ phản hồi.'
+            : 'Đã nhắc ${result.reminded}/${result.pending} ca viên đang chờ phản hồi.';
+      } else {
+        await api.inviteMembers(id);
+      }
+    });
+    if (!mounted || !sent) return;
+    ref.invalidate(_participationEvent(id));
+    ref.invalidate(_roster(id));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
   @override
   Widget build(BuildContext context) {
-    final provider = _roster(widget.eventId);
+    final provider = _participationEvent(widget.eventId);
     return OpsPage(
-      title: widget.demo ? 'Xác nhận hàng loạt • Demo' : 'Xác nhận tham gia',
+      title: 'Xác nhận tham gia',
+      actions: [
+        IconButton(
+          tooltip: 'Tải lại',
+          icon: const Icon(Icons.refresh),
+          onPressed: busy ? null : () => ref.invalidate(provider),
+        ),
+      ],
       child: OpsAsync(
         value: ref.watch(provider),
         onRetry: () => ref.invalidate(provider),
         data: (data) {
-          if (!data.canManage || (widget.demo && !AppEnv.demoToolsEnabled)) {
-            return const Center(
-              child: Text('Bạn không có quyền thực hiện thao tác này.'),
-            );
-          }
+          final canSend =
+              data.event.status == 'Published' &&
+              staffEventIsUpcoming(data.event);
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
               actionState,
-              if (widget.demo)
-                const Text(
-                  'Thao tác này ghi dữ liệu xác nhận lên backend demo đang kết nối.',
+              if (canSend) ...[
+                FilledButton(
+                  onPressed: busy
+                      ? null
+                      : () => _send(data.event, reminder: false),
+                  child: const Text('Mời ca viên'),
                 ),
-              FilledButton(
-                onPressed: busy
-                    ? null
-                    : () async {
-                        final ok = await opsConfirm(
-                          context,
-                          widget.demo
-                              ? 'Xác nhận hộ toàn bộ'
-                              : 'Mời ca viên tham gia',
-                          widget.demo
-                              ? 'Xác nhận hộ ca viên của chương trình trong môi trường demo?'
-                              : 'Mời các ca viên đủ điều kiện chưa được mời tham gia chương trình?',
-                          widget.demo ? 'Xác nhận hộ' : 'Gửi lời mời',
-                        );
-                        if (!ok || !mounted) return;
-                        final api = ref.read(staffOperationsApiProvider);
-                        if (await runAction(
-                              () => widget.demo
-                                  ? api.demoConfirmAll(widget.eventId)
-                                  : api.inviteMembers(widget.eventId),
-                            ) &&
-                            mounted) {
-                          ref.invalidate(provider);
-                        }
-                      },
-                child: Text(
-                  widget.demo ? 'Xác nhận hộ toàn bộ' : 'Mời ca viên',
-                ),
-              ),
-              for (final row in data.participants)
+                if (data.rows.any((row) => row.status == 'Invited'))
+                  OutlinedButton(
+                    onPressed: busy
+                        ? null
+                        : () => _send(data.event, reminder: true),
+                    child: const Text('Nhắc phản hồi'),
+                  ),
+              ],
+              if (data.rows.isEmpty) const Text('Chưa có lời mời tham gia.'),
+              for (final row in data.rows)
                 OpsTile(
                   title: row.name,
-                  subtitle: switch (row.status) {
-                    'Confirmed' => 'Đã xác nhận',
-                    'Declined' => 'Báo vắng',
-                    'Unsure' => 'Chưa chắc chắn',
-                    'Invited' => 'Chờ xác nhận',
-                    _ => row.status,
-                  },
+                  subtitle: [
+                    switch (row.status) {
+                      'Confirmed' => 'Đã xác nhận',
+                      'Declined' => 'Báo vắng',
+                      'Unsure' => 'Chưa chắc chắn',
+                      'Invited' => 'Chờ xác nhận',
+                      _ => row.status,
+                    },
+                    if (row.hasTimeConflict) 'Trùng giờ phục vụ',
+                  ].join(' · '),
                 ),
             ],
           );
