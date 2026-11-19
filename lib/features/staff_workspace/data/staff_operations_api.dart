@@ -8,6 +8,8 @@ import '../../../core/constants/api_endpoints.dart';
 import '../../../core/di/core_providers.dart';
 import '../../../core/errors/app_exceptions.dart';
 import '../../../core/network/api_client.dart';
+import '../../choir_membership/data/choir_membership_api.dart'
+    show requireMemberManagementId;
 import '../../music/data/music_dto.dart';
 import '../../notifications/data/notification_dto.dart';
 import '../../practice/data/practice_audio_format.dart';
@@ -34,6 +36,10 @@ typedef PendingStaffSkill = ({
   String memberId,
   String memberName,
   MemberSkillDto skill,
+});
+typedef BulkSkillReview = ({
+  Set<String> approvedIds,
+  Map<String, String> failed,
 });
 typedef RehearsalSong = ({String id, String title, String? note});
 typedef StaffRehearsal = ({
@@ -328,6 +334,7 @@ class StaffOperationsApi {
     String keyword = '',
     MemberStatus? status,
     String? skillId,
+    bool? hasChoir,
   }) => _page(
     ApiEndpoints.memberProfiles,
     page,
@@ -345,6 +352,7 @@ class StaffOperationsApi {
       if (keyword.trim().isNotEmpty) 'keyword': keyword.trim(),
       if (status != null) 'status': status.wireName,
       'skillId': ?skillId,
+      'hasChoir': ?hasChoir,
     },
   );
 
@@ -407,6 +415,13 @@ class StaffOperationsApi {
   );
 
   Future<void> addChoirMembers(String choirId, List<String> memberIds) async {
+    requireMemberManagementId(choirId);
+    if (memberIds.isEmpty) {
+      throw const ValidationException(code: 'CHOIR_MEMBER_INVALID');
+    }
+    for (final id in memberIds) {
+      requireMemberManagementId(id);
+    }
     await _request<Object?>(
       'POST',
       ApiEndpoints.choirMembers(_id(choirId)),
@@ -434,6 +449,39 @@ class StaffOperationsApi {
     ),
     pageSize: pageSize,
   );
+
+  Future<BulkSkillReview> bulkApproveSkills(List<String> ids) async {
+    if (ids.isEmpty || ids.length > 50) {
+      throw const ValidationException(code: 'MEMBER_SKILL_BULK_COUNT_INVALID');
+    }
+    for (final id in ids) {
+      requireMemberManagementId(id);
+    }
+    final response = (await _request<Map<String, dynamic>>(
+      'POST',
+      '${ApiEndpoints.memberSkills}/bulk-approve',
+      body: {'ids': ids},
+    ))!;
+    return (
+      approvedIds: {
+        for (final row in _rows(response['approved'])) _str(row, 'id'),
+      },
+      failed: {
+        for (final row in _rows(response['failed']))
+          _str(row, 'id'): _str(row, 'code'),
+      },
+    );
+  }
+
+  Future<void> assignSkill(String memberId, String skillId) async {
+    requireMemberManagementId(memberId);
+    requireMemberManagementId(skillId);
+    await _request<Object?>(
+      'POST',
+      '${ApiEndpoints.memberSkills}/assign',
+      body: {'memberId': memberId, 'skillId': skillId},
+    );
+  }
 
   Future<void> reviewMemberSkill(String id, {String? rejectReason}) async {
     final action = rejectReason == null ? 'approve' : 'reject';

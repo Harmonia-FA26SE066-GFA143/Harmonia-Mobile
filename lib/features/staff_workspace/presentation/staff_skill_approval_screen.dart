@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/errors/error_messages.dart';
 import '../data/staff_operations_api.dart';
 import '../data/staff_dashboard_providers.dart';
 import 'staff_member_profile_screen.dart';
@@ -25,6 +26,7 @@ class _StaffSkillApprovalScreenState
     extends ConsumerState<StaffSkillApprovalScreen>
     with OpsActions<StaffSkillApprovalScreen> {
   int _page = 1;
+  final _checked = <String>{};
 
   Future<void> _review(
     PendingStaffSkill row, {
@@ -56,16 +58,81 @@ class _StaffSkillApprovalScreenState
       () => api.reviewMemberSkill(row.skill.id, rejectReason: reason),
     );
     if (!saved || !mounted) return;
-    if (lastOnPage && _page > 1) setState(() => _page--);
-    ref.invalidate(_pendingSkills);
-    ref.invalidate(staffPendingSkillsCountProvider);
-    ref.invalidate(staffMemberProfilesProvider);
-    ref.invalidate(staffMemberSummaryProvider);
+    setState(() {
+      _checked.remove(row.skill.id);
+      if (lastOnPage && _page > 1) _page--;
+    });
+    _refresh();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(approve ? 'Đã duyệt kỹ năng.' : 'Đã từ chối kỹ năng.'),
       ),
     );
+  }
+
+  void _refresh() {
+    ref.invalidate(_pendingSkills);
+    ref.invalidate(staffPendingSkillsCountProvider);
+    ref.invalidate(staffMemberProfilesProvider);
+    ref.invalidate(staffMemberSummaryProvider);
+  }
+
+  Future<void> _approveSelected(List<PendingStaffSkill> page) async {
+    final rows = page.where((row) => _checked.contains(row.skill.id)).toList();
+    if (rows.isEmpty) return;
+    final api = ref.read(staffOperationsApiProvider);
+    if (!await opsConfirm(
+          context,
+          'Duyệt các kỹ năng đã chọn?',
+          'Gửi duyệt ${rows.length} bản khai đang chờ xử lý.',
+          'Duyệt',
+        ) ||
+        !mounted) {
+      return;
+    }
+
+    late BulkSkillReview result;
+    if (!await runAction(() async {
+          result = await api.bulkApproveSkills(
+            rows.map((row) => row.skill.id).toList(),
+          );
+        }) ||
+        !mounted) {
+      return;
+    }
+
+    setState(() {
+      _page = 1;
+      _checked.clear();
+    });
+    _refresh();
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Kết quả duyệt kỹ năng'),
+        scrollable: true,
+        content: Text(
+          [
+            '${result.approvedIds.length} đã duyệt · ${result.failed.length} thất bại',
+            for (final row in rows)
+              '${row.memberName} · ${row.skill.skillName}\n${result.approvedIds.contains(row.skill.id) ? 'Đã duyệt' : ErrorMessages.getMessage(result.failed[row.skill.id] ?? '', fallback: 'Chưa xác nhận được kết quả.')}',
+          ].join('\n\n'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Đóng'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _goToPage(int number) {
+    setState(() {
+      _checked.clear();
+      _page = number;
+    });
   }
 
   @override
@@ -76,7 +143,12 @@ class _StaffSkillApprovalScreenState
       actions: [
         IconButton(
           tooltip: 'Tải lại',
-          onPressed: busy ? null : () => ref.invalidate(provider),
+          onPressed: busy
+              ? null
+              : () {
+                  setState(_checked.clear);
+                  ref.invalidate(provider);
+                },
           icon: const Icon(Icons.refresh),
         ),
       ],
@@ -95,12 +167,38 @@ class _StaffSkillApprovalScreenState
                 children: [
                   if (page.items.isEmpty)
                     const Center(child: Text('Chưa có kỹ năng chờ duyệt.')),
+                  if (page.items.isNotEmpty)
+                    OutlinedButton(
+                      onPressed:
+                          busy ||
+                              !page.items.any(
+                                (row) => _checked.contains(row.skill.id),
+                              )
+                          ? null
+                          : () => _approveSelected(page.items),
+                      child: Text(
+                        'Duyệt đã chọn (${page.items.where((row) => _checked.contains(row.skill.id)).length})',
+                      ),
+                    ),
                   for (final row in page.items)
                     Card(
                       child: Column(
                         children: [
                           ListTile(
-                            leading: const Icon(Icons.fact_check_outlined),
+                            leading: Checkbox(
+                              semanticLabel:
+                                  'Chọn ${row.skill.skillName} của ${row.memberName}',
+                              value: _checked.contains(row.skill.id),
+                              onChanged: busy
+                                  ? null
+                                  : (selected) => setState(() {
+                                      if (selected == true) {
+                                        _checked.add(row.skill.id);
+                                      } else {
+                                        _checked.remove(row.skill.id);
+                                      }
+                                    }),
+                            ),
                             title: Text(row.skill.skillName),
                             subtitle: Text(
                               [
@@ -148,10 +246,10 @@ class _StaffSkillApprovalScreenState
                   OpsPaging(
                     page: _page,
                     previous: page.hasPreviousPage && !busy
-                        ? () => setState(() => _page--)
+                        ? () => _goToPage(_page - 1)
                         : null,
                     next: page.hasNextPage && !busy
-                        ? () => setState(() => _page++)
+                        ? () => _goToPage(_page + 1)
                         : null,
                   ),
                 ],

@@ -80,6 +80,19 @@ class ErrorMessages {
         'Hãy cập nhật giới tính trong hồ sơ để khai báo kỹ năng này.',
     'MEMBER_SKILL_GENDER_MISMATCH':
         'Kỹ năng này không phù hợp với giới tính đã lưu trong hồ sơ.',
+    'MEMBER_SKILL_BULK_COUNT_INVALID': 'Chọn từ 1 đến 50 kỹ năng để duyệt.',
+    'MEMBER_MANAGEMENT_ID_INVALID':
+        'Dữ liệu tham chiếu không hợp lệ. Vui lòng tải lại.',
+    'MEMBER_ALREADY_IN_CHOIR':
+        'Ca viên đã thuộc ca đoàn khác và cần tự gửi yêu cầu chuyển ca đoàn.',
+    'CHOIR_JOIN_REQUEST_NOT_FOUND': 'Không tìm thấy yêu cầu ca đoàn.',
+    'CHOIR_JOIN_REQUEST_ALREADY_PENDING':
+        'Đang có yêu cầu hoặc lời mời chờ xử lý.',
+    'CHOIR_JOIN_REQUEST_NOT_PENDING':
+        'Yêu cầu đã được xử lý. Vui lòng tải lại.',
+    'CHOIR_JOIN_REQUEST_ALREADY_MEMBER': 'Bạn đã tham gia ca đoàn này.',
+    'CHOIR_JOIN_REQUEST_REJECT_REASON_REQUIRED': 'Vui lòng nhập lý do từ chối.',
+    'CHOIR_JOIN_REQUEST_TEXT_TOO_LONG': 'Lời nhắn hoặc lý do tối đa 500 ký tự.',
     'MATERIAL_LEARNING_STATUS_INVALID':
         'Chỉ có thể chọn Đã thuộc hoặc Cần tập thêm.',
     'MATERIAL_SCORE_INVALID':

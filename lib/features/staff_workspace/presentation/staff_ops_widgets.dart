@@ -199,23 +199,22 @@ Future<bool> opsConfirm(
   BuildContext context,
   String title,
   String body,
-  String label,
-) async =>
+  String label, {
+  bool outlinedCancel = false,
+}) async =>
     await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(title),
         content: Text(body),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Hủy'),
-          ),
-          FilledButton(
+        actions: _dialogActions(
+          context,
+          outlinedCancel: outlinedCancel,
+          confirm: FilledButton(
             onPressed: () => Navigator.pop(context, true),
             child: Text(label),
           ),
-        ],
+        ),
       ),
     ) ??
     false;
@@ -226,6 +225,7 @@ Future<String?> opsText(
   String label, {
   String initial = '',
   bool requiredText = false,
+  bool outlinedCancel = false,
   int max = 500,
 }) {
   var text = initial;
@@ -242,21 +242,41 @@ Future<String?> opsText(
           decoration: InputDecoration(labelText: label),
           onChanged: (value) => update(() => text = value.trim()),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Hủy'),
-          ),
-          FilledButton(
+        actions: _dialogActions(
+          context,
+          outlinedCancel: outlinedCancel,
+          confirm: FilledButton(
             onPressed: requiredText && text.trim().isEmpty
                 ? null
                 : () => Navigator.pop(context, text.trim()),
             child: const Text('Xác nhận'),
           ),
-        ],
+        ),
       ),
     ),
   );
+}
+
+List<Widget> _dialogActions(
+  BuildContext context, {
+  required bool outlinedCancel,
+  required Widget confirm,
+}) {
+  void close() => Navigator.pop(context);
+  const label = Text('Hủy');
+  if (!outlinedCancel) {
+    return [TextButton(onPressed: close, child: label), confirm];
+  }
+  return [
+    MemberChoirStyle.pairedActions(
+      cancel: OutlinedButton(
+        style: MemberChoirStyle.cancelButtonStyle,
+        onPressed: close,
+        child: label,
+      ),
+      confirm: confirm,
+    ),
+  ];
 }
 
 class OpsChoiceField extends StatelessWidget {

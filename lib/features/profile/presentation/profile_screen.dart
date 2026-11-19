@@ -1494,6 +1494,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
               actions: [
                 IconButton(
+                  tooltip: 'Yêu cầu và lời mời ca đoàn',
+                  onPressed: () => context.push('/choir-membership'),
+                  icon: const Icon(Icons.groups_outlined),
+                ),
+                IconButton(
                   tooltip: 'Ảnh đại diện',
                   onPressed: profile == null || _isAvatarUpdating
                       ? null

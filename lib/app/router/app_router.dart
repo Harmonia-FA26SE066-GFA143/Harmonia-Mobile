@@ -11,6 +11,7 @@ import '../../features/auth/presentation/reset_password_screen.dart';
 import '../../features/calendar/presentation/calendar_screen.dart';
 import '../../features/calendar/presentation/rehearsal_detail_screen.dart';
 import '../../features/calendar/presentation/liturgical_event_detail_screen.dart';
+import '../../features/choir_membership/presentation/choir_membership_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/music/presentation/song_detail_screen.dart';
 import '../../features/music/presentation/music_library_screen.dart';
@@ -331,6 +332,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) =>
             StaffChoirMembersScreen(choirId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/choir-membership',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const ChoirMembershipScreen(),
+      ),
+      GoRoute(
+        path: '/staff-choir-requests',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => ChoirMembershipScreen(
+          staff: true,
+          choirId: state.uri.queryParameters['choirId'],
+        ),
       ),
       GoRoute(
         path: '/staff-skill-approval',
