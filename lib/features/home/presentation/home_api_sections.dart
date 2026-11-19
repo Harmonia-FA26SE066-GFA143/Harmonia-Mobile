@@ -66,7 +66,7 @@ class MemberAssignmentsCard extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    'Phân công của bạn',
+                    'Phân công',
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 12),
@@ -74,7 +74,10 @@ class MemberAssignmentsCard extends ConsumerWidget {
                     const Card(
                       child: Padding(
                         padding: EdgeInsets.all(20),
-                        child: Text('Chưa có phân công sắp tới được công bố.'),
+                        child: Text(
+                          'Chưa có phân công sắp tới được công bố.',
+                          textAlign: TextAlign.center,
+                        ),
                       ),
                     ),
                   for (final event in assigned)
@@ -133,7 +136,10 @@ class UpcomingRehearsalCard extends ConsumerWidget {
             return const Card(
               child: Padding(
                 padding: EdgeInsets.all(16),
-                child: Text('Chưa có buổi tập sắp tới.'),
+                child: Text(
+                  'Chưa có buổi tập sắp tới.',
+                  textAlign: TextAlign.center,
+                ),
               ),
             );
           }

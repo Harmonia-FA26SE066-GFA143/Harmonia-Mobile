@@ -179,7 +179,7 @@ class LiturgicalDayDialog extends StatelessWidget {
     decoration: BoxDecoration(
       color: const Color(0xFFF8FAFC),
       borderRadius: BorderRadius.circular(8),
-      border: Border.all(color: AppColors.border),
+      border: MemberChoirStyle.panelBorder,
     ),
     child: Row(
       children: [

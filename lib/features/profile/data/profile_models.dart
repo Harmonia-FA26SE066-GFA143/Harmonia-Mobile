@@ -22,42 +22,23 @@ class MemberProfile {
   });
 }
 
-enum SkillLevel {
-  beginner('Beginner', 'Sơ cấp'),
-  intermediate('Intermediate', 'Trung cấp'),
-  advanced('Advanced', 'Nâng cao');
-
-  final String wireName;
-  final String label;
-
-  const SkillLevel(this.wireName, this.label);
-
-  static SkillLevel? fromWire(String? value) {
-    if (value == null) return null;
-    final clean = value.trim().toLowerCase();
-    for (final level in SkillLevel.values) {
-      if (level.wireName.toLowerCase() == clean ||
-          level.label.toLowerCase() == clean) {
-        return level;
-      }
-    }
-    return null;
-  }
-
-  static String toLabel(String? wireValue) {
-    if (wireValue == null || wireValue.trim().isEmpty) return 'Chưa xếp';
-    final parsed = fromWire(wireValue);
-    return parsed?.label ?? 'Chưa xác định';
-  }
-}
-
 enum SkillApprovalStatus {
   approved('Đã duyệt'),
   pending('Đang chờ duyệt'),
-  rejected('Chưa đạt');
+  rejected('Chưa đạt'),
+  revoked('Đã thu hồi'),
+  unknown('Chưa xác định');
 
   final String label;
   const SkillApprovalStatus(this.label);
+
+  static SkillApprovalStatus fromWire(String value) => switch (value) {
+    'Approved' => approved,
+    'Pending' => pending,
+    'Rejected' => rejected,
+    'Revoked' => revoked,
+    _ => unknown,
+  };
 }
 
 class MemberSkill {
@@ -66,15 +47,14 @@ class MemberSkill {
   final String name;
   final String categoryId;
   final String categoryName; // Kỹ năng thanh nhạc, Kỹ năng nhạc cụ
-  final String? level; // Beginner, Intermediate, Advanced or null
   final SkillApprovalStatus status;
   final String? note;
   final String? rejectReason;
   final DateTime? declaredAt;
   final DateTime? approvedAt;
+  final DateTime? revokedAt;
+  final String? revokeReason;
   final MemberSkillEvidence? evidence;
-
-  String get levelLabel => SkillLevel.toLabel(level);
 
   const MemberSkill({
     required this.id,
@@ -82,12 +62,13 @@ class MemberSkill {
     required this.name,
     this.categoryId = '',
     required this.categoryName,
-    this.level,
     required this.status,
     this.note,
     this.rejectReason,
     this.declaredAt,
     this.approvedAt,
+    this.revokedAt,
+    this.revokeReason,
     this.evidence,
   });
 }

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../profile/data/profile_models.dart';
 import '../data/staff_operations_api.dart';
 import '../data/staff_dashboard_providers.dart';
 import 'staff_member_profile_screen.dart';
@@ -107,9 +106,6 @@ class _StaffSkillApprovalScreenState
                               [
                                 row.memberName,
                                 row.skill.categoryName,
-                                if (SkillLevel.fromWire(row.skill.level)
-                                    case final level?)
-                                  level.label,
                                 if (row.skill.declaredAt case final date?)
                                   opsTime(date),
                               ].join(' · '),

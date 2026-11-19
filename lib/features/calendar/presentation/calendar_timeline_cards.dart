@@ -13,8 +13,6 @@ import '../data/liturgical_models.dart';
 import 'participation_prompt.dart';
 
 const _stitchSurfaceBg = Color(0xFFFAF8F5);
-const _stitchBorder = Color(0xFFE6E1D8);
-const _stitchInsetBorder = Color(0x99E6E1D8);
 const _stitchTextDark = Color(0xFF201C21);
 const _stitchTextMuted = Color(0xFF76767E);
 const _stitchTextBody = Color(0xFF45464D);
@@ -127,7 +125,7 @@ class CalendarEventCard extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: _stitchSurfaceBg,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: _stitchInsetBorder),
+                border: MemberChoirStyle.panelBorder,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -459,7 +457,7 @@ class CalendarRehearsalCard extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: _stitchSurfaceBg,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: _stitchInsetBorder),
+                border: MemberChoirStyle.panelBorder,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -704,7 +702,7 @@ class CalendarApprovedSongs extends ConsumerWidget {
                         decoration: BoxDecoration(
                           color: MemberChoirStyle.paper,
                           shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.border),
+                          border: MemberChoirStyle.panelBorder,
                         ),
                         child: Text(
                           '${index + 1}',
@@ -785,7 +783,7 @@ class _CalendarSurface extends StatelessWidget {
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: _stitchBorder),
+      border: MemberChoirStyle.panelBorder,
       boxShadow: const [
         BoxShadow(
           color: Color(0x0A1B2541),

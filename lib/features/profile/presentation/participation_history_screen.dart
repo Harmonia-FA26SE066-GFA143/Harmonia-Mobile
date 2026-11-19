@@ -185,16 +185,19 @@ class _ParticipationHistoryScreenState
                       // Season dropdown
                       Expanded(
                         child: DropdownButtonFormField<String?>(
-                          icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                          icon: MemberChoirStyle.choiceIcon,
+                          iconEnabledColor: MemberChoirStyle.wine,
                           initialValue: _selectedSeasonId,
                           isExpanded: true,
-                          decoration: InputDecoration(
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 10,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
+                          decoration: MemberChoirStyle.choiceDecoration(
+                            InputDecoration(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
                             ),
                           ),
                           items: [
@@ -377,6 +380,10 @@ class _ParticipationHistoryScreenState
                             : null;
 
                         return Card(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: MemberChoirStyle.buttonBorder,
+                          ),
                           child: Padding(
                             padding: const EdgeInsets.all(16),
                             child: Column(

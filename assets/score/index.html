@@ -9,6 +9,10 @@
   body { margin: 0; background: white; color: #261d21; font: 14px system-ui, sans-serif; }
   #sheet { min-height: 4rem; }
   #sheet svg { display: block; width: 100%; height: auto; max-height: calc(100vh - 3.5rem); }
+  body.follow-playback { height: 100vh; display: flex; flex-direction: column; }
+  .follow-playback #sheet { flex: 1; min-height: 0; overflow: auto; }
+  .follow-playback #sheet svg { max-height: none; }
+  .follow-playback nav { flex-shrink: 0; }
   #sheet .active-note, #sheet .active-note * { fill: #9c244a; stroke: #9c244a; }
   nav { display: flex; align-items: center; justify-content: center; gap: 1rem; padding: .4rem; }
   button { padding: .5rem 1rem; color: #751b37; background: white; border: 1px solid #d6c4ca; border-radius: .4rem; }

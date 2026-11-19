@@ -697,7 +697,7 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
       decoration: BoxDecoration(
         color: const Color(0xFF1C3047),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFF344B65)),
+        border: Border.all(color: AppColors.outline, width: 1.2),
       ),
       child: Column(
         children: [
@@ -1309,7 +1309,10 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                               DecoratedBox(
                                 decoration: BoxDecoration(
                                   color: Colors.white.withValues(alpha: .07),
-                                  border: Border.all(color: Colors.white24),
+                                  border: Border.all(
+                                    color: Colors.white54,
+                                    width: 1.2,
+                                  ),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Padding(

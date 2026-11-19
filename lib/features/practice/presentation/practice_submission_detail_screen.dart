@@ -312,7 +312,7 @@ class _PracticeSubmissionDetailScreenState
                 decoration: BoxDecoration(
                   color: MemberChoirStyle.paper,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: MemberChoirStyle.border),
+                  border: MemberChoirStyle.panelBorder,
                 ),
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
@@ -401,7 +401,12 @@ class _PracticeSubmissionDetailScreenState
                 ),
               ),
               if (submission.feedbacks.isEmpty)
-                const Text('Chưa có nhận xét nào từ Ca trưởng cho lần nộp này.')
+                const Center(
+                  child: Text(
+                    'Chưa có nhận xét nào từ Ca trưởng cho lần nộp này.',
+                    textAlign: TextAlign.center,
+                  ),
+                )
               else
                 for (final (index, feedback)
                     in submission.feedbacks.indexed) ...[

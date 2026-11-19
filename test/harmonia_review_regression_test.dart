@@ -183,7 +183,6 @@ class FakeProfileRepository implements ProfileRepository {
   @override
   Future<MemberSkill> declareNewSkill({
     required String skillId,
-    String? level,
     String? name,
     String? categoryName,
     String? note,
@@ -294,62 +293,6 @@ class FakePracticeRepository implements PracticeRepository {
 void main() {
   setUp(() {
     FlutterSecureStorage.setMockInitialValues({});
-  });
-
-  group('Mục 2: Cấp độ kỹ năng (Enum, Mapping, WireName, Detail)', () {
-    test('SkillLevel wireName and Vietnamese labels map correctly', () {
-      expect(SkillLevel.beginner.wireName, 'Beginner');
-      expect(SkillLevel.beginner.label, 'Sơ cấp');
-
-      expect(SkillLevel.intermediate.wireName, 'Intermediate');
-      expect(SkillLevel.intermediate.label, 'Trung cấp');
-
-      expect(SkillLevel.advanced.wireName, 'Advanced');
-      expect(SkillLevel.advanced.label, 'Nâng cao');
-    });
-
-    test(
-      'SkillLevel.fromWire parses case-insensitively and handles invalid',
-      () {
-        expect(SkillLevel.fromWire('Beginner'), SkillLevel.beginner);
-        expect(SkillLevel.fromWire('intermediate'), SkillLevel.intermediate);
-        expect(SkillLevel.fromWire('ADVANCED'), SkillLevel.advanced);
-        expect(SkillLevel.fromWire('UnknownLevel'), isNull);
-        expect(SkillLevel.fromWire(null), isNull);
-      },
-    );
-
-    test('MemberSkill.levelLabel handles valid, unknown, and null levels', () {
-      final skillValid = MemberSkill(
-        id: '00000000-0000-0000-0000-000000000001',
-        skillId: '00000000-0000-0000-0000-000000000002',
-        name: 'Thanh nhạc',
-        categoryName: 'Hát',
-        level: 'Intermediate',
-        status: SkillApprovalStatus.approved,
-      );
-      expect(skillValid.levelLabel, 'Trung cấp');
-
-      final skillNull = MemberSkill(
-        id: '00000000-0000-0000-0000-000000000003',
-        skillId: '00000000-0000-0000-0000-000000000004',
-        name: 'Đệm đàn',
-        categoryName: 'Nhạc cụ',
-        level: null,
-        status: SkillApprovalStatus.approved,
-      );
-      expect(skillNull.levelLabel, 'Chưa xếp');
-
-      final skillUnknown = MemberSkill(
-        id: '00000000-0000-0000-0000-000000000005',
-        skillId: '00000000-0000-0000-0000-000000000006',
-        name: 'Chỉ huy',
-        categoryName: 'Điều hành',
-        level: 'ExpertLevel',
-        status: SkillApprovalStatus.pending,
-      );
-      expect(skillUnknown.levelLabel, 'Chưa xác định');
-    });
   });
 
   group('Mục 3: Bộ lọc Chưa nộp & hasSubmission', () {
@@ -1357,7 +1300,6 @@ void main() {
           skillId: 'guid-$i',
           name: 'Kỹ năng $i',
           categoryName: 'Thanh nhạc',
-          level: 'Beginner',
           status: SkillApprovalStatus.approved,
         ),
       );
@@ -1430,7 +1372,6 @@ void main() {
           skillId: 'guid-$i',
           name: 'Kỹ năng $i',
           categoryName: 'Thanh nhạc',
-          level: 'Beginner',
           status: SkillApprovalStatus.approved,
         ),
       );
@@ -1473,7 +1414,6 @@ void main() {
             skillId: 'guid-$i',
             name: 'Kỹ năng $i',
             categoryName: 'Thanh nhạc',
-            level: 'Beginner',
             status: SkillApprovalStatus.approved,
           ),
         ),
@@ -1483,7 +1423,6 @@ void main() {
           skillId: 'guid-0',
           name: 'Kỹ năng 0',
           categoryName: 'Thanh nhạc',
-          level: 'Beginner',
           status: SkillApprovalStatus.approved,
         ),
         MemberSkill(
@@ -1491,7 +1430,6 @@ void main() {
           skillId: 'guid-10',
           name: 'Kỹ năng 10',
           categoryName: 'Thanh nhạc',
-          level: 'Beginner',
           status: SkillApprovalStatus.approved,
         ),
       ];
@@ -1523,7 +1461,6 @@ void main() {
           skillId: 'guid-$i',
           name: 'Kỹ năng $i',
           categoryName: 'Thanh nhạc',
-          level: 'Beginner',
           status: SkillApprovalStatus.approved,
         ),
       );
@@ -1563,7 +1500,6 @@ void main() {
           skillId: 'g-app',
           name: 'Kỹ năng đã duyệt',
           categoryName: 'Thanh nhạc',
-          level: 'Beginner',
           status: SkillApprovalStatus.approved,
         ),
         MemberSkill(
@@ -1571,7 +1507,6 @@ void main() {
           skillId: 'g-pen',
           name: 'Kỹ năng chờ duyệt',
           categoryName: 'Thanh nhạc',
-          level: 'Beginner',
           status: SkillApprovalStatus.pending,
         ),
       ];
@@ -1609,7 +1544,6 @@ void main() {
           skillId: 'guid-$i',
           name: 'Kỹ năng $i',
           categoryName: 'Thanh nhạc',
-          level: 'Beginner',
           status: SkillApprovalStatus.approved,
         ),
       );
@@ -1638,7 +1572,6 @@ void main() {
           skillId: 'guid-$i',
           name: 'Kỹ năng $i',
           categoryName: 'Thanh nhạc',
-          level: 'Beginner',
           status: SkillApprovalStatus.approved,
         ),
       );

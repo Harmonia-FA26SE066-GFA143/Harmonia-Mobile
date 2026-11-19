@@ -357,7 +357,7 @@ class _SongOverview extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0x4DC6C6CE)),
+        border: MemberChoirStyle.panelBorder,
         boxShadow: const [
           BoxShadow(
             color: Color(0x0F1B2541),
@@ -499,9 +499,7 @@ class _SongOverview extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: MemberChoirStyle.paper,
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: const Color(0x99E6E1D8),
-                              ),
+                              border: MemberChoirStyle.panelBorder,
                             ),
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.center,
@@ -621,7 +619,7 @@ class _ScoreAndSheetSection extends StatelessWidget {
               decoration: BoxDecoration(
                 color: const Color(0xFFFAF8F5),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE6E1D8)),
+                border: MemberChoirStyle.panelBorder,
               ),
               child: Material(
                 color: Colors.transparent,
@@ -704,9 +702,7 @@ class _ScoreAndSheetSection extends StatelessWidget {
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: const Color(0xFF111C2D),
                                 backgroundColor: Colors.white,
-                                side: const BorderSide(
-                                  color: Color(0xFFE6E1D8),
-                                ),
+                                side: MemberChoirStyle.buttonBorder,
                                 minimumSize: const Size(0, 36),
                                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                 shape: RoundedRectangleBorder(
@@ -758,7 +754,7 @@ class _ScoreAndSheetSection extends StatelessWidget {
               decoration: BoxDecoration(
                 color: const Color(0xFFFAF8F5),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE6E1D8)),
+                border: MemberChoirStyle.panelBorder,
               ),
               child: Material(
                 color: Colors.transparent,
@@ -933,7 +929,7 @@ class _AssignmentAndDocumentsSection extends StatelessWidget {
               decoration: BoxDecoration(
                 color: MemberChoirStyle.paper,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE6E1D8)),
+                border: MemberChoirStyle.panelBorder,
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -1025,10 +1021,11 @@ class _AssignmentAndDocumentsSection extends StatelessWidget {
               decoration: BoxDecoration(
                 color: const Color(0xFFFAF8F5),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0x99E6E1D8)),
+                border: MemberChoirStyle.panelBorder,
               ),
               child: const Text(
                 'Chưa có tài liệu phù hợp với kỹ năng của bạn cho bài hát này.',
+                textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 13, color: Color(0xFF45464D)),
               ),
             ),
@@ -1057,7 +1054,7 @@ class _DirectorNoteSection extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0x4DC6C6CE)),
+        border: MemberChoirStyle.panelBorder,
         boxShadow: const [
           BoxShadow(
             color: Color(0x0A1B2541),
@@ -1126,7 +1123,7 @@ class _DirectorNoteSection extends StatelessWidget {
     decoration: BoxDecoration(
       color: const Color(0xFFFAF8F5),
       borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: const Color(0x99E6E1D8)),
+      border: MemberChoirStyle.panelBorder,
     ),
     child: Text(
       text,
@@ -1150,7 +1147,7 @@ class _SongCardShell extends StatelessWidget {
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: const Color(0x4DC6C6CE)),
+      border: MemberChoirStyle.panelBorder,
       boxShadow: const [
         BoxShadow(
           color: Color(0x0A1B2541),
@@ -1185,7 +1182,7 @@ class _SongMaterialCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFFFAF8F5),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE6E1D8)),
+        border: MemberChoirStyle.panelBorder,
       ),
       child: Material(
         color: Colors.transparent,
@@ -1236,7 +1233,7 @@ class _SongMaterialCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0x99E6E1D8)),
+                      border: MemberChoirStyle.panelBorder,
                     ),
                     child: Text(
                       material.lyricsText!,

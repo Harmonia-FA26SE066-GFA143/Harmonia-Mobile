@@ -27,14 +27,14 @@ Future<void> showParticipationPrompt(
     return;
   }
   final epoch = ref.read(sessionManagerProvider).sessionEpoch;
+  final isChange = event.participationStatus.isAnswer;
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      title: Text('Gửi phản hồi: ${status.label}?'),
-      content: Text(
-        '${event.title}\n\nPhản hồi chỉ gửi một lần và không thể thay đổi trên hệ thống.'
-        '${event.participationStatus == ParticipationStatus.unknown ? "\nBạn chỉ có thể phản hồi nếu đã nhận lời mời tham gia." : ""}',
+      title: Text(
+        '${isChange ? 'Đổi sang' : 'Gửi phản hồi'}: ${status.label}?',
       ),
+      content: Text(event.title),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(dialogContext, false),
@@ -42,7 +42,7 @@ Future<void> showParticipationPrompt(
         ),
         FilledButton(
           onPressed: () => Navigator.pop(dialogContext, true),
-          child: const Text('Gửi phản hồi'),
+          child: Text(isChange ? 'Đổi phản hồi' : 'Gửi phản hồi'),
         ),
       ],
     ),

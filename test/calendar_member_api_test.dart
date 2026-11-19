@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:harmonia_mobile/core/errors/app_exceptions.dart';
 import 'package:harmonia_mobile/core/network/api_client.dart';
 import 'package:harmonia_mobile/core/session/session_manager.dart';
 import 'package:harmonia_mobile/core/storage/secure_storage_service.dart';
@@ -22,6 +23,7 @@ class MemberScheduleAdapter implements HttpClientAdapter {
   String responseStatus = 'Confirmed';
   String? failPath;
   bool allowResponse = false;
+  String? note;
   bool noInvitations = false;
   int putStatusCode = 200;
   String detailId = id;
@@ -42,12 +44,11 @@ class MemberScheduleAdapter implements HttpClientAdapter {
       body = putStatusCode == 200
           ? {'eventId': id, 'status': (options.data as Map)['status']}
           : {
-              'code': 'EVENT_PARTICIPATION_ALREADY_RESPONDED',
-              'message': 'Already responded',
+              'code': 'EVENT_PARTICIPATION_CHANGE_CLOSED',
+              'message': 'Change window closed',
             };
       if (putStatusCode == 200) {
         responseStatus = (options.data as Map)['status'];
-        allowResponse = false;
       }
     } else {
       body = switch (options.path) {
@@ -71,11 +72,11 @@ class MemberScheduleAdapter implements HttpClientAdapter {
                     'status': responseStatus,
                     'requestedAt': '2026-10-15T01:00:00Z',
                     'respondedAt': '2026-10-16T01:00:00Z',
-                    'note': null,
+                    'note': note,
                     'canRespond': allowResponse,
                     'cannotRespondReason': allowResponse
                         ? null
-                        : 'EVENT_PARTICIPATION_ALREADY_RESPONDED',
+                        : 'EVENT_PARTICIPATION_CHANGE_CLOSED',
                   },
                 ],
         '/api/schedule/assignments' => [
@@ -222,7 +223,7 @@ void main() {
     );
     expect(adapter.requests.where((r) => r.method == 'PUT'), isEmpty);
   });
-  test('a successful PUT is restored by a new repository and a second PUT is blocked', () async {
+  test('an answer can be changed until the server closes the window', () async {
     adapter.responseStatus = 'Invited';
     adapter.allowResponse = true;
     await repo.updateParticipation(id, ParticipationStatus.confirmed);
@@ -231,27 +232,63 @@ void main() {
       (await restored.getEvents()).single.participationStatus,
       ParticipationStatus.confirmed,
     );
-    expect((await repo.getEvents()).single.canRespond, isFalse);
+    expect((await restored.getEvents()).single.canRespond, isTrue);
+    final note = '${'a' * 298}🎵';
+    adapter.note = note;
+    await restored.updateParticipation(id, ParticipationStatus.unsure);
+    final change = adapter.requests.lastWhere((r) => r.method == 'PUT');
+    expect(change.data, {'status': 'Unsure', 'note': note});
+    adapter.allowResponse = false;
     await expectLater(
       repo.updateParticipation(id, ParticipationStatus.declined),
-      throwsA(anything),
+      throwsA(
+        isA<ValidationException>().having(
+          (error) => error.code,
+          'code',
+          'EVENT_PARTICIPATION_CHANGE_CLOSED',
+        ),
+      ),
     );
-    expect(adapter.requests.where((r) => r.method == 'PUT').length, 1);
+    expect(adapter.requests.where((r) => r.method == 'PUT').length, 2);
   });
+  test(
+    'a 301-unit note prevents PUT even when the invitation is open',
+    () async {
+      adapter.allowResponse = true;
+      adapter.note = '${'a' * 299}🎵';
+
+      await expectLater(
+        repo.updateParticipation(id, ParticipationStatus.unsure),
+        throwsA(
+          isA<ValidationException>().having(
+            (error) => error.code,
+            'code',
+            'PARTICIPATION_NOTE_TOO_LONG',
+          ),
+        ),
+      );
+      expect(adapter.requests.where((r) => r.method == 'PUT'), isEmpty);
+    },
+  );
   test(
     'PUT conflict is propagated and never becomes a successful answer',
     () async {
-      adapter.responseStatus = 'Invited';
       adapter.allowResponse = true;
       adapter.putStatusCode = 409;
       await expectLater(
-        repo.updateParticipation(id, ParticipationStatus.confirmed),
-        throwsA(anything),
+        repo.updateParticipation(id, ParticipationStatus.declined),
+        throwsA(
+          isA<AppException>().having(
+            (error) => error.code,
+            'code',
+            'EVENT_PARTICIPATION_CHANGE_CLOSED',
+          ),
+        ),
       );
       expect(adapter.requests.where((r) => r.method == 'PUT').length, 1);
       expect(
         (await repo.getEvents()).single.participationStatus,
-        ParticipationStatus.invited,
+        ParticipationStatus.confirmed,
       );
     },
   );

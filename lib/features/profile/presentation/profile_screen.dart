@@ -107,7 +107,7 @@ final _profileActionButtonStyle = OutlinedButton.styleFrom(
   backgroundColor: AppColors.statusDangerSoft,
   minimumSize: const Size(0, 48),
   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-  side: BorderSide(color: AppColors.statusDanger.withValues(alpha: 0.35)),
+  side: const BorderSide(color: AppColors.statusDanger, width: 1.2),
   textStyle: AppTypography.labelLarge.copyWith(fontWeight: FontWeight.bold),
 );
 
@@ -241,13 +241,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         title: const Text('Xóa ảnh đại diện?'),
         content: const Text('Bạn có thể thêm ảnh mới bất cứ lúc nào.'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Hủy'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Xóa ảnh'),
+          MemberChoirStyle.pairedActions(
+            cancel: OutlinedButton(
+              style: MemberChoirStyle.cancelButtonStyle,
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Hủy'),
+            ),
+            confirm: TextButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Xóa ảnh'),
+            ),
           ),
         ],
       ),
@@ -423,7 +426,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     Text('Giới tính', style: AppTypography.labelLarge),
                     const SizedBox(height: 6),
                     DropdownButtonFormField<MemberGender>(
-                      icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                      icon: MemberChoirStyle.choiceIcon,
+                      iconEnabledColor: MemberChoirStyle.wine,
+                      decoration: MemberChoirStyle.choiceDecoration(
+                        const InputDecoration(),
+                      ),
                       initialValue: selectedGender,
                       isExpanded: true,
                       style: Theme.of(context).textTheme.bodyLarge,
@@ -562,11 +569,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  void _showDeclareSkillDialog(BuildContext context, ProfileRepository repo) {
+  void _showDeclareSkillDialog(
+    BuildContext context,
+    ProfileRepository repo,
+    MemberGender? memberGender,
+  ) {
     SkillDto? selectedSkill;
-    SkillLevel selectedLevel = SkillLevel.intermediate;
     String? evidencePath;
     String? evidenceFileName;
+    final session = ref.read(sessionManagerProvider);
+    final epoch = session.sessionEpoch;
 
     bool isSubmitting = false;
     String? errorMessage;
@@ -592,6 +604,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               final loading = snapshot.connectionState != ConnectionState.done;
               final availableSkills = snapshot.data ?? const <SkillDto>[];
               selectedSkill ??= availableSkills.firstOrNull;
+              final requiredGender = selectedSkill?.gender;
+              final genderError = requiredGender == null
+                  ? null
+                  : memberGender == null
+                  ? 'MEMBER_SKILL_GENDER_REQUIRED'
+                  : memberGender != requiredGender
+                  ? 'MEMBER_SKILL_GENDER_MISMATCH'
+                  : null;
+              final canSubmit =
+                  !isSubmitting && selectedSkill != null && genderError == null;
               final choiceDecoration = InputDecoration(
                 fillColor: AppColors.surface,
                 border: OutlineInputBorder(
@@ -602,7 +624,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
               Future<void> submit() async {
                 final skill = selectedSkill;
-                if (isSubmitting || skill == null) return;
+                if (isSubmitting ||
+                    skill == null ||
+                    genderError != null ||
+                    session.sessionEpoch != epoch) {
+                  return;
+                }
                 final messenger = ScaffoldMessenger.of(this.context);
                 setModalState(() {
                   isSubmitting = true;
@@ -612,9 +639,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 try {
                   final declared = await repo.declareNewSkill(
                     skillId: skill.id,
-                    level: selectedLevel.wireName,
                     name: skill.name,
                   );
+                  if (!mounted ||
+                      !context.mounted ||
+                      session.sessionEpoch != epoch) {
+                    return;
+                  }
                   final evidence = evidencePath;
                   Object? uploadError;
                   if (evidence != null) {
@@ -627,7 +658,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       uploadError = error;
                     }
                   }
-                  if (!mounted || !context.mounted) return;
+                  if (!mounted ||
+                      !context.mounted ||
+                      session.sessionEpoch != epoch) {
+                    return;
+                  }
                   close();
                   ref.invalidate(currentMemberSkillsProvider);
                   unawaited(
@@ -648,7 +683,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
                   );
                 } catch (error) {
-                  if (!context.mounted) return;
+                  if (!context.mounted || session.sessionEpoch != epoch) return;
                   setModalState(() {
                     isSubmitting = false;
                     errorMessage =
@@ -753,18 +788,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                     )
                                   else
                                     DropdownButtonFormField<SkillDto>(
-                                      icon: const Icon(
-                                        Icons.keyboard_arrow_down_rounded,
-                                      ),
+                                      icon: MemberChoirStyle.choiceIcon,
+                                      iconEnabledColor: MemberChoirStyle.wine,
                                       initialValue: selectedSkill,
                                       isExpanded: true,
                                       itemHeight: null,
-                                      decoration: choiceDecoration.copyWith(
-                                        prefixIcon: const Icon(
-                                          Icons.music_note_rounded,
-                                          color: MemberChoirStyle.wine,
-                                        ),
-                                      ),
+                                      decoration:
+                                          MemberChoirStyle.choiceDecoration(
+                                            choiceDecoration.copyWith(
+                                              prefixIcon: const Icon(
+                                                Icons.music_note_rounded,
+                                                color: MemberChoirStyle.wine,
+                                              ),
+                                            ),
+                                          ),
                                       selectedItemBuilder: (_) => [
                                         for (final skill in availableSkills)
                                           Text(
@@ -798,49 +835,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                       ],
                                       onChanged: isSubmitting
                                           ? null
-                                          : (skill) => setModalState(
-                                              () => selectedSkill = skill,
-                                            ),
+                                          : (skill) => setModalState(() {
+                                              selectedSkill = skill;
+                                              errorMessage = null;
+                                            }),
                                     ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    'Cấp độ năng lực',
-                                    style: AppTypography.labelLarge,
-                                  ),
-                                  const SizedBox(height: 6),
-                                  DropdownButtonFormField<SkillLevel>(
-                                    icon: const Icon(
-                                      Icons.keyboard_arrow_down_rounded,
-                                    ),
-                                    initialValue: selectedLevel,
-                                    isExpanded: true,
-                                    decoration: choiceDecoration.copyWith(
-                                      prefixIcon: const Icon(
-                                        Icons.workspace_premium_outlined,
-                                        color: AppColors.statusWarning,
+                                  if (genderError != null) ...[
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      ErrorMessages.getMessage(genderError),
+                                      style: AppTypography.bodySmall.copyWith(
+                                        color: AppColors.statusDanger,
                                       ),
                                     ),
-                                    items: SkillLevel.values
-                                        .map(
-                                          (l) => DropdownMenuItem(
-                                            value: l,
-                                            child: Text(
-                                              l.label,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                        )
-                                        .toList(),
-                                    onChanged: isSubmitting
-                                        ? null
-                                        : (val) {
-                                            if (val != null) {
-                                              setModalState(
-                                                () => selectedLevel = val,
-                                              );
-                                            }
-                                          },
-                                  ),
+                                  ],
                                   const SizedBox(height: 14),
                                   Text(
                                     'Minh chứng ghi âm hoặc video (không bắt buộc)',
@@ -850,9 +858,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                   OutlinedButton.icon(
                                     style: OutlinedButton.styleFrom(
                                       backgroundColor: MemberChoirStyle.paper,
-                                      side: const BorderSide(
-                                        color: MemberChoirStyle.border,
-                                      ),
                                     ),
                                     onPressed: isSubmitting
                                         ? null
@@ -970,41 +975,28 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             ),
                           Padding(
                             padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-                            child: Row(
-                              spacing: 10,
-                              children: [
-                                OutlinedButton(
-                                  style: OutlinedButton.styleFrom(
-                                    minimumSize: const Size(0, 48),
-                                  ),
-                                  onPressed: isSubmitting ? null : close,
-                                  child: const Text('Hủy'),
+                            child: MemberChoirStyle.pairedActions(
+                              cancel: OutlinedButton(
+                                style: MemberChoirStyle.cancelButtonStyle,
+                                onPressed: isSubmitting ? null : close,
+                                child: const Text('Hủy'),
+                              ),
+                              confirm: FilledButton.icon(
+                                onPressed: canSubmit ? submit : null,
+                                icon: isSubmitting
+                                    ? const SizedBox.square(
+                                        dimension: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : const Icon(Icons.send_outlined, size: 18),
+                                label: const Text(
+                                  'Gửi bản khai kỹ năng',
+                                  textAlign: TextAlign.center,
                                 ),
-                                Expanded(
-                                  child: FilledButton.icon(
-                                    onPressed:
-                                        isSubmitting || selectedSkill == null
-                                        ? null
-                                        : submit,
-                                    icon: isSubmitting
-                                        ? const SizedBox.square(
-                                            dimension: 18,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: Colors.white,
-                                            ),
-                                          )
-                                        : const Icon(
-                                            Icons.send_outlined,
-                                            size: 18,
-                                          ),
-                                    label: const Text(
-                                      'Gửi bản khai kỹ năng',
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
                           ),
                         ],
@@ -1092,18 +1084,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     );
                   }
 
-                  Color badgeBg;
-                  Color badgeFg;
-                  if (skill.status == SkillApprovalStatus.approved) {
-                    badgeBg = AppColors.statusSuccessSoft;
-                    badgeFg = AppColors.statusSuccess;
-                  } else if (skill.status == SkillApprovalStatus.rejected) {
-                    badgeBg = AppColors.statusDangerSoft;
-                    badgeFg = AppColors.statusDanger;
-                  } else {
-                    badgeBg = AppColors.statusWarningSoft;
-                    badgeFg = AppColors.statusWarning;
-                  }
+                  final (badgeFg, badgeBg, icon) = _skillStatusAppearance(
+                    skill.status,
+                  );
+                  final isRevoked = skill.status == SkillApprovalStatus.revoked;
+                  final reason =
+                      (isRevoked ? skill.revokeReason : skill.rejectReason)
+                          ?.trim();
 
                   return Padding(
                     padding: const EdgeInsets.all(20),
@@ -1140,43 +1127,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           ),
                         ),
                         const SizedBox(height: 20),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: badgeBg,
-                                borderRadius: BorderRadius.circular(24),
-                              ),
-                              child: Text(
-                                skill.status.label,
-                                style: AppTypography.labelSmall.copyWith(
-                                  color: badgeFg,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.surfaceContainerLow,
-                                borderRadius: BorderRadius.circular(24),
-                              ),
-                              child: Text(
-                                'Cấp độ: ${skill.levelLabel}',
-                                style: AppTypography.labelSmall.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
+                        Align(
+                          alignment: AlignmentDirectional.centerStart,
+                          child: _ProfileBadge(
+                            label: skill.status.label,
+                            color: badgeFg,
+                            fill: badgeBg,
+                            icon: icon,
+                          ),
                         ),
                         const SizedBox(height: 20),
                         if (skill.declaredAt != null)
@@ -1195,9 +1153,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               style: AppTypography.bodySmall,
                             ),
                           ),
-                        if (skill.status == SkillApprovalStatus.rejected &&
-                            skill.rejectReason != null &&
-                            skill.rejectReason!.isNotEmpty) ...[
+                        if (skill.revokedAt case final date? when isRevoked)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Text(
+                              'Ngày thu hồi: ${DateFormat('dd/MM/yyyy HH:mm').format(date)}',
+                              style: AppTypography.bodySmall,
+                            ),
+                          ),
+                        if ((isRevoked ||
+                                skill.status == SkillApprovalStatus.rejected) &&
+                            reason != null &&
+                            reason.isNotEmpty) ...[
                           const SizedBox(height: 10),
                           Container(
                             padding: const EdgeInsets.all(12),
@@ -1209,7 +1176,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Lý do từ chối từ Ca trưởng:',
+                                  isRevoked
+                                      ? 'Lý do thu hồi:'
+                                      : 'Lý do từ chối từ Ca trưởng:',
                                   style: AppTypography.labelSmall.copyWith(
                                     color: AppColors.statusDanger,
                                     fontWeight: FontWeight.bold,
@@ -1217,7 +1186,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  skill.rejectReason!,
+                                  reason,
                                   style: AppTypography.bodySmall.copyWith(
                                     color: AppColors.statusDanger,
                                   ),
@@ -1433,17 +1402,29 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             'Bạn có chắc chắn muốn kết thúc phiên đăng nhập trên thiết bị này?',
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Hủy'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.statusDanger,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Đăng xuất'),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: 8,
+              children: [
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.statusDanger,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(
+                      0,
+                      MemberChoirStyle.dialogActionHeight,
+                    ),
+                  ),
+                  onPressed: () => Navigator.of(dialogContext).pop(true),
+                  child: const Text('Đăng xuất'),
+                ),
+                OutlinedButton(
+                  style: MemberChoirStyle.cancelButtonStyle,
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child: const Text('Hủy'),
+                ),
+              ],
             ),
           ],
         );
@@ -1597,8 +1578,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                   horizontal: 8,
                                 ),
                               ),
-                              onPressed: () =>
-                                  _showDeclareSkillDialog(context, repo),
+                              onPressed: () => _showDeclareSkillDialog(
+                                context,
+                                repo,
+                                profile.gender,
+                              ),
                               icon: const Icon(Icons.add_rounded, size: 18),
                               label: const Text('Khai báo'),
                             ),
@@ -1631,7 +1615,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             const Card(
                               child: Padding(
                                 padding: EdgeInsets.all(16),
-                                child: Text('Bạn chưa khai báo kỹ năng nào.'),
+                                child: Text(
+                                  'Bạn chưa khai báo kỹ năng nào.',
+                                  textAlign: TextAlign.center,
+                                ),
                               ),
                             )
                           else ...[
@@ -2019,12 +2006,15 @@ class _PersonalInformation extends StatelessWidget {
         formatProfileDateOfBirthDisplay(profile.dateOfBirth),
       ),
       (Icons.person_outline, 'Giới tính', profile.gender?.label),
-      if (profile.choirNames case final names?)
-        (
-          Icons.groups_outlined,
-          'Ca đoàn',
-          names.isEmpty ? 'Chưa tham gia ca đoàn' : names.join(' · '),
-        ),
+      (
+        Icons.groups_outlined,
+        'Ca đoàn',
+        switch (profile.choirNames) {
+          null => 'Chưa xác minh được ca đoàn',
+          [] => 'Chưa tham gia ca đoàn',
+          final names => names.join(' · '),
+        },
+      ),
     ];
 
     return Column(
@@ -2181,15 +2171,8 @@ class _ProfileBadge extends StatelessWidget {
   );
 }
 
-class _ProfileSkillCard extends StatelessWidget {
-  const _ProfileSkillCard({required this.skill, required this.onTap});
-
-  final MemberSkill skill;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final (color, fill, icon) = switch (skill.status) {
+(Color, Color, IconData) _skillStatusAppearance(SkillApprovalStatus status) =>
+    switch (status) {
       SkillApprovalStatus.approved => (
         AppColors.statusSuccess,
         AppColors.statusSuccessSoft,
@@ -2200,12 +2183,31 @@ class _ProfileSkillCard extends StatelessWidget {
         AppColors.statusWarningSoft,
         Icons.hourglass_top_rounded,
       ),
-      SkillApprovalStatus.rejected => (
+      SkillApprovalStatus.rejected || SkillApprovalStatus.revoked => (
         AppColors.statusDanger,
         AppColors.statusDangerSoft,
         Icons.info_outline,
       ),
+      SkillApprovalStatus.unknown => (
+        AppColors.muted,
+        AppColors.surfaceContainerLow,
+        Icons.help_outline,
+      ),
     };
+
+class _ProfileSkillCard extends StatelessWidget {
+  const _ProfileSkillCard({required this.skill, required this.onTap});
+
+  final MemberSkill skill;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final (color, fill, icon) = _skillStatusAppearance(skill.status);
+    final isRevoked = skill.status == SkillApprovalStatus.revoked;
+    final statusDate = isRevoked ? skill.revokedAt : skill.approvedAt;
+    final reason = (isRevoked ? skill.revokeReason : skill.rejectReason)
+        ?.trim();
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       clipBehavior: Clip.antiAlias,
@@ -2228,10 +2230,7 @@ class _ProfileSkillCard extends StatelessWidget {
                   spacing: 6,
                   children: [
                     Text(skill.name, style: AppTypography.titleMedium),
-                    Text(
-                      '${skill.categoryName} · Cấp độ: ${skill.levelLabel}',
-                      style: AppTypography.bodySmall,
-                    ),
+                    Text(skill.categoryName, style: AppTypography.bodySmall),
                     Wrap(
                       spacing: 6,
                       runSpacing: 6,
@@ -2243,17 +2242,19 @@ class _ProfileSkillCard extends StatelessWidget {
                           fill: fill,
                           icon: icon,
                         ),
-                        if (skill.approvedAt case final date?)
+                        if (statusDate case final date?)
                           Text(
                             DateFormat('dd/MM/yyyy').format(date),
                             style: AppTypography.labelSmall,
                           ),
                       ],
                     ),
-                    if (skill.rejectReason?.trim().isNotEmpty == true &&
-                        skill.status == SkillApprovalStatus.rejected)
+                    if ((isRevoked ||
+                            skill.status == SkillApprovalStatus.rejected) &&
+                        reason != null &&
+                        reason.isNotEmpty)
                       Text(
-                        'Lý do từ chối: ${skill.rejectReason!}',
+                        '${isRevoked ? 'Lý do thu hồi' : 'Lý do từ chối'}: $reason',
                         style: AppTypography.bodySmall.copyWith(color: color),
                       ),
                   ],

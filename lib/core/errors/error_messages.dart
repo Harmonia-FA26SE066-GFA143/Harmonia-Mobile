@@ -13,6 +13,7 @@ class ErrorMessages {
     'EVENT_PARTICIPATION_ALREADY_RESPONDED':
         'Bạn đã chọn trạng thái phản hồi cho sự kiện này.',
     'EVENT_PARTICIPATION_CLOSED': 'Đã hết thời gian phản hồi tham gia.',
+    'EVENT_PARTICIPATION_CHANGE_CLOSED': 'Đã hết thời gian đổi phản hồi.',
     'CHOIR_NOT_LEAD': 'Chỉ ca trưởng của ca đoàn phụ trách hoặc người thay có quyền thực hiện.',
     'CHOIR_LEAD_INVALID': 'Chọn ca đoàn phụ trách trong số ca đoàn phục vụ.',
     'CHOIR_CHANGE_REASON_REQUIRED':
@@ -73,6 +74,12 @@ class ErrorMessages {
     'MEMBER_SKILL_ALREADY_REVIEWED':
         'Kỹ năng này đã được ca trưởng xem xét. Vui lòng tải lại.',
     'MEMBER_SKILL_ALREADY_DECLARED': 'Bạn đã khai báo kỹ năng này trước đó.',
+    'MEMBER_SKILL_ID_INVALID':
+        'Không thể xác định kỹ năng. Vui lòng tải lại danh sách kỹ năng.',
+    'MEMBER_SKILL_GENDER_REQUIRED':
+        'Hãy cập nhật giới tính trong hồ sơ để khai báo kỹ năng này.',
+    'MEMBER_SKILL_GENDER_MISMATCH':
+        'Kỹ năng này không phù hợp với giới tính đã lưu trong hồ sơ.',
     'MATERIAL_LEARNING_STATUS_INVALID':
         'Chỉ có thể chọn Đã thuộc hoặc Cần tập thêm.',
     'MATERIAL_SCORE_INVALID':
@@ -306,6 +313,8 @@ class ErrorMessages {
     'MATERIAL_URL_INVALID': 'Liên kết tài liệu không hợp lệ.',
     'NO_UPCOMING_EVENT': 'Không có sự kiện phụng vụ sắp tới.',
     'PARTICIPATION_STATUS_INVALID': 'Vui lòng chọn phản hồi hợp lệ.',
+    'PARTICIPATION_NOTE_TOO_LONG':
+        'Ghi chú phản hồi không được vượt quá 300 ký tự.',
     'PLATFORM_NOT_SUPPORTED': 'Thiết bị này chưa hỗ trợ đăng nhập bằng Google.',
     'PRACTICE_DRAFT_INVALID':
         'Hãy chọn bản thu MP3, M4A hoặc WAV hợp lệ, tối đa 20 MB.',

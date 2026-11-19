@@ -267,19 +267,92 @@ class _ScorePlayerState extends State<_ScorePlayer> {
   Widget build(BuildContext context) {
     final accent = widget.member ? MemberChoirStyle.accent : AppColors.primary;
     final playing = _player.state == PlayerState.playing;
+    final scrubber = ValueListenableBuilder<double>(
+      valueListenable: _position,
+      builder: (context, seconds, _) => _ScoreScrubber(
+        value: seconds,
+        duration: _duration,
+        onSeek: _working ? null : _seek,
+      ),
+    );
+    final memberControls = Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      spacing: 12,
+      children: [
+        IconButton(
+          tooltip: 'Lùi 10 giây',
+          onPressed: _working
+              ? null
+              : () => _seek((_position.value - 10).clamp(0.0, _duration)),
+          icon: const Icon(Icons.replay_10_rounded),
+        ),
+        IconButton.filled(
+          tooltip: playing ? 'Tạm dừng' : 'Phát bản nhạc',
+          style: IconButton.styleFrom(
+            backgroundColor: accent,
+            foregroundColor: Colors.white,
+            minimumSize: const Size.square(56),
+          ),
+          onPressed: _working ? null : _toggle,
+          icon: Icon(playing ? Icons.pause : Icons.play_arrow_rounded),
+        ),
+        IconButton(
+          tooltip: 'Tiến 10 giây',
+          onPressed: _working
+              ? null
+              : () => _seek((_position.value + 10).clamp(0.0, _duration)),
+          icon: const Icon(Icons.forward_10_rounded),
+        ),
+      ],
+    );
+    final title = Text(
+      widget.data.metadata.title,
+      maxLines: widget.member ? 2 : null,
+      overflow: widget.member ? TextOverflow.ellipsis : null,
+      style: widget.member
+          ? AppTypography.headlineSmall.copyWith(
+              fontFamily: MemberChoirStyle.displayFont,
+              color: MemberChoirStyle.ink,
+            )
+          : Theme.of(context).textTheme.headlineSmall,
+    );
+    final playbackError = _error == null
+        ? null
+        : Text(
+            _error!,
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          );
+    if (widget.member && widget.data.timeline.locators.isNotEmpty) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: 8,
+          children: [
+            title,
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: ScoreEngraving(
+                  score: widget.data,
+                  position: _position,
+                  followPlayback: true,
+                ),
+              ),
+            ),
+            scrubber,
+            memberControls,
+            if (_working) const LinearProgressIndicator(),
+            ?playbackError,
+          ],
+        ),
+      );
+    }
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 10,
       children: [
-        Text(
-          widget.data.metadata.title,
-          style: widget.member
-              ? AppTypography.headlineSmall.copyWith(
-                  fontFamily: MemberChoirStyle.displayFont,
-                  color: MemberChoirStyle.ink,
-                )
-              : Theme.of(context).textTheme.headlineSmall,
-        ),
+        title,
         Text(widget.data.metadata.instrument.label),
         ScoreEngraving(score: widget.data, position: _position),
         if (widget.data.metadata.notesSchemaVersion == 1)
@@ -342,46 +415,13 @@ class _ScorePlayerState extends State<_ScorePlayer> {
                     ),
                   ),
                 ),
-                _ScoreScrubber(
-                  value: seconds,
-                  duration: _duration,
-                  onSeek: _working ? null : _seek,
-                ),
+                scrubber,
               ],
             );
           },
         ),
         if (widget.member)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            spacing: 12,
-            children: [
-              IconButton(
-                tooltip: 'Lùi 10 giây',
-                onPressed: _working
-                    ? null
-                    : () => _seek((_position.value - 10).clamp(0.0, _duration)),
-                icon: const Icon(Icons.replay_10_rounded),
-              ),
-              IconButton.filled(
-                tooltip: playing ? 'Tạm dừng' : 'Phát bản nhạc',
-                style: IconButton.styleFrom(
-                  backgroundColor: accent,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size.square(56),
-                ),
-                onPressed: _working ? null : _toggle,
-                icon: Icon(playing ? Icons.pause : Icons.play_arrow_rounded),
-              ),
-              IconButton(
-                tooltip: 'Tiến 10 giây',
-                onPressed: _working
-                    ? null
-                    : () => _seek((_position.value + 10).clamp(0.0, _duration)),
-                icon: const Icon(Icons.forward_10_rounded),
-              ),
-            ],
-          )
+          memberControls
         else
           FilledButton.icon(
             onPressed: _working ? null : _toggle,
@@ -389,11 +429,7 @@ class _ScorePlayerState extends State<_ScorePlayer> {
             label: Text(playing ? 'Tạm dừng' : 'Phát bản nhạc'),
           ),
         if (_working) const LinearProgressIndicator(),
-        if (_error != null)
-          Text(
-            _error!,
-            style: TextStyle(color: Theme.of(context).colorScheme.error),
-          ),
+        ?playbackError,
       ],
     );
     return ListView(

@@ -47,6 +47,31 @@ class _PracticeListScreenState extends ConsumerState<PracticeListScreen> {
     }
   }
 
+  Widget _buildFilter(PracticeCounts? counts) {
+    final options = [
+      (PracticeFilter.all, 'Tất cả', counts?.total),
+      (PracticeFilter.notSubmitted, 'Chưa nộp', counts?.notSubmitted),
+      (PracticeFilter.submitted, 'Chờ chấm', counts?.submitted),
+      (PracticeFilter.needsRevision, 'Cần luyện', counts?.needsRevision),
+      (PracticeFilter.passed, 'Đã đạt', counts?.passed),
+      (PracticeFilter.overdue, 'Quá hạn', counts?.overdue),
+    ];
+    return MemberChoiceField<PracticeFilter>(
+      label: 'Trạng thái bài tập',
+      value: _selectedFilter,
+      items: [
+        for (final (filter, label, count) in options)
+          DropdownMenuItem(
+            value: filter,
+            child: Text(count == null ? label : '$label ($count)'),
+          ),
+      ],
+      onChanged: (value) {
+        if (value != null) _onFilterChanged(value);
+      },
+    );
+  }
+
   void _onFilterChanged(PracticeFilter filter) {
     setState(() {
       _selectedFilter = filter;
@@ -133,99 +158,7 @@ class _PracticeListScreenState extends ConsumerState<PracticeListScreen> {
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: countsAsync.when(
-                          loading: () => Row(
-                            children: [
-                              _StitchPracticeFilterPill(
-                                label: 'Tất cả',
-                                selected: _selectedFilter == PracticeFilter.all,
-                                onTap: () =>
-                                    _onFilterChanged(PracticeFilter.all),
-                              ),
-                            ],
-                          ),
-                          error: (_, _) => Row(
-                            children: [
-                              _StitchPracticeFilterPill(
-                                label: 'Tất cả',
-                                selected: _selectedFilter == PracticeFilter.all,
-                                onTap: () =>
-                                    _onFilterChanged(PracticeFilter.all),
-                              ),
-                            ],
-                          ),
-                          data: (counts) => Row(
-                            spacing: 8,
-                            children: [
-                              _StitchPracticeFilterPill(
-                                label: 'Tất cả',
-                                count: counts.total,
-                                badgeFill: const Color(0xFFF3ECEF),
-                                badgeColor: MemberChoirStyle.wine,
-                                selected: _selectedFilter == PracticeFilter.all,
-                                onTap: () =>
-                                    _onFilterChanged(PracticeFilter.all),
-                              ),
-                              _StitchPracticeFilterPill(
-                                label: 'Chưa nộp',
-                                count: counts.notSubmitted,
-                                badgeFill: const Color(0xFFF2F0EC),
-                                badgeColor: const Color(0xFF64646B),
-                                selected:
-                                    _selectedFilter ==
-                                    PracticeFilter.notSubmitted,
-                                onTap: () => _onFilterChanged(
-                                  PracticeFilter.notSubmitted,
-                                ),
-                              ),
-                              _StitchPracticeFilterPill(
-                                label: 'Chờ chấm',
-                                count: counts.submitted,
-                                badgeFill: const Color(0xFFE7EEFF),
-                                badgeColor: AppColors.statusInfo,
-                                selected:
-                                    _selectedFilter == PracticeFilter.submitted,
-                                onTap: () =>
-                                    _onFilterChanged(PracticeFilter.submitted),
-                              ),
-                              _StitchPracticeFilterPill(
-                                label: 'Cần luyện',
-                                count: counts.needsRevision,
-                                badgeFill: AppColors.statusWarningSoft,
-                                badgeColor: AppColors.statusWarning,
-                                selected:
-                                    _selectedFilter ==
-                                    PracticeFilter.needsRevision,
-                                onTap: () => _onFilterChanged(
-                                  PracticeFilter.needsRevision,
-                                ),
-                              ),
-                              _StitchPracticeFilterPill(
-                                label: 'Đã đạt',
-                                count: counts.passed,
-                                badgeFill: AppColors.statusSuccessSoft,
-                                badgeColor: AppColors.statusSuccess,
-                                selected:
-                                    _selectedFilter == PracticeFilter.passed,
-                                onTap: () =>
-                                    _onFilterChanged(PracticeFilter.passed),
-                              ),
-                              _StitchPracticeFilterPill(
-                                label: 'Quá hạn',
-                                count: counts.overdue,
-                                badgeFill: AppColors.statusDangerSoft,
-                                badgeColor: AppColors.statusDanger,
-                                selected:
-                                    _selectedFilter == PracticeFilter.overdue,
-                                onTap: () =>
-                                    _onFilterChanged(PracticeFilter.overdue),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                      child: _buildFilter(countsAsync.asData?.value),
                     ),
                   ),
                   ...state.when(
@@ -257,8 +190,7 @@ class _PracticeListScreenState extends ConsumerState<PracticeListScreen> {
                                 Text(
                                   ErrorMessages.forException(
                                     e,
-                                    defaultMessage:
-                                        'Không thể tải danh sách bài tập. Vui lòng thử lại.',
+                                    defaultMessage: 'Không thể tải danh sách bài tập. Vui lòng thử lại.',
                                   ),
                                   style: AppTypography.bodyMedium,
                                   textAlign: TextAlign.center,
@@ -487,7 +419,7 @@ class _PracticeAssignmentCard extends StatelessWidget {
                 DecoratedBox(
                   decoration: BoxDecoration(
                     color: MemberChoirStyle.serviceCanvas,
-                    border: Border.all(color: MemberChoirStyle.border),
+                    border: MemberChoirStyle.panelBorder,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Padding(
@@ -635,85 +567,6 @@ class _PracticeHeroBanner extends StatelessWidget {
       ),
     );
   }
-}
-
-class _StitchPracticeFilterPill extends StatelessWidget {
-  const _StitchPracticeFilterPill({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-    this.count,
-    this.badgeFill = const Color(0xFFF3ECEF),
-    this.badgeColor = MemberChoirStyle.wine,
-  });
-
-  final String label;
-  final int? count;
-  final bool selected;
-  final VoidCallback onTap;
-  final Color badgeFill;
-  final Color badgeColor;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    button: true,
-    selected: selected,
-    child: Material(
-      color: selected ? MemberChoirStyle.wine : AppColors.surface,
-      shape: StadiumBorder(
-        side: BorderSide(
-          color: selected ? MemberChoirStyle.wine : MemberChoirStyle.border,
-        ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 40),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              spacing: 7,
-              children: [
-                Text(
-                  label,
-                  style: AppTypography.labelLarge.copyWith(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w700,
-                    color: selected ? Colors.white : const Color(0xFF333642),
-                  ),
-                ),
-                if (count != null)
-                  Container(
-                    constraints: const BoxConstraints(minWidth: 20),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: selected
-                          ? Colors.white.withValues(alpha: 0.22)
-                          : badgeFill,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      '$count',
-                      style: AppTypography.labelSmall.copyWith(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: selected ? Colors.white : badgeColor,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    ),
-  );
 }
 
 class _PracticeBadge extends StatelessWidget {

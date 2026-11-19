@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:harmonia_mobile/core/errors/app_exceptions.dart';
 import 'package:harmonia_mobile/core/network/api_client.dart';
 import 'package:harmonia_mobile/core/realtime/signalr_service.dart';
 import 'package:harmonia_mobile/core/session/session_manager.dart';
@@ -113,7 +114,6 @@ class FakePracticeApiService extends PracticeApiService {
 
 class FakeMemberProfileApiService extends MemberProfileApiService {
   String? lastDeclaredSkillId;
-  String? lastDeclaredLevel;
 
   FakeMemberProfileApiService()
     : super(
@@ -130,39 +130,43 @@ class FakeMemberProfileApiService extends MemberProfileApiService {
     int pageNumber = 1,
     int pageSize = 50,
   }) async => PagedList<MemberSkillDto>(
-    items: const [
+    items: [
       MemberSkillDto(
         id: 'ms-01',
         skillId: 'skill-tenor',
         skillName: 'Tenor',
         categoryId: 'cat-vocal',
         categoryName: 'Vocal',
-        level: 'Intermediate',
         status: 'Approved',
       ),
+      MemberSkillDto.fromJson({
+        'id': 'ms-03',
+        'skillId': 'skill-bass',
+        'skillName': 'Bass',
+        'categoryId': 'cat-vocal',
+        'categoryName': 'Vocal',
+        'status': 'Revoked',
+        'revokedAt': '2026-11-18T07:00:00Z',
+        'revokeReason': 'Test reason',
+      }),
     ],
     pageNumber: pageNumber,
     pageSize: pageSize,
-    totalCount: 1,
+    totalCount: 2,
     totalPages: 1,
     hasPreviousPage: false,
     hasNextPage: false,
   );
 
   @override
-  Future<MemberSkillDto> declareSkill({
-    required String skillId,
-    String? level,
-  }) async {
+  Future<MemberSkillDto> declareSkill({required String skillId}) async {
     lastDeclaredSkillId = skillId;
-    lastDeclaredLevel = level;
     return MemberSkillDto(
       id: 'ms-02',
       skillId: skillId,
       skillName: 'Alto',
       categoryId: 'cat-vocal',
       categoryName: 'Vocal',
-      level: level,
       status: 'Pending',
     );
   }
@@ -454,19 +458,72 @@ void main() {
         final repo = ProfileRepositoryImpl(apiService: fakeApi);
 
         final skills = await repo.getSkills();
-        expect(skills.length, 1);
+        expect(skills.length, 2);
         expect(skills.first.name, 'Tenor');
-        expect(skills.first.level, 'Intermediate');
         expect(skills.first.status, SkillApprovalStatus.approved);
+        expect(skills.last.status, SkillApprovalStatus.revoked);
+        expect(skills.last.revokedAt?.toUtc(), DateTime.utc(2026, 11, 18, 7));
+        expect(skills.last.revokeReason, 'Test reason');
 
         await repo.declareNewSkill(
           skillId: 'skill-alto',
           name: 'skill-alto',
           categoryName: 'Vocal',
-          level: 'Intermediate',
         );
         expect(fakeApi.lastDeclaredSkillId, 'skill-alto');
-        expect(fakeApi.lastDeclaredLevel, 'Intermediate');
+      },
+    );
+
+    test(
+      'declaring a skill validates its GUID and sends only skillId',
+      () async {
+        const skillId = 'B063B240-28CB-4F0F-B5DA-E26E7067C5CF';
+        final requests = <RequestOptions>[];
+        final storage = SecureStorageService();
+        final session = SessionManager(storage);
+        addTearDown(session.dispose);
+        final dio = Dio(BaseOptions(baseUrl: 'https://example.invalid'));
+        addTearDown(dio.close);
+        dio.interceptors.add(
+          InterceptorsWrapper(
+            onRequest: (options, handler) {
+              requests.add(options);
+              handler.resolve(
+                Response(
+                  requestOptions: options,
+                  data: {'skillId': skillId, 'status': 'Pending'},
+                ),
+              );
+            },
+          ),
+        );
+        final api = MemberProfileApiService(
+          ApiClient(storage: storage, sessionManager: session, customDio: dio),
+        );
+        for (final invalidId in [
+          '',
+          'not-a-guid',
+          '$skillId\n',
+          '00000000-0000-0000-0000-000000000000',
+        ]) {
+          await expectLater(
+            api.declareSkill(skillId: invalidId),
+            throwsA(
+              isA<ValidationException>().having(
+                (error) => error.code,
+                'code',
+                'MEMBER_SKILL_ID_INVALID',
+              ),
+            ),
+          );
+        }
+        expect(requests, isEmpty);
+
+        expect((await api.declareSkill(skillId: skillId)).status, 'Pending');
+        final request = requests.single;
+        expect(request.method, 'POST');
+        expect(request.path, '/api/member-skills');
+        expect(request.data, {'skillId': skillId});
       },
     );
 

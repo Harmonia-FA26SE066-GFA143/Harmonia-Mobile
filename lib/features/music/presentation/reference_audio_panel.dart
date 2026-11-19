@@ -575,7 +575,7 @@ class _ReferenceAudioPlayerState extends ConsumerState<_ReferenceAudioPlayer>
           decoration: BoxDecoration(
             color: MemberChoirStyle.paper,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0x4DC6C6CE)),
+            border: MemberChoirStyle.panelBorder,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -870,7 +870,7 @@ class _ReferenceAudioPlayerState extends ConsumerState<_ReferenceAudioPlayer>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0x4DC6C6CE)),
+        border: MemberChoirStyle.panelBorder,
         boxShadow: const [
           BoxShadow(
             color: Color(0x0A1B2541),

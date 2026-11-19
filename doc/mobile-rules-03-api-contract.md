@@ -5,6 +5,8 @@
 Đối chiếu ngày 2026-10-16 với source BE `origin/main` đang có tại máy:
 `cea85534a1aecc9b8117275194dc74623bf4ed99`.
 Đây là snapshot local, không chứng minh Azure đã triển khai cùng commit.
+Các mục kỹ năng và phản hồi tham gia bên dưới đã đối chiếu thêm với BE
+`d854e2b` và Swagger Azure ngày 2026-11-18.
 Trước khi thay hợp đồng, đọc controller, DTO, validator, serializer và quyền của endpoint.
 
 [Bảng tích hợp](mobile-api-integration-status.md) ghi nơi gọi thực tế và phần chưa kiểm chứng.
@@ -55,7 +57,13 @@ hồ sơ /me và /me/history; member-skills/mine và chi tiết; schedule/events
 schedule/rehearsals; practice-assignments/mine, counts, chi tiết, submissions;
 practice-submissions/mine và chi tiết; notifications, unread-count và đánh dấu đọc.
 
-- Khai báo kỹ năng gửi skillId và level **Beginner/Intermediate/Advanced** theo contract; UI dùng nhãn tiếng Việt.
+- `POST /api/member-skills` chỉ gửi `skillId`, một GUID hợp lệ khác GUID rỗng.
+  Nếu kỹ năng có `gender`, dùng
+  giới tính từ hồ sơ để hướng dẫn trước khi gửi. Backend vẫn quyết định quyền
+  khai báo và có thể trả `MEMBER_SKILL_GENDER_REQUIRED` hoặc
+  `MEMBER_SKILL_GENDER_MISMATCH`.
+- Kỹ năng thu hồi có `status: Revoked`, `revokedAt` và `revokeReason`. Chỉ trạng
+  thái `Pending` cho phép đính kèm minh chứng.
 - Danh sách bài tập dùng status wire hợp lệ; lọc chưa nộp bằng hasSubmission=false.
 - Không gửi Pending như trạng thái bản nộp.
 - Nộp bản thu dùng multipart theo API: file và durationSeconds nếu có.
@@ -139,14 +147,21 @@ Không tự retry thao tác ghi khi mất mạng nếu chưa biết server đã 
 | GET | /api/rehearsals/{id}/songs | Đăng nhập; bare array songId, songTitle, displayOrder, note |
 | PUT | /api/event-participations/mine/{eventId} | ChoirMember; body status + note tùy chọn; EventParticipationDto |
 
-- Status gửi **Confirmed/Declined/Unsure**; Invited và unknown không phải giá trị gửi. Note tối đa 300 ký tự.
-- Backend yêu cầu Active, được mời, chưa phản hồi và sự kiện còn cho phản hồi. Mỗi lời mời chỉ phản hồi một lần, kể cả Unsure. UI cần xác nhận trước, không âm thầm retry PUT.
+- Status gửi **Confirmed/Declined/Unsure**. Note tối đa 300 ký tự theo cách đếm
+  UTF-16 của BE. Flutter kiểm tra trước khi gửi PUT.
+- Backend yêu cầu ca viên đang hoạt động và đã nhận lời mời. Có thể gửi lần
+  đầu trước giờ lễ và đổi phản hồi khi còn trong hạn do backend cấu hình. Dùng
+  `canRespond` kể cả khi đã trả lời. Quá hạn đổi trả `409 EVENT_PARTICIPATION_CHANGE_CLOSED`.
+  UI cần xác nhận trước, giữ ghi chú hiện có và không âm thầm retry PUT.
 - GET schedule/events vẫn là summary. Ghép trạng thái từ GET /api/event-participations/mine và phân công từ GET /api/schedule/assignments; không gán mặc định Invited. Màn hình chi tiết gọi GET /api/schedule/events/{id}, buổi tập gọi GET /api/schedule/rehearsals/{id}. Không phụ thuộc ID có trong lịch sắp tới.
 - Dùng canRespond của MyParticipationDto để điều khiển UI; PUT preflight tải lại lời mời, giữ expectedSessionEpoch đến khi gửi request. Thành công invalidate chi tiết và tải lại lịch bằng generation mới, không giữ map phản hồi tạm trong repository.
 - myAttendanceStatus nullable: null là chưa có bản ghi điểm danh, không đổi thành Absent. Chỉ hiển thị dữ liệu của người gọi theo DTO BE.
 - DateOnly không đổi múi giờ. Rehearsal startTime/endTime UTC đổi local. EventDate + Time là giờ Việt Nam theo BE; canRespond/cannotRespondReason quyết định còn quyền phản hồi. Không có responseDeadlineAt riêng để hiển thị hạn mẫu.
 - Service-rosters và rehearsal attendances hiện dành cho ChoirDirector; không gọi dưới quyền ca viên để thay dữ liệu còn thiếu bằng mock.
 - DirectorNotes là linh mục gửi ca trưởng; không phải ghi chú được phép hiển thị cho ca viên.
+- `GET /api/member-profiles/me` trên Azure hiện chưa công bố `choirNames`.
+  Mobile chỉ hiện tên ca đoàn từ trường này nếu backend trả về. Danh sách vắng
+  mặt hoặc null nghĩa là chưa xác minh. Mảng rỗng nghĩa là chưa tham gia ca đoàn.
 - Xem [yêu cầu BE](mobile-backend-api-requests-2026-10-15.md) và [kết quả đối chiếu](mobile-api-audit-2026-10-15.md).
 
 **Giới hạn cập nhật tiến độ:** PUT learning-progress chỉ gửi Learned hoặc NeedsPractice. NotStarted chỉ dùng đọc/lọc; không cho chọn làm giá trị ghi dù UI vẫn hiển thị được trạng thái này.

@@ -25,21 +25,18 @@ class MockProfileData {
       id: 'skill-01',
       name: 'Xướng âm & Hát đơn ca (Solo)',
       categoryName: 'Kỹ năng thanh nhạc',
-      level: 'Nâng cao',
       status: SkillApprovalStatus.approved,
     ),
     const MemberSkill(
       id: 'skill-02',
       name: 'Thị tấu & Đọc nốt nhạc nhanh',
       categoryName: 'Kỹ năng thanh nhạc',
-      level: 'Trung cấp',
       status: SkillApprovalStatus.approved,
     ),
     const MemberSkill(
       id: 'skill-03',
       name: 'Đệm đàn Organ phụng vụ',
       categoryName: 'Kỹ năng nhạc cụ',
-      level: 'Trung cấp',
       status: SkillApprovalStatus.pending,
       note: 'Đã hoàn thành khóa đệm thánh ca phụng vụ cơ bản.',
     ),
@@ -146,7 +143,6 @@ class MockProfileRepositoryImpl implements ProfileRepository {
   @override
   Future<MemberSkill> declareNewSkill({
     required String skillId,
-    String? level,
     String? name,
     String? categoryName,
     String? note,
@@ -157,7 +153,6 @@ class MockProfileRepositoryImpl implements ProfileRepository {
       skillId: skillId,
       name: name ?? 'Kỹ năng mới',
       categoryName: categoryName ?? 'Kỹ năng thanh nhạc',
-      level: level ?? 'Sơ cấp',
       status: SkillApprovalStatus.pending,
       note: note,
       declaredAt: DateTime.now(),

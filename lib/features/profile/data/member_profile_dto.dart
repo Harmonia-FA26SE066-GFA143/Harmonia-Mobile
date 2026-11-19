@@ -127,11 +127,12 @@ class MemberSkillDto {
   final String skillName;
   final String categoryId;
   final String categoryName;
-  final String? level;
   final String status;
   final DateTime? declaredAt;
   final DateTime? approvedAt;
   final String? rejectReason;
+  final DateTime? revokedAt;
+  final String? revokeReason;
   final MemberSkillEvidenceDto? evidence;
 
   const MemberSkillDto({
@@ -140,11 +141,12 @@ class MemberSkillDto {
     required this.skillName,
     required this.categoryId,
     required this.categoryName,
-    this.level,
     required this.status,
     this.declaredAt,
     this.approvedAt,
     this.rejectReason,
+    this.revokedAt,
+    this.revokeReason,
     this.evidence,
   });
 
@@ -155,8 +157,7 @@ class MemberSkillDto {
       skillName: json['skillName']?.toString() ?? '',
       categoryId: json['categoryId']?.toString() ?? '',
       categoryName: json['categoryName']?.toString() ?? 'Kỹ năng',
-      level: json['level']?.toString(),
-      status: json['status']?.toString() ?? 'Pending',
+      status: json['status']?.toString() ?? '',
       declaredAt: json['declaredAt'] != null
           ? DateTime.tryParse(json['declaredAt'].toString())?.toLocal()
           : null,
@@ -164,6 +165,9 @@ class MemberSkillDto {
           ? DateTime.tryParse(json['approvedAt'].toString())?.toLocal()
           : null,
       rejectReason: json['rejectReason']?.toString(),
+      revokedAt: DateTime.tryParse(json['revokedAt']?.toString() ?? '')
+          ?.toLocal(),
+      revokeReason: json['revokeReason'] as String?,
       evidence: json['evidence'] is Map<String, dynamic>
           ? MemberSkillEvidenceDto.fromJson(
               json['evidence'] as Map<String, dynamic>,
@@ -178,11 +182,12 @@ class MemberSkillDto {
     'skillName': skillName,
     'categoryId': categoryId,
     'categoryName': categoryName,
-    if (level != null) 'level': level,
     'status': status,
     if (declaredAt != null) 'declaredAt': declaredAt!.toIso8601String(),
     if (approvedAt != null) 'approvedAt': approvedAt!.toIso8601String(),
     if (rejectReason != null) 'rejectReason': rejectReason,
+    if (revokedAt != null) 'revokedAt': revokedAt!.toIso8601String(),
+    if (revokeReason != null) 'revokeReason': revokeReason,
     if (evidence != null) 'evidence': evidence!.toJson(),
   };
 }

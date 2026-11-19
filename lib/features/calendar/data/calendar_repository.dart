@@ -157,17 +157,20 @@ class CalendarRepositoryImpl implements CalendarRepository {
     final invitation = invitations
         .where((p) => p.eventId == eventId)
         .firstOrNull;
-    if (invitation?.canRespond != true) {
+    if (invitation == null || !invitation.canRespond) {
       throw ValidationException(
         code:
             invitation?.cannotRespondReason ??
-            'EVENT_PARTICIPATION_NOT_INVITED',
+            (invitation == null
+                ? 'EVENT_PARTICIPATION_NOT_INVITED'
+                : 'EVENT_PARTICIPATION_CLOSED'),
         message: 'This invitation cannot be answered.',
       );
     }
     await apiService.respondParticipation(
       eventId,
       status,
+      note: invitation.note,
       expectedSessionEpoch: epoch,
     );
   }
@@ -243,32 +246,12 @@ class CalendarNotifier extends Notifier<AsyncValue<List<LiturgicalEvent>>> {
     request = Future<void>.microtask(() async {
       try {
         await repository.updateParticipation(eventId, status);
-        if (!ref.mounted || epoch != session.sessionEpoch) return;
-        // Keep the acknowledged PUT visible; later reads always use the server.
-        final events = state.value;
-        if (events != null) {
-          state = AsyncValue.data([
-            for (final event in events)
-              event.id == eventId
-                  ? event.copyWith(
-                      participationStatus: status,
-                      canRespond: false,
-                      cannotRespondReason:
-                          'EVENT_PARTICIPATION_ALREADY_RESPONDED',
-                    )
-                  : event,
-          ]);
-        }
-        ref.invalidate(eventDetailProvider(eventId));
-        // Start a new generation so a GET started before PUT cannot restore Invited.
-        await loadEvents();
-      } catch (_) {
+      } finally {
         if (ref.mounted && epoch == session.sessionEpoch) {
           ref.invalidate(eventDetailProvider(eventId));
+          // Re-read status and permissions after a write or a rejected preflight.
           await loadEvents();
         }
-        rethrow;
-      } finally {
         if (identical(_pending[eventId], request)) _pending.remove(eventId);
       }
     });

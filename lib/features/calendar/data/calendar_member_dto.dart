@@ -35,7 +35,7 @@ class MyParticipation {
           : DateTime.parse(json['respondedAt'] as String),
       note: json['note'] as String?,
       canRespond:
-          (json['canRespond'] as bool) && status == ParticipationStatus.invited,
+          json['canRespond'] == true && status != ParticipationStatus.unknown,
       cannotRespondReason: json['cannotRespondReason'] as String?,
     );
   }

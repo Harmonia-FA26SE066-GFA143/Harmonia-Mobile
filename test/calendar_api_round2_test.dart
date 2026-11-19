@@ -43,8 +43,8 @@ class ScheduleAdapter implements HttpClientAdapter {
       body = responseBody!(options)!;
     } else if (statusCode != 200) {
       body = {
-        'code': 'EVENT_PARTICIPATION_ALREADY_RESPONDED',
-        'message': 'Already responded',
+        'code': 'EVENT_PARTICIPATION_CHANGE_CLOSED',
+        'message': 'Change window closed',
       };
     } else if (options.path == '/api/event-participations/mine') {
       body = invited
@@ -56,10 +56,8 @@ class ScheduleAdapter implements HttpClientAdapter {
                 'requestedAt': '2026-10-15T00:00:00Z',
                 'respondedAt': null,
                 'note': null,
-                'canRespond': currentParticipationStatus == 'Invited',
-                'cannotRespondReason': currentParticipationStatus == 'Invited'
-                    ? null
-                    : 'EVENT_PARTICIPATION_ALREADY_RESPONDED',
+                'canRespond': true,
+                'cannotRespondReason': null,
               },
             ]
           : [];
@@ -431,7 +429,7 @@ void main() {
     },
   );
 
-  testWidgets('canceling the one-time confirmation never sends a reply', (
+  testWidgets('canceling a change confirmation never sends a reply', (
     tester,
   ) async {
     final session = SessionManager(SecureStorageService());
@@ -449,7 +447,9 @@ void main() {
                 onPressed: () => showParticipationPrompt(
                   context,
                   ref,
-                  testEvent,
+                  testEvent.copyWith(
+                    participationStatus: ParticipationStatus.confirmed,
+                  ),
                   ParticipationStatus.unsure,
                 ),
                 child: const Text('Respond'),
@@ -461,7 +461,7 @@ void main() {
     );
     await tester.tap(find.text('Respond'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Phản hồi chỉ gửi một lần'), findsOneWidget);
+    expect(find.text('Đổi phản hồi'), findsOneWidget);
     await tester.tap(find.text('Quay lại'));
     await tester.pumpAndSettle();
     expect(repo.calls, 0);

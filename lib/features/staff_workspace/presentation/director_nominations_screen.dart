@@ -108,6 +108,7 @@ class _DirectorNominationsState
                 OpsChoiceField(
                   label: 'Trạng thái',
                   labelAbove: true,
+                  memberStyle: member,
                   value: _filter?.wire ?? '',
                   options: [
                     (id: '', name: 'Tất cả'),

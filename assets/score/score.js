@@ -12,9 +12,10 @@ let page = 0;
 let pageCount = 0;
 let notes = [];
 let latestEnd = [];
-let highlighted = [];
+let highlighted = new Set();
 let followedPage = 0;
 let position = -1;
+let followPlayback = false;
 
 function notify(message) {
   if (window.webkit?.messageHandlers?.scoreStatus) {
@@ -52,7 +53,8 @@ function render(target) {
   pageNumber.textContent = target + ' / ' + pageCount;
   previous.disabled = page === 1;
   next.disabled = page === pageCount;
-  highlighted = [];
+  highlighted.clear();
+  if (followPlayback) sheet.scrollTop = 0;
 }
 
 previous.addEventListener('click', () => render(page - 1));
@@ -79,8 +81,10 @@ function read(kind) {
   return result;
 }
 
-function load() {
+function load(follow = false) {
   try {
+    followPlayback = follow;
+    document.body.classList.toggle('follow-playback', followPlayback);
     const source = read('score');
     if (/<!ENTITY/i.test(source)) throw new Error('Unsupported entity');
     const xml = new DOMParser().parseFromString(
@@ -143,13 +147,27 @@ function progress(seconds) {
   for (let i = lo; i < notes.length && notes[i].start <= seconds; i++) {
     if (notes[i].end > seconds) active.push(notes[i]);
   }
-  const first = active[0];
-  const target = first && (document.getElementById(first.id) ? page : toolkit.getPageWithElement(first.id));
-  if (target && target !== followedPage) render(target);
+  const latestStart = active[active.length - 1]?.start;
+  const focus = followPlayback ? active.find(note => note.start === latestStart) : active[0];
+  const target = focus && (document.getElementById(focus.id) ? page : toolkit.getPageWithElement(focus.id));
+  if (target && target !== (followPlayback ? page : followedPage)) render(target);
   followedPage = target;
-  for (const element of highlighted) element.classList.remove('active-note');
-  highlighted = active.map(note => document.getElementById(note.id)).filter(Boolean);
-  for (const element of highlighted) element.classList.add('active-note');
+  const current = new Set(active.map(note => document.getElementById(note.id)).filter(Boolean));
+  for (const element of highlighted) {
+    if (!current.has(element)) element.classList.remove('active-note');
+  }
+  for (const element of current) {
+    if (!highlighted.has(element)) element.classList.add('active-note');
+  }
+  const focusElement = followPlayback && focus && document.getElementById(focus.id);
+  if (focusElement && !highlighted.has(focusElement)) {
+    const note = focusElement.getBoundingClientRect();
+    const viewport = sheet.getBoundingClientRect();
+    if (note.top < viewport.top || note.bottom > viewport.bottom) {
+      focusElement.scrollIntoView({ block: 'center', inline: 'nearest' });
+    }
+  }
+  highlighted = current;
 }
 
 window.HarmoniaScore = { append, load, progress };

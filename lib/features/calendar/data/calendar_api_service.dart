@@ -89,6 +89,7 @@ class CalendarApiService {
   Future<ParticipationReply> respondParticipation(
     String eventId,
     ParticipationStatus status, {
+    String? note,
     int? expectedSessionEpoch,
   }) async {
     if (!status.isAnswer) {
@@ -97,10 +98,13 @@ class CalendarApiService {
         message: 'Vui lòng chọn phản hồi hợp lệ.',
       );
     }
+    if (note != null && note.length > 300) {
+      throw const ValidationException(code: 'PARTICIPATION_NOTE_TOO_LONG');
+    }
     try {
       final response = await _client.dio.put(
         ApiEndpoints.respondParticipation(eventId),
-        data: {'status': status.wireName},
+        data: {'status': status.wireName, 'note': ?note},
         options: Options(
           extra: {'expectedSessionEpoch': expectedSessionEpoch ?? sessionEpoch},
         ),

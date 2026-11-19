@@ -100,7 +100,12 @@ void main() {
               MockPracticeRepositoryImpl(),
             ),
             profileRepositoryProvider.overrideWithValue(
-              MockProfileRepositoryImpl(),
+              MockProfileRepositoryImpl(
+                profile: MemberProfileDto.fromJson({
+                  ...MockProfileData.profileWithChoirs.toJson(),
+                  'choirNames': <String>[],
+                }),
+              ),
             ),
             notificationRepositoryProvider.overrideWithValue(
               _TestNotificationRepository(),
@@ -113,6 +118,13 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      final defaultChoirLabel = find.text('Ca đoàn phục vụ');
+      expect(defaultChoirLabel, findsOneWidget);
+      expect(
+        tester.getTopLeft(defaultChoirLabel).dy,
+        greaterThan(tester.getTopLeft(find.text('Harmonia')).dy),
+      );
+      expect(find.text('Ca đoàn'), findsNothing);
 
       expect(
         find.text('Chào ${MockProfileData.profile.fullName}'),
@@ -430,12 +442,22 @@ void main() {
     expect(notifBadge.textColor, const Color(0xFF05102B));
     expect(find.text('4'), findsWidgets);
 
-    // 2. Show the member's role and every active choir separately.
-    expect(find.text('Chào Têrêsa Nguyễn Thị Mai'), findsOneWidget);
+    // 2. Show the member's choir directly below the brand.
+    final greeting = find.text('Chào Têrêsa Nguyễn Thị Mai');
+    expect(greeting, findsOneWidget);
     expect(find.text('Chúc một ngày phụng vụ bình an'), findsOneWidget);
     expect(find.text('Ca viên'), findsOneWidget);
-    expect(find.text('Ca đoàn'), findsOneWidget);
-    expect(find.text(MockProfileData.choirNames.join(' · ')), findsOneWidget);
+    expect(find.text('Ca đoàn'), findsNothing);
+    expect(find.text('Ca đoàn phục vụ'), findsNothing);
+    final choirLabel = find.text(MockProfileData.choirNames.join(' · '));
+    expect(choirLabel, findsOneWidget);
+    expect(
+      tester.getTopLeft(choirLabel).dy,
+      allOf(
+        greaterThan(tester.getTopLeft(find.text('Harmonia')).dy),
+        lessThan(tester.getTopLeft(greeting).dy),
+      ),
+    );
 
     // 3. Chương trình phục vụ sắp tới: Bỏ câu phụ & chip ngày, có badge ƯU TIÊN
     expect(find.text('Chương trình phục vụ sắp tới'), findsOneWidget);
@@ -447,9 +469,21 @@ void main() {
 
     // 4. Phân công cá nhân: Tách khung riêng trong thẻ sự kiện, đặt trước nút "Xem chi tiết phục vụ"
     expect(find.text('Phân công cá nhân:'), findsOneWidget);
+    final outlinedAssignment = find.ancestor(
+      of: find.text('Phân công cá nhân:'),
+      matching: find.byWidgetPredicate(
+        (widget) =>
+            widget is Container &&
+            widget.decoration is BoxDecoration &&
+            (widget.decoration! as BoxDecoration).border ==
+                MemberChoirStyle.panelBorder,
+      ),
+    );
+    expect(outlinedAssignment, findsOneWidget);
     expect(find.text('Xem chi tiết phục vụ'), findsOneWidget);
-    // Danh sách "Phân công của bạn" vẫn độc lập bên dưới
-    expect(find.text('Phân công của bạn'), findsOneWidget);
+    // The assignments section remains separate.
+    expect(find.text('Phân công'), findsOneWidget);
+    expect(find.text('Của bạn'), findsNothing);
 
     // 5. Thư viện thánh ca: Thẻ thu gọn, subtitle 1 dòng ellipsis
     expect(find.text('Thư viện thánh ca'), findsOneWidget);

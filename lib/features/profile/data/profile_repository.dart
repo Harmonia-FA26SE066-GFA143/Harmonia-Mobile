@@ -38,7 +38,6 @@ abstract class ProfileRepository {
   Future<MemberSkill?> getSkillById(String id);
   Future<MemberSkill> declareNewSkill({
     required String skillId,
-    String? level,
     String? name,
     String? categoryName,
     String? note,
@@ -82,27 +81,19 @@ class ProfileRepositoryImpl implements ProfileRepository {
   Future<void> deleteAvatar() => apiService.deleteMyAvatar();
 
   MemberSkill _mapSkillDto(MemberSkillDto dto) {
-    SkillApprovalStatus status;
-    if (dto.status == 'Approved') {
-      status = SkillApprovalStatus.approved;
-    } else if (dto.status == 'Rejected') {
-      status = SkillApprovalStatus.rejected;
-    } else {
-      status = SkillApprovalStatus.pending;
-    }
-
     return MemberSkill(
       id: dto.id,
       skillId: dto.skillId,
       name: dto.skillName,
       categoryId: dto.categoryId,
       categoryName: dto.categoryName,
-      level: dto.level,
-      status: status,
+      status: SkillApprovalStatus.fromWire(dto.status),
       note: dto.rejectReason,
       rejectReason: dto.rejectReason,
       declaredAt: dto.declaredAt,
       approvedAt: dto.approvedAt,
+      revokedAt: dto.revokedAt,
+      revokeReason: dto.revokeReason,
       evidence: dto.evidence == null
           ? null
           : MemberSkillEvidence(
@@ -166,13 +157,10 @@ class ProfileRepositoryImpl implements ProfileRepository {
   @override
   Future<MemberSkill> declareNewSkill({
     required String skillId,
-    String? level,
     String? name,
     String? categoryName,
     String? note,
-  }) async => _mapSkillDto(
-    await apiService.declareSkill(skillId: skillId, level: level),
-  );
+  }) async => _mapSkillDto(await apiService.declareSkill(skillId: skillId));
 
   @override
   Future<MemberSkill> uploadSkillEvidence({

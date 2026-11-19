@@ -9,6 +9,11 @@ import '../../notifications/data/notification_dto.dart';
 import 'member_profile_dto.dart';
 
 class MemberProfileApiService {
+  static final _guidPattern = RegExp(
+    r'^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$',
+    caseSensitive: false,
+  );
+
   final ApiClient _client;
 
   MemberProfileApiService(this._client);
@@ -130,16 +135,18 @@ class MemberProfileApiService {
     }
   }
 
-  Future<MemberSkillDto> declareSkill({
-    required String skillId,
-    String? level,
-  }) async {
+  Future<MemberSkillDto> declareSkill({required String skillId}) async {
+    if (skillId.length != 36 ||
+        skillId == '00000000-0000-0000-0000-000000000000' ||
+        !_guidPattern.hasMatch(skillId)) {
+      throw const ValidationException(code: 'MEMBER_SKILL_ID_INVALID');
+    }
+    final epoch = _client.sessionManager.sessionEpoch;
     try {
-      final data = <String, dynamic>{'skillId': skillId};
-      if (level != null && level.isNotEmpty) data['level'] = level;
       final response = await _client.dio.post(
         ApiEndpoints.memberSkills,
-        data: data,
+        data: {'skillId': skillId},
+        options: Options(extra: {'expectedSessionEpoch': epoch}),
       );
       return MemberSkillDto.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {

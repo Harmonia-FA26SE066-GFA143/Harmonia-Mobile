@@ -48,7 +48,12 @@ class _SkillLookups extends LookupsApiService {
 
   @override
   Future<List<SkillDto>> getSkills({String? categoryId}) async => [
-    const SkillDto(id: 'singing', categoryId: 'voice', name: 'Xướng đáp ca'),
+    SkillDto.fromJson({
+      'id': 'singing',
+      'categoryId': 'voice',
+      'name': 'Xướng đáp ca',
+      'gender': 'Female',
+    }),
     for (var index = 1; index <= 16; index++)
       SkillDto(id: 'voice-$index', categoryId: 'voice', name: 'Giọng $index'),
     const SkillDto(id: 'organ', categoryId: 'instrument', name: 'Đàn organ'),
@@ -59,16 +64,11 @@ class _Profiles extends MockProfileRepositoryImpl {
   @override
   Future<MemberSkill> declareNewSkill({
     required String skillId,
-    String? level,
     String? name,
     String? categoryName,
     String? note,
   }) async {
-    final result = await super.declareNewSkill(
-      skillId: skillId,
-      level: level,
-      name: name,
-    );
+    final result = await super.declareNewSkill(skillId: skillId, name: name);
     skills = [...skills, result];
     return result;
   }
@@ -332,8 +332,9 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      final skill = find.text('Thanh nhạc').first;
-      await tester.ensureVisible(skill);
+      expect(find.text('Chưa xác minh được ca đoàn'), findsOneWidget);
+      final skill = find.text('Thanh nhạc');
+      await tester.scrollUntilVisible(skill, 160);
       await tester.tap(skill);
       await tester.pumpAndSettle();
       expect(find.text('Chi tiết kỹ năng'), findsOneWidget);
@@ -376,6 +377,15 @@ void main() {
       await tester.tap(declare);
       await tester.pumpAndSettle();
       expect(find.text('Khai báo kỹ năng mới'), findsOneWidget);
+      expect(find.text('Cấp độ năng lực'), findsNothing);
+      expect(
+        find.text(
+          'Hãy cập nhật giới tính trong hồ sơ để khai báo kỹ năng này.',
+        ),
+        findsOneWidget,
+      );
+      final submit = find.widgetWithText(FilledButton, 'Gửi bản khai kỹ năng');
+      expect(tester.widget<FilledButton>(submit).onPressed, isNull);
 
       final skillField = find.byType(DropdownButtonFormField<SkillDto>);
       await tester.tap(skillField);
@@ -402,7 +412,6 @@ void main() {
 
       expect(find.text('Khai báo kỹ năng mới'), findsNothing);
       expect(profiles.skills.last.skillId, 'organ');
-      expect(profiles.skills.last.level, SkillLevel.intermediate.wireName);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
     },

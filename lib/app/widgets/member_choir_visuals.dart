@@ -18,8 +18,49 @@ class MemberChoirStyle {
   static const serviceCanvas = Color(0xFFF6F5FB);
   static const header = LinearGradient(colors: [wine, wine]);
   static const displayFont = 'Playfair Display';
+  static const choiceIcon = Icon(Icons.keyboard_arrow_down_rounded, size: 26);
+  static const buttonBorder = BorderSide(color: AppColors.muted, width: 1.2);
+  static const panelBorder = Border.fromBorderSide(buttonBorder);
+  static const dialogActionHeight = 52.0;
+  static final cancelButtonStyle = OutlinedButton.styleFrom(
+    minimumSize: const Size(0, dialogActionHeight),
+    side: buttonBorder,
+  );
 
-  static ThemeData theme(BuildContext context) {
+  static Widget pairedActions({
+    required Widget cancel,
+    required Widget confirm,
+  }) {
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: 10,
+        children: [
+          Expanded(child: cancel),
+          Expanded(child: confirm),
+        ],
+      ),
+    );
+  }
+
+  static InputDecoration choiceDecoration(InputDecoration decoration) {
+    final border = switch (decoration.border) {
+      final OutlineInputBorder existing => existing,
+      _ => OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+    };
+    return decoration.copyWith(
+      border: border,
+      enabledBorder: border.copyWith(borderSide: buttonBorder),
+      focusedBorder: border.copyWith(
+        borderSide: const BorderSide(color: wine, width: 1.6),
+      ),
+      disabledBorder: border.copyWith(
+        borderSide: const BorderSide(color: AppColors.outlineVariant),
+      ),
+    );
+  }
+
+  static ThemeData theme(BuildContext context, {bool strengthenPanels = true}) {
     final base = Theme.of(context);
     final button = ElevatedButton.styleFrom(
       backgroundColor: accent,
@@ -38,11 +79,22 @@ class MemberChoirStyle {
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: border),
+          side: strengthenPanels
+              ? buttonBorder
+              : const BorderSide(color: border),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: base.elevatedButtonTheme.style?.merge(button) ?? button,
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: (base.outlinedButtonTheme.style ?? const ButtonStyle()).copyWith(
+          side: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.disabled)
+                ? const BorderSide(color: AppColors.outlineVariant, width: 1.2)
+                : buttonBorder,
+          ),
+        ),
       ),
       chipTheme: base.chipTheme.copyWith(
         selectedColor: blush,
@@ -51,6 +103,57 @@ class MemberChoirStyle {
       ),
     );
   }
+}
+
+class MemberEmptyStateSliver extends StatelessWidget {
+  const MemberEmptyStateSliver({super.key, required this.child, this.footer});
+
+  final Widget child;
+  final Widget? footer;
+
+  @override
+  Widget build(BuildContext context) => SliverFillRemaining(
+    hasScrollBody: false,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(child: Center(child: child)),
+        ?footer,
+      ],
+    ),
+  );
+}
+
+class MemberChoiceField<T> extends StatelessWidget {
+  const MemberChoiceField({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+    this.hint,
+  });
+
+  final String label;
+  final T? value;
+  final List<DropdownMenuItem<T>> items;
+  final ValueChanged<T?>? onChanged;
+  final String? hint;
+
+  @override
+  Widget build(BuildContext context) => DropdownButtonFormField<T>(
+    key: ValueKey((label, value)),
+    initialValue: items.any((item) => item.value == value) ? value : null,
+    icon: MemberChoirStyle.choiceIcon,
+    iconEnabledColor: MemberChoirStyle.wine,
+    isExpanded: true,
+    hint: hint == null ? null : Text(hint!),
+    decoration: MemberChoirStyle.choiceDecoration(
+      InputDecoration(labelText: label),
+    ),
+    items: items,
+    onChanged: onChanged,
+  );
 }
 
 enum MemberChoirArtwork {

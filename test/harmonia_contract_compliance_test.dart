@@ -102,6 +102,7 @@ class FakeCalendarApiService extends CalendarApiService {
   Future<ParticipationReply> respondParticipation(
     String id,
     ParticipationStatus status, {
+    String? note,
     int? expectedSessionEpoch,
   }) async => throw const ForbiddenException();
 

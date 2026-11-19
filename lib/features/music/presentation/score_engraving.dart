@@ -12,11 +12,13 @@ import '../data/score_package.dart';
 class ScoreEngraving extends StatefulWidget {
   final DownloadedScore score;
   final ValueListenable<double> position;
+  final bool followPlayback;
 
   const ScoreEngraving({
     super.key,
     required this.score,
     required this.position,
+    this.followPlayback = false,
   });
 
   @override
@@ -116,7 +118,9 @@ class _ScoreEngravingState extends State<ScoreEngraving> {
           await _run(channel, 'HarmoniaScore.append("$kind", "$encoded")');
         }
       }
-      if (!_failed) await _run(channel, 'HarmoniaScore.load()');
+      if (!_failed) {
+        await _run(channel, 'HarmoniaScore.load(${widget.followPlayback})');
+      }
     } catch (_) {
       if (mounted) setState(() => _failed = true);
     }
@@ -126,7 +130,7 @@ class _ScoreEngravingState extends State<ScoreEngraving> {
   Widget build(BuildContext context) {
     if (_failed) return const Text('Không thể hiển thị khuông nhạc.');
     return SizedBox(
-      height: 400,
+      height: widget.followPlayback ? double.infinity : 400,
       child: switch (defaultTargetPlatform) {
         TargetPlatform.android => AndroidView(
           viewType: _viewType,
