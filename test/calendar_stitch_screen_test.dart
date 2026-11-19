@@ -600,7 +600,10 @@ void main() {
       tester,
     ) async {
       await open(tester, width: width, scale: 1.3);
-      await tester.drag(find.byType(ListView).first, const Offset(0, -1400));
+      await tester.drag(
+        find.byType(CustomScrollView).first,
+        const Offset(0, -1400),
+      );
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
     });
@@ -747,7 +750,10 @@ void main() {
       expect(find.text('Thánh lễ từ API'), findsOneWidget);
 
       // Verify scrolling down in 360px width + 1.3x text scale has no overflow.
-      await tester.drag(find.byType(ListView).first, const Offset(0, -900));
+      await tester.drag(
+        find.byType(CustomScrollView).first,
+        const Offset(0, -900),
+      );
       await tester.pumpAndSettle();
       expect(find.text('HOẠT ĐỘNG THÁNG ${repo.day.month}'), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -757,7 +763,7 @@ void main() {
       expect(detailButtons, findsNWidgets(2));
       await tester.dragUntilVisible(
         detailButtons.last,
-        find.byType(ListView).first,
+        find.byType(CustomScrollView).first,
         const Offset(0, 200),
       );
       await tester.pumpAndSettle();

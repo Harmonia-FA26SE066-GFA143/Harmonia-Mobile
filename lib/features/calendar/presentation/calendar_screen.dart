@@ -30,7 +30,6 @@ typedef _TimelineEntry = ({
 });
 
 class _CalendarScreenState extends ConsumerState<CalendarScreen> {
-  static const _stitchBorder = Color(0xFFE6E1D8);
   static const _stitchTextDark = Color(0xFF201C21);
   static const _stitchTextMuted = Color(0xFF76767E);
   static const _stitchGold = Color(0xFFFECE57);
@@ -193,101 +192,126 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               child: RefreshIndicator(
                 color: MemberChoirStyle.accent,
                 onRefresh: _refresh,
-                child: ListView(
+                child: CustomScrollView(
                   key: ValueKey((
                     _dateKey(_selectedDay),
                     _tab,
                     isMonthTab ? _monthRevision : 0,
                   )),
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.only(bottom: 24),
-                  children: [
-                    _calendarHeader(captionLabel, isMonthTab: isMonthTab),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                  slivers: [
+                    SliverPadding(
+                      padding: const EdgeInsets.only(bottom: 24),
+                      sliver: SliverList.list(
                         children: [
-                          if (!isMonthTab) ...[
-                            _weekNavigator(weekSeason),
-                            const SizedBox(height: 14),
-                            _daySelector(today, events, rehearsals),
-                            const SizedBox(height: 18),
-                            _selectedDayHeader(timelineItems.length),
-                            const SizedBox(height: 12),
-                            if (loading)
-                              const Padding(
-                                padding: EdgeInsets.only(bottom: 16),
-                                child: LinearProgressIndicator(
-                                  minHeight: 2,
-                                  color: MemberChoirStyle.wine,
-                                  backgroundColor: Color(0xFFE7EEFF),
-                                ),
-                              ),
-                            if (!isPastWeek && eventsState.hasError)
-                              _sourceError(
-                                eventsState.error!,
-                                'Thử lại lịch phục vụ',
-                                () => ref
-                                    .read(calendarNotifierProvider.notifier)
-                                    .loadEvents(),
-                              ),
-                            if (rehearsalsState.hasError)
-                              _sourceError(
-                                rehearsalsState.error!,
-                                'Thử lại lịch tập',
-                                () => ref.invalidate(
-                                  rehearsalsForRangeProvider(rehearsalRange),
-                                ),
-                              ),
-                            if (timelineItems.isEmpty &&
-                                !loading &&
-                                !incomplete)
-                              _notice(
-                                'Chưa có ${isPastDay ? 'lịch tập' : 'lịch phục vụ hoặc lịch tập'} trong ngày ${DateFormat('dd/MM/yyyy').format(_selectedDay)}.',
-                              ),
-                            if (timelineItems.isNotEmpty)
-                              for (var i = 0; i < timelineItems.length; i++)
-                                _timelineRow(
-                                  timelineItems[i],
-                                  isLast: i == timelineItems.length - 1,
-                                ),
-                            if (!loading &&
-                                !incomplete &&
-                                (weekEvents.isNotEmpty ||
-                                    weekRehearsals.isNotEmpty))
-                              _weekSummaryCard(
-                                eventCount: isPastWeek && weekEvents.isEmpty
-                                    ? null
-                                    : weekEvents.length,
-                                rehearsalCount: weekRehearsals.length,
-                              ),
-                          ] else ...[
-                            if (eventsState.isLoading)
-                              const Padding(
-                                padding: EdgeInsets.only(bottom: 12),
-                                child: LinearProgressIndicator(minHeight: 2),
-                              ),
-                            if (eventsState.hasError)
-                              _sourceError(
-                                eventsState.error!,
-                                'Thử lại lịch phụng vụ',
-                                () => ref
-                                    .read(calendarNotifierProvider.notifier)
-                                    .loadEvents(),
-                              ),
-                            LiturgicalMonthCalendar(
-                              initialDate: _selectedDay,
-                              today: today,
-                              events: events,
-                              eventsComplete:
-                                  !eventsState.isLoading &&
-                                  !eventsState.hasError,
+                          _calendarHeader(captionLabel, isMonthTab: isMonthTab),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                if (!isMonthTab) ...[
+                                  _weekNavigator(weekSeason),
+                                  const SizedBox(height: 14),
+                                  _daySelector(today, events, rehearsals),
+                                  const SizedBox(height: 18),
+                                  _selectedDayHeader(timelineItems.length),
+                                  const SizedBox(height: 12),
+                                  if (loading)
+                                    const Padding(
+                                      padding: EdgeInsets.only(bottom: 16),
+                                      child: LinearProgressIndicator(
+                                        minHeight: 2,
+                                        color: MemberChoirStyle.wine,
+                                        backgroundColor: Color(0xFFE7EEFF),
+                                      ),
+                                    ),
+                                  if (!isPastWeek && eventsState.hasError)
+                                    _sourceError(
+                                      eventsState.error!,
+                                      'Thử lại lịch phục vụ',
+                                      () => ref
+                                          .read(
+                                            calendarNotifierProvider.notifier,
+                                          )
+                                          .loadEvents(),
+                                    ),
+                                  if (rehearsalsState.hasError)
+                                    _sourceError(
+                                      rehearsalsState.error!,
+                                      'Thử lại lịch tập',
+                                      () => ref.invalidate(
+                                        rehearsalsForRangeProvider(
+                                          rehearsalRange,
+                                        ),
+                                      ),
+                                    ),
+                                  if (timelineItems.isNotEmpty)
+                                    for (
+                                      var i = 0;
+                                      i < timelineItems.length;
+                                      i++
+                                    )
+                                      _timelineRow(
+                                        timelineItems[i],
+                                        isLast: i == timelineItems.length - 1,
+                                      ),
+                                  if (!loading &&
+                                      !incomplete &&
+                                      (weekEvents.isNotEmpty ||
+                                          weekRehearsals.isNotEmpty))
+                                    _weekSummaryCard(
+                                      eventCount:
+                                          isPastWeek && weekEvents.isEmpty
+                                          ? null
+                                          : weekEvents.length,
+                                      rehearsalCount: weekRehearsals.length,
+                                    ),
+                                ] else ...[
+                                  if (eventsState.isLoading)
+                                    const Padding(
+                                      padding: EdgeInsets.only(bottom: 12),
+                                      child: LinearProgressIndicator(
+                                        minHeight: 2,
+                                      ),
+                                    ),
+                                  if (eventsState.hasError)
+                                    _sourceError(
+                                      eventsState.error!,
+                                      'Thử lại lịch phụng vụ',
+                                      () => ref
+                                          .read(
+                                            calendarNotifierProvider.notifier,
+                                          )
+                                          .loadEvents(),
+                                    ),
+                                  LiturgicalMonthCalendar(
+                                    initialDate: _selectedDay,
+                                    today: today,
+                                    events: events,
+                                    eventsComplete:
+                                        !eventsState.isLoading &&
+                                        !eventsState.hasError,
+                                  ),
+                                ],
+                              ],
                             ),
-                          ],
+                          ),
                         ],
                       ),
                     ),
+                    if (!isMonthTab &&
+                        timelineItems.isEmpty &&
+                        !loading &&
+                        !incomplete)
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        sliver: MemberEmptyStateSliver(
+                          child: _notice(
+                            'Chưa có ${isPastDay ? 'lịch tập' : 'lịch phục vụ hoặc lịch tập'} trong ngày ${DateFormat('dd/MM/yyyy').format(_selectedDay)}.',
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -703,14 +727,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           color: selected ? MemberChoirStyle.accent : Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: BorderSide(
-              color: selected
-                  ? MemberChoirStyle.accent
-                  : isToday
-                  ? _stitchGold
-                  : _stitchBorder,
-              width: selected || isToday ? 1.5 : 1.0,
-            ),
+            side: selected || isToday
+                ? BorderSide(
+                    color: selected ? MemberChoirStyle.accent : _stitchGold,
+                    width: 1.5,
+                  )
+                : MemberChoirStyle.buttonBorder,
           ),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
@@ -1023,7 +1045,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     decoration: BoxDecoration(
       color: const Color(0xFFFAF8F5),
       borderRadius: BorderRadius.circular(10),
-      border: Border.all(color: const Color(0x99E6E1D8)),
+      border: MemberChoirStyle.panelBorder,
     ),
     child: Column(
       mainAxisSize: MainAxisSize.min,
@@ -1056,7 +1078,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: _stitchBorder),
+          border: MemberChoirStyle.panelBorder,
           boxShadow: const [
             BoxShadow(
               color: Color(0x0A1B2541),

@@ -371,7 +371,7 @@ class _LiturgicalMonthCalendarState
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: _stitchCardBorder),
+            border: MemberChoirStyle.panelBorder,
             boxShadow: _stitchCardShadow,
           ),
           child: Column(
@@ -440,7 +440,7 @@ class _LiturgicalMonthCalendarState
                   decoration: BoxDecoration(
                     color: _stitchSurfaceContainerLow,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: _stitchCardBorder),
+                    border: MemberChoirStyle.panelBorder,
                   ),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
@@ -483,7 +483,7 @@ class _LiturgicalMonthCalendarState
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: _stitchCardBorder),
+            border: MemberChoirStyle.panelBorder,
             boxShadow: _stitchCardShadow,
           ),
           child: Padding(
@@ -632,13 +632,14 @@ class _LiturgicalMonthCalendarState
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: _stitchCardBorder),
+                border: MemberChoirStyle.panelBorder,
                 boxShadow: _stitchCardShadow,
               ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(
                   'Chưa có lịch phụng vụ hoặc buổi tập được công bố cho ngày này.',
+                  textAlign: TextAlign.center,
                   style: AppTypography.bodyMedium.copyWith(
                     color: _stitchOnSurfaceVariant,
                   ),
@@ -674,7 +675,7 @@ class _LiturgicalMonthCalendarState
                 ],
               ),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: _stitchCardBorder),
+              border: MemberChoirStyle.panelBorder,
             ),
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -748,10 +749,7 @@ class _MonthEventCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: MemberChoirStyle.wine.withValues(alpha: 0.30),
-          width: 1.5,
-        ),
+        border: MemberChoirStyle.panelBorder,
         boxShadow: const [
           BoxShadow(
             color: Color(0x1F6D2636),
@@ -975,7 +973,7 @@ class _MonthRehearsalCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _stitchCardBorder),
+        border: MemberChoirStyle.panelBorder,
         boxShadow: _stitchCardShadow,
       ),
       child: ClipRRect(
@@ -1201,7 +1199,7 @@ class _MonthlyStatTile extends StatelessWidget {
     decoration: BoxDecoration(
       color: Colors.white.withValues(alpha: 0.80),
       borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: _stitchDivider),
+      border: MemberChoirStyle.panelBorder,
     ),
     child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),

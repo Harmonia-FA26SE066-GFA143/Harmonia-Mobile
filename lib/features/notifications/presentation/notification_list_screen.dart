@@ -187,6 +187,18 @@ class _NotificationListScreenState
       (groups[group] ??= []).add(item);
     }
 
+    final Widget? paging = state.isLoadingMore
+        ? const Padding(
+            padding: EdgeInsets.all(16),
+            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          )
+        : state.hasNextPage
+        ? OutlinedButton(
+            onPressed: notifier.loadMore,
+            child: const Text('Tải thêm thông báo'),
+          )
+        : null;
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -295,97 +307,107 @@ class _NotificationListScreenState
             child: AntiphonaryBackground(
               child: RefreshIndicator(
                 onRefresh: notifier.refresh,
-                child: ListView(
+                child: CustomScrollView(
                   controller: _scrollController,
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                  children: [
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        spacing: 8,
+                  slivers: [
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                      sliver: SliverList.list(
                         children: [
-                          for (final filter in _MemberNotificationFilter.values)
-                            ChoiceChip(
-                              label: Text(filter.label),
-                              selected: filter == _memberFilter,
-                              onSelected: (_) =>
-                                  setState(() => _memberFilter = filter),
+                          MemberChoiceField<_MemberNotificationFilter>(
+                            label: 'Loại thông báo',
+                            value: _memberFilter,
+                            items: [
+                              for (final filter
+                                  in _MemberNotificationFilter.values)
+                                DropdownMenuItem(
+                                  value: filter,
+                                  child: Text(filter.label),
+                                ),
+                            ],
+                            onChanged: (value) {
+                              if (value != null) {
+                                setState(() => _memberFilter = value);
+                              }
+                            },
+                          ),
+                          if (_unreadOnly)
+                            Align(
+                              alignment: AlignmentDirectional.centerStart,
+                              child: InputChip(
+                                label: const Text('Chỉ hiện chưa đọc'),
+                                onDeleted: () =>
+                                    setState(() => _unreadOnly = false),
+                              ),
                             ),
+                          for (final group in [
+                            'Hôm nay',
+                            'Hôm qua',
+                            'Trước đó',
+                          ])
+                            if (groups[group] case final items?) ...[
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(0, 14, 0, 8),
+                                child: Row(
+                                  spacing: 8,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        group.toUpperCase(),
+                                        style: AppTypography.labelMedium
+                                            .copyWith(color: AppColors.muted),
+                                      ),
+                                    ),
+                                    Text(
+                                      '${items.length} tin',
+                                      style: AppTypography.labelSmall,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              for (final item in items)
+                                Padding(
+                                  key: ValueKey(item.id),
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: StitchEntrance(
+                                    child: _MemberNotificationCard(
+                                      item: item,
+                                      icon: _getIconForType(item.type),
+                                      time: _formatTime(item.createdAt),
+                                      onOpen: () =>
+                                          _handleNotificationTap(item),
+                                    ),
+                                  ),
+                                ),
+                            ],
                         ],
                       ),
                     ),
-                    if (_unreadOnly)
-                      Align(
-                        alignment: AlignmentDirectional.centerStart,
-                        child: InputChip(
-                          label: const Text('Chỉ hiện chưa đọc'),
-                          onDeleted: () => setState(() => _unreadOnly = false),
-                        ),
-                      ),
-                    if (state.isLoading && state.items.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.all(28),
-                        child: Center(child: CircularProgressIndicator()),
-                      )
-                    else if (state.errorMessage != null && state.items.isEmpty)
-                      _MemberNotificationMessage(
-                        message: state.errorMessage!,
-                        onRetry: notifier.loadInitial,
-                      )
-                    else if (groups.isEmpty)
-                      _MemberNotificationMessage(
-                        message: state.items.isEmpty
-                            ? 'Bạn chưa có thông báo'
-                            : 'Chưa có thông báo đã tải phù hợp với bộ lọc.',
-                      ),
-                    for (final group in ['Hôm nay', 'Hôm qua', 'Trước đó'])
-                      if (groups[group] case final items?) ...[
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(0, 14, 0, 8),
-                          child: Row(
-                            spacing: 8,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  group.toUpperCase(),
-                                  style: AppTypography.labelMedium.copyWith(
-                                    color: AppColors.muted,
-                                  ),
+                    if (groups.isEmpty)
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                        sliver: MemberEmptyStateSliver(
+                          footer: paging,
+                          child: state.isLoading && state.items.isEmpty
+                              ? const CircularProgressIndicator()
+                              : state.errorMessage != null &&
+                                    state.items.isEmpty
+                              ? _MemberNotificationMessage(
+                                  message: state.errorMessage!,
+                                  onRetry: notifier.loadInitial,
+                                )
+                              : _MemberNotificationMessage(
+                                  message: state.items.isEmpty
+                                      ? 'Bạn chưa có thông báo'
+                                      : 'Chưa có thông báo đã tải phù hợp với bộ lọc.',
                                 ),
-                              ),
-                              Text(
-                                '${items.length} tin',
-                                style: AppTypography.labelSmall,
-                              ),
-                            ],
-                          ),
-                        ),
-                        for (final item in items)
-                          Padding(
-                            key: ValueKey(item.id),
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: StitchEntrance(
-                              child: _MemberNotificationCard(
-                                item: item,
-                                icon: _getIconForType(item.type),
-                                time: _formatTime(item.createdAt),
-                                onOpen: () => _handleNotificationTap(item),
-                              ),
-                            ),
-                          ),
-                      ],
-                    if (state.isLoadingMore)
-                      const Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Center(
-                          child: CircularProgressIndicator(strokeWidth: 2),
                         ),
                       )
-                    else if (state.hasNextPage)
-                      OutlinedButton(
-                        onPressed: notifier.loadMore,
-                        child: const Text('Tải thêm thông báo'),
+                    else
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                        sliver: SliverToBoxAdapter(child: paging),
                       ),
                   ],
                 ),
@@ -586,11 +608,7 @@ class _NotificationListScreenState
                                   AppColors.surface,
                                 ),
                           borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                            color: item.isRead && tone == AppColors.body
-                                ? AppColors.border
-                                : tone.withValues(alpha: .16),
-                          ),
+                          border: MemberChoirStyle.panelBorder,
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,

@@ -11,6 +11,10 @@ import 'package:harmonia_mobile/features/practice/presentation/practice_history_
 import 'support/fake_practice_repository.dart';
 
 class _HistoryRepository extends MockPracticeRepositoryImpl {
+  _HistoryRepository({this.empty = false});
+
+  final bool empty;
+
   @override
   Future<PagedList<PracticeSubmissionDetail>> getMySubmissionsPaged({
     String? assignmentId,
@@ -18,28 +22,29 @@ class _HistoryRepository extends MockPracticeRepositoryImpl {
     int pageSize = 20,
   }) async => PagedList(
     items: [
-      PracticeSubmissionDetail(
-        id: 'history-submission',
-        practiceAssignmentId: 'history-assignment',
-        attemptNo: 2,
-        submittedAt: DateTime(2026, 10, 20, 19, 30),
-        status: 'NeedsRevision',
-        durationSeconds: 75,
-        assignmentTitle: 'Luyện bài Ca Hiệp Lễ',
-        assignmentDueDate: DateTime(2026, 10, 22, 21),
-        feedbacks: const [
-          PracticeFeedbackItem(
-            id: 'history-feedback',
-            result: 'NeedsRevision',
-            comment: 'Chú ý giữ đúng cao độ ở câu cuối.',
-            reviewerName: 'Giuse',
-          ),
-        ],
-      ),
+      if (!empty)
+        PracticeSubmissionDetail(
+          id: 'history-submission',
+          practiceAssignmentId: 'history-assignment',
+          attemptNo: 2,
+          submittedAt: DateTime(2026, 10, 20, 19, 30),
+          status: 'NeedsRevision',
+          durationSeconds: 75,
+          assignmentTitle: 'Luyện bài Ca Hiệp Lễ',
+          assignmentDueDate: DateTime(2026, 10, 22, 21),
+          feedbacks: const [
+            PracticeFeedbackItem(
+              id: 'history-feedback',
+              result: 'NeedsRevision',
+              comment: 'Chú ý giữ đúng cao độ ở câu cuối.',
+              reviewerName: 'Giuse',
+            ),
+          ],
+        ),
     ],
     pageNumber: pageNumber,
     pageSize: pageSize,
-    totalCount: 1,
+    totalCount: empty ? 0 : 1,
     totalPages: 1,
     hasPreviousPage: false,
     hasNextPage: false,
@@ -86,6 +91,38 @@ class _TestSessionManager extends SessionManager {
 }
 
 void main() {
+  testWidgets('centers the empty message below the submission summary', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final session = _TestSessionManager();
+    addTearDown(session.dispose);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          practiceRepositoryProvider.overrideWithValue(
+            _HistoryRepository(empty: true),
+          ),
+          sessionManagerProvider.overrideWithValue(session),
+        ],
+        child: const MaterialApp(home: PracticeHistoryScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final summary = tester.getRect(find.text('0 bản thu đã nộp'));
+    final viewport = tester.getRect(find.byType(CustomScrollView));
+    final message = tester.getCenter(
+      find.text('Bạn chưa có bản thu luyện tập nào.'),
+    );
+    expect(message.dx, closeTo(viewport.center.dx, 1));
+    expect(message.dy, closeTo((summary.bottom + viewport.bottom) / 2, 52));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('a status filter keeps older pages available on a narrow phone', (
     tester,
   ) async {
@@ -109,7 +146,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Đạt yêu cầu (0)'));
+    await tester.tap(find.byIcon(Icons.keyboard_arrow_down_rounded));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Đạt yêu cầu (0)').hitTestable().last);
     await tester.pumpAndSettle();
     expect(
       find.text('Không có bản thu đã tải thuộc trạng thái này.'),

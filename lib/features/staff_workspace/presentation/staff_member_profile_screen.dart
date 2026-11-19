@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../lookups/data/lookups_api_service.dart';
+import '../../lookups/data/lookup_dto.dart';
 import '../../profile/data/member_profile_dto.dart';
 import '../data/staff_operations_api.dart';
+import '../data/staff_dashboard_providers.dart';
 import 'staff_members_screen.dart';
 import 'staff_ops_widgets.dart';
 
@@ -17,6 +20,10 @@ final staffMemberSummaryProvider = FutureProvider.autoDispose.family(
       ref.watch(staffOperationsApiProvider).memberSummary(key.$1, key.$2),
 );
 
+final _assignableSkills = FutureProvider.autoDispose(
+  (ref) => ref.watch(lookupsApiServiceProvider).getSkills(),
+);
+
 String _dateLabel(String? value) {
   final day = value == null ? null : DateTime.tryParse(value);
   return day == null ? 'Chưa cập nhật' : opsDay(day);
@@ -25,6 +32,25 @@ String _dateLabel(String? value) {
 class StaffMemberProfileScreen extends ConsumerWidget {
   const StaffMemberProfileScreen({super.key, required this.memberId});
   final String memberId;
+
+  Future<void> _assign(
+    BuildContext context,
+    WidgetRef ref,
+    MemberProfileDto profile,
+  ) async {
+    final saved = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _AssignSkillDialog(profile: profile),
+    );
+    if (saved != true || !context.mounted) return;
+    ref.invalidate(staffMemberSummaryProvider((profile.id, profile.email)));
+    ref.invalidate(staffMemberProfilesProvider);
+    ref.invalidate(staffPendingSkillsCountProvider);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Đã ghi nhận kỹ năng cho ca viên.')),
+    );
+  }
 
   Future<void> _edit(
     BuildContext context,
@@ -110,6 +136,12 @@ class StaffMemberProfileScreen extends ConsumerWidget {
                   icon: const Icon(Icons.edit_outlined),
                   label: const Text('Chỉnh sửa hồ sơ'),
                 ),
+                if (profile.status == MemberStatus.active)
+                  OutlinedButton.icon(
+                    onPressed: () => _assign(context, ref, profile),
+                    icon: const Icon(Icons.fact_check_outlined),
+                    label: const Text('Ghi nhận kỹ năng'),
+                  ),
               ],
               if (canEdit || summary.isLoading || summary.hasError)
                 OpsAsync(
@@ -147,6 +179,103 @@ class StaffMemberProfileScreen extends ConsumerWidget {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _AssignSkillDialog extends ConsumerStatefulWidget {
+  const _AssignSkillDialog({required this.profile});
+  final MemberProfileDto profile;
+
+  @override
+  ConsumerState<_AssignSkillDialog> createState() => _AssignSkillDialogState();
+}
+
+class _AssignSkillDialogState extends ConsumerState<_AssignSkillDialog>
+    with OpsActions<_AssignSkillDialog> {
+  String? _selectedId;
+
+  Future<void> _save(SkillDto skill) async {
+    final api = ref.read(staffOperationsApiProvider);
+    if (await runAction(() => api.assignSkill(widget.profile.id, skill.id)) &&
+        mounted) {
+      Navigator.pop(context, true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final catalog = ref.watch(_assignableSkills);
+    final skills = catalog.asData?.value ?? const <SkillDto>[];
+    final selected = skills
+        .where((skill) => skill.id == _selectedId)
+        .firstOrNull;
+    final requiredGender = selected?.gender;
+    final memberGender = widget.profile.gender;
+    final error = requiredGender == null || requiredGender == memberGender
+        ? null
+        : memberGender == null
+        ? 'Ca viên cần cập nhật giới tính trong hồ sơ.'
+        : 'Kỹ năng này không phù hợp với giới tính của ca viên.';
+    return PopScope(
+      canPop: !busy,
+      child: AlertDialog(
+        title: const Text('Ghi nhận kỹ năng'),
+        scrollable: true,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: 12,
+          children: [
+            Text(widget.profile.fullName),
+            if (catalog.isLoading)
+              const LinearProgressIndicator()
+            else if (catalog.hasError)
+              TextButton(
+                onPressed: () => ref.invalidate(_assignableSkills),
+                child: const Text('Tải lại kỹ năng'),
+              )
+            else if (skills.isEmpty)
+              const Text('Danh mục kỹ năng đang trống.')
+            else
+              OpsChoiceField(
+                label: 'Kỹ năng',
+                value: _selectedId,
+                options: [
+                  for (final skill in skills)
+                    (
+                      id: skill.id,
+                      name: [
+                        skill.name,
+                        if (skill.gender case final gender?) gender.label,
+                      ].join(' · '),
+                    ),
+                ],
+                onChanged: busy
+                    ? null
+                    : (value) => setState(() => _selectedId = value),
+              ),
+            if (error != null)
+              Text(
+                error,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            actionState,
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: busy ? null : () => Navigator.pop(context),
+            child: const Text('Đóng'),
+          ),
+          FilledButton(
+            onPressed: busy || selected == null || error != null
+                ? null
+                : () => _save(selected),
+            child: const Text('Ghi nhận'),
+          ),
+        ],
       ),
     );
   }

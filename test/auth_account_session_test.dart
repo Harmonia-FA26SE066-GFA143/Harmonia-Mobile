@@ -1020,7 +1020,18 @@ void main() {
         await tester.ensureVisible(action);
         await tester.tap(action);
         await tester.pumpAndSettle();
-        await tester.tap(find.text('Hủy'));
+        final confirm = find.widgetWithText(ElevatedButton, 'Đăng xuất');
+        final cancel = find.widgetWithText(OutlinedButton, 'Hủy');
+        expect(tester.getSize(cancel), tester.getSize(confirm));
+        expect(
+          tester.getCenter(cancel).dy,
+          greaterThan(tester.getCenter(confirm).dy),
+        );
+        expect(
+          tester.getCenter(cancel).dx,
+          closeTo(tester.getCenter(confirm).dx, 1),
+        );
+        await tester.tap(cancel);
         await tester.pumpAndSettle();
         expect(api.logoutCalls, 0);
         expect(api.currentDeviceLogoutCalls, 0);

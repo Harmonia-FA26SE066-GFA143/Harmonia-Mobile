@@ -188,9 +188,17 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(
-        find.byType(DropdownButtonFormField<music.LearningStatus>),
+      final progress = find.byType(
+        DropdownButtonFormField<music.LearningStatus>,
       );
+      expect(
+        find.descendant(
+          of: progress,
+          matching: find.byIcon(Icons.keyboard_arrow_down_rounded),
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(progress);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Đã thuộc').last);
       await tester.pump();
@@ -647,12 +655,8 @@ void main() {
       expect(find.text('Kho Bài Hát Chung'), findsOneWidget);
       expect(find.text('Tài liệu học của tôi'), findsWidgets);
       expect(find.text('CA ĐOÀN THÁNH TÂM'), findsOneWidget);
-      expect(
-        find.text(
-          'Đang hiển thị 2/7 tài liệu • Số liệu chi tiết tính trên phần đã tải',
-        ),
-        findsOneWidget,
-      );
+      expect(find.text('Đang hiển thị 2/7 tài liệu'), findsNothing);
+      expect(find.text('Tổng số'), findsNothing);
       expect(find.text('Bè: Soprano'), findsOneWidget);
 
       // Unsupported Stitch controls must NOT be present.
@@ -744,11 +748,21 @@ void main() {
       expect(container.read(musicLibraryProvider).materialsTab, isTrue);
 
       // Filter by SheetMusic and Learned progress.
-      await tester.tap(find.text('Bản nhạc phổ'));
+      final typeFilter = find.byType(
+        DropdownButtonFormField<music.MaterialType>,
+      );
+      await tester.ensureVisible(typeFilter);
+      await tester.tap(typeFilter);
       await tester.pumpAndSettle();
-      final learnedTab = find.widgetWithText(InkWell, 'Đã thuộc').first;
-      await tester.ensureVisible(learnedTab);
-      await tester.tap(learnedTab);
+      await tester.tap(find.text('Bản nhạc phổ').hitTestable().last);
+      await tester.pumpAndSettle();
+      final progressFilter = find.byType(
+        DropdownButtonFormField<music.LearningStatus>,
+      );
+      await tester.ensureVisible(progressFilter);
+      await tester.tap(progressFilter);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Đã thuộc').hitTestable().last);
       await tester.pumpAndSettle();
 
       expect(
@@ -839,7 +853,7 @@ void main() {
       expect(find.text('Tài liệu học của tôi'), findsOneWidget);
       expect(find.byTooltip('Tìm kiếm'), findsOneWidget);
       expect(find.byType(TextField), findsNothing);
-      expect(find.byTooltip('Bộ lọc'), findsOneWidget);
+      expect(find.byTooltip('Bộ lọc'), findsNothing);
 
       // Keeps Kho Bài Hát Chung artwork while matching full-bleed hero + overview layout.
       final heroArt = tester.widget<MemberChoirArt>(
@@ -848,12 +862,8 @@ void main() {
       expect(heroArt.artwork, MemberChoirArtwork.library);
       expect(heroArt.alignment, Alignment.topCenter);
       expect(find.text('Bài hát và bản phổ'), findsOneWidget);
-      expect(
-        find.text(
-          'Đang hiển thị 2/5 bài hát • Số liệu chi tiết tính trên phần đã tải',
-        ),
-        findsOneWidget,
-      );
+      expect(find.text('Đang hiển thị 2/5 bài hát'), findsNothing);
+      expect(find.text('Tổng số'), findsNothing);
       expect(find.text('Tất cả mùa'), findsOneWidget);
 
       final songCard = find.text('Bài hát dài thử nghiệm Kho Bài Hát Chung');

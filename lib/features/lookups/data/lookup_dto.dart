@@ -1,3 +1,5 @@
+import '../../profile/data/member_profile_dto.dart' show MemberGender;
+
 class LookupItemDto {
   final String id;
   final String name;
@@ -107,12 +109,14 @@ class SkillDto {
   final String categoryId;
   final String name;
   final String? description;
+  final MemberGender? gender;
 
   const SkillDto({
     required this.id,
     required this.categoryId,
     required this.name,
     this.description,
+    this.gender,
   });
 
   factory SkillDto.fromJson(Map<String, dynamic> json) {
@@ -121,6 +125,7 @@ class SkillDto {
       categoryId: json['categoryId']?.toString() ?? '',
       name: json['name']?.toString() ?? '',
       description: json['description']?.toString(),
+      gender: MemberGender.fromWire(json['gender']),
     );
   }
 
@@ -129,5 +134,6 @@ class SkillDto {
     'categoryId': categoryId,
     'name': name,
     'description': description,
+    'gender': gender?.wireName,
   };
 }

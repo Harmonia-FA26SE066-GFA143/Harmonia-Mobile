@@ -6,6 +6,7 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../app/widgets/app_page_header.dart';
 import '../../../app/widgets/harmonia_svg_art.dart';
+import '../../../app/widgets/member_choir_visuals.dart';
 import '../../../core/errors/error_messages.dart';
 import '../data/staff_operations_api.dart';
 
@@ -198,23 +199,22 @@ Future<bool> opsConfirm(
   BuildContext context,
   String title,
   String body,
-  String label,
-) async =>
+  String label, {
+  bool outlinedCancel = false,
+}) async =>
     await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(title),
         content: Text(body),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Hủy'),
-          ),
-          FilledButton(
+        actions: _dialogActions(
+          context,
+          outlinedCancel: outlinedCancel,
+          confirm: FilledButton(
             onPressed: () => Navigator.pop(context, true),
             child: Text(label),
           ),
-        ],
+        ),
       ),
     ) ??
     false;
@@ -225,6 +225,7 @@ Future<String?> opsText(
   String label, {
   String initial = '',
   bool requiredText = false,
+  bool outlinedCancel = false,
   int max = 500,
 }) {
   var text = initial;
@@ -241,21 +242,41 @@ Future<String?> opsText(
           decoration: InputDecoration(labelText: label),
           onChanged: (value) => update(() => text = value.trim()),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Hủy'),
-          ),
-          FilledButton(
+        actions: _dialogActions(
+          context,
+          outlinedCancel: outlinedCancel,
+          confirm: FilledButton(
             onPressed: requiredText && text.trim().isEmpty
                 ? null
                 : () => Navigator.pop(context, text.trim()),
             child: const Text('Xác nhận'),
           ),
-        ],
+        ),
       ),
     ),
   );
+}
+
+List<Widget> _dialogActions(
+  BuildContext context, {
+  required bool outlinedCancel,
+  required Widget confirm,
+}) {
+  void close() => Navigator.pop(context);
+  const label = Text('Hủy');
+  if (!outlinedCancel) {
+    return [TextButton(onPressed: close, child: label), confirm];
+  }
+  return [
+    MemberChoirStyle.pairedActions(
+      cancel: OutlinedButton(
+        style: MemberChoirStyle.cancelButtonStyle,
+        onPressed: close,
+        child: label,
+      ),
+      confirm: confirm,
+    ),
+  ];
 }
 
 class OpsChoiceField extends StatelessWidget {
@@ -268,6 +289,7 @@ class OpsChoiceField extends StatelessWidget {
     this.optional = false,
     this.emptyLabel = 'Không chọn',
     this.labelAbove = false,
+    this.memberStyle = false,
   });
   final String label;
   final List<Choice> options;
@@ -276,16 +298,24 @@ class OpsChoiceField extends StatelessWidget {
   final bool optional;
   final String emptyLabel;
   final bool labelAbove;
+  final bool memberStyle;
 
   @override
   Widget build(BuildContext context) {
     final dropdown = DropdownButtonFormField<String>(
-      icon: labelAbove
+      icon: memberStyle
+          ? MemberChoirStyle.choiceIcon
+          : labelAbove
           ? const Icon(Icons.keyboard_arrow_down_rounded)
           : const SizedBox.shrink(),
+      iconEnabledColor: memberStyle ? MemberChoirStyle.wine : null,
       key: ValueKey((label, value)),
       initialValue: options.any((choice) => choice.id == value) ? value : null,
-      decoration: InputDecoration(labelText: labelAbove ? null : label),
+      decoration: memberStyle
+          ? MemberChoirStyle.choiceDecoration(
+              InputDecoration(labelText: labelAbove ? null : label),
+            )
+          : InputDecoration(labelText: labelAbove ? null : label),
       isExpanded: true,
       items: [
         if (optional) DropdownMenuItem(child: Text(emptyLabel)),

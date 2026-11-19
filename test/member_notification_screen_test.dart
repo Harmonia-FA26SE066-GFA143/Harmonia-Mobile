@@ -119,10 +119,12 @@ void main() {
       expect(find.text('HÔM QUA'), findsOneWidget);
       expect(find.text('2 thông báo chưa đọc'), findsOneWidget);
 
-      final category = find.text('Phân công & Lịch');
-      await tester.ensureVisible(category);
+      final filter = find.byIcon(Icons.keyboard_arrow_down_rounded);
+      await tester.ensureVisible(filter);
       await tester.pumpAndSettle();
-      await tester.tap(category);
+      await tester.tap(filter);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Phân công & Lịch').hitTestable().last);
       await tester.pumpAndSettle();
       expect(
         find.text('Chưa có thông báo đã tải phù hợp với bộ lọc.'),

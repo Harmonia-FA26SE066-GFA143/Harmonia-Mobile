@@ -441,7 +441,7 @@ class _RehearsalDetailScreenState extends ConsumerState<RehearsalDetailScreen>
         : const <PracticeAssignment>[];
 
     return Theme(
-      data: MemberChoirStyle.theme(context),
+      data: MemberChoirStyle.theme(context, strengthenPanels: isMemberSession),
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppPageHeader(
@@ -566,6 +566,7 @@ class _RehearsalDetailScreenState extends ConsumerState<RehearsalDetailScreen>
                                 rehearsal: rehearsal,
                                 rawAttendanceStatus: detail.myAttendanceStatus,
                                 showOwnAttendance: widget.showOwnAttendance,
+                                member: isMemberSession,
                                 dateLabel: _formatFullDate(rehearsal.date),
                                 durationMinutes:
                                     durationMinutes != null &&
@@ -587,11 +588,14 @@ class _RehearsalDetailScreenState extends ConsumerState<RehearsalDetailScreen>
                             _RehearsalSongsHeader(count: detail.songs.length),
                             const SizedBox(height: 12),
                             if (detail.songs.isEmpty)
-                              const Card(
+                              Card(
                                 child: Padding(
-                                  padding: EdgeInsets.all(20),
+                                  padding: const EdgeInsets.all(20),
                                   child: Text(
                                     'Buổi tập chưa có danh sách bài hát.',
+                                    textAlign: isMemberSession
+                                        ? TextAlign.center
+                                        : TextAlign.start,
                                   ),
                                 ),
                               )
@@ -602,6 +606,7 @@ class _RehearsalDetailScreenState extends ConsumerState<RehearsalDetailScreen>
                                   for (final song in detail.songs)
                                     _RehearsalSongCard(
                                       song: song,
+                                      member: isMemberSession,
                                       assignment: isMemberSession
                                           ? _matchSongAssignment(
                                               song.songId,
@@ -661,6 +666,7 @@ class _OverviewSessionCard extends StatelessWidget {
     required this.rehearsal,
     required this.rawAttendanceStatus,
     required this.showOwnAttendance,
+    required this.member,
     required this.dateLabel,
     required this.durationMinutes,
     required this.songCount,
@@ -670,6 +676,7 @@ class _OverviewSessionCard extends StatelessWidget {
   final RehearsalSession rehearsal;
   final String? rawAttendanceStatus;
   final bool showOwnAttendance;
+  final bool member;
   final String dateLabel;
   final int? durationMinutes;
   final int songCount;
@@ -708,7 +715,9 @@ class _OverviewSessionCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFEAE3DC)),
+        border: member
+            ? MemberChoirStyle.panelBorder
+            : Border.all(color: const Color(0xFFEAE3DC)),
         boxShadow: [
           BoxShadow(
             color: MemberChoirStyle.wine.withValues(alpha: 0.08),
@@ -837,7 +846,9 @@ class _OverviewSessionCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: const Color(0xFFFFFBF2),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFF3E5C8)),
+                border: member
+                    ? MemberChoirStyle.panelBorder
+                    : Border.all(color: const Color(0xFFF3E5C8)),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -881,7 +892,9 @@ class _OverviewSessionCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: const Color(0xFFF9F7F4),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFECE6DF)),
+                      border: member
+                          ? MemberChoirStyle.panelBorder
+                          : Border.all(color: const Color(0xFFECE6DF)),
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -1045,11 +1058,13 @@ class _RehearsalSongsHeader extends StatelessWidget {
 class _RehearsalSongCard extends StatelessWidget {
   const _RehearsalSongCard({
     required this.song,
+    required this.member,
     required this.assignment,
     required this.onTap,
   });
 
   final RehearsalSong song;
+  final bool member;
   final PracticeAssignment? assignment;
   final VoidCallback onTap;
 
@@ -1087,7 +1102,9 @@ class _RehearsalSongCard extends StatelessWidget {
       color: AppColors.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
-        side: const BorderSide(color: Color(0xFFECE6DF)),
+        side: member
+            ? MemberChoirStyle.buttonBorder
+            : const BorderSide(color: Color(0xFFECE6DF)),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -1453,7 +1470,7 @@ class _PracticeSubmissionCtaCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFECCED3)),
+        border: MemberChoirStyle.panelBorder,
         boxShadow: [
           BoxShadow(
             color: MemberChoirStyle.wine.withValues(alpha: 0.06),

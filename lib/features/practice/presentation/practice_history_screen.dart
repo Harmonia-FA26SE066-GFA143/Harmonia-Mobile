@@ -66,86 +66,109 @@ class _PracticeHistoryScreenState extends ConsumerState<PracticeHistoryScreen> {
             onRefresh: notifier.refresh,
             child: state.items.isEmpty && state.isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : ListView.builder(
+                : CustomScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(16),
-                    itemCount:
-                        1 +
-                        (visible.isEmpty ? 1 : visible.length) +
-                        (state.hasNextPage ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (index == 0) {
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          spacing: 12,
-                          children: [
-                            if (state.errorMessage == null ||
-                                state.items.isNotEmpty)
-                              _HistorySummary(name: userName, count: count),
-                            if (state.items.isNotEmpty)
-                              SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                child: Row(
-                                  spacing: 8,
-                                  children: [
+                    slivers: [
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                        sliver: SliverToBoxAdapter(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            spacing: 12,
+                            children: [
+                              if (state.errorMessage == null ||
+                                  state.items.isNotEmpty)
+                                _HistorySummary(name: userName, count: count),
+                              if (state.items.isNotEmpty)
+                                MemberChoiceField<_HistoryFilter>(
+                                  label: 'Trạng thái bản thu',
+                                  value: _filter,
+                                  items: [
                                     for (final filter in _HistoryFilter.values)
-                                      ChoiceChip(
-                                        label: Text(
+                                      DropdownMenuItem(
+                                        value: filter,
+                                        child: Text(
                                           '${filter.label} (${filter == _HistoryFilter.all ? count : state.items.where((item) => item.status == filter.status).length})',
+                                          overflow: TextOverflow.ellipsis,
                                         ),
-                                        selected: _filter == filter,
-                                        onSelected: (_) =>
-                                            setState(() => _filter = filter),
                                       ),
                                   ],
+                                  onChanged: (value) {
+                                    if (value != null) {
+                                      setState(() => _filter = value);
+                                    }
+                                  },
                                 ),
-                              ),
-                            if (state.items.isNotEmpty && state.hasNextPage)
-                              const Text(
-                                'Số liệu theo trạng thái tính trên các bản thu đã tải.',
-                              ),
-                            const SizedBox(height: 2),
-                          ],
-                        );
-                      }
-                      if (state.hasNextPage &&
-                          index == (visible.isEmpty ? 2 : visible.length + 1)) {
-                        return _LoadMoreButton(
-                          isLoading: state.isLoadingMore,
-                          error: state.loadMoreErrorMessage,
-                          onPressed: notifier.loadMore,
-                        );
-                      }
-                      if (visible.isEmpty) {
-                        return _HistoryMessage(
-                          icon: state.errorMessage == null
-                              ? Icons.library_music_outlined
-                              : Icons.error_outline_rounded,
-                          message:
-                              state.errorMessage ??
-                              (state.items.isEmpty
-                                  ? 'Bạn chưa có bản thu luyện tập nào.'
-                                  : 'Không có bản thu đã tải thuộc trạng thái này.'),
-                          actionLabel: state.errorMessage == null
-                              ? null
-                              : 'Thử lại',
-                          onPressed: state.errorMessage == null
-                              ? null
-                              : notifier.refresh,
-                        );
-                      }
-                      final submission = visible[index - 1];
-                      return Padding(
-                        key: ValueKey(submission.id),
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _PracticeSubmissionCard(
-                          submission: submission,
-                          onTap: () => context.push(
-                            '/practice-submission/${Uri.encodeComponent(submission.id)}',
+                              if (state.items.isNotEmpty && state.hasNextPage)
+                                const Text(
+                                  'Số liệu theo trạng thái tính trên các bản thu đã tải.',
+                                ),
+                            ],
                           ),
                         ),
-                      );
-                    },
+                      ),
+                      if (visible.isEmpty)
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                          sliver: MemberEmptyStateSliver(
+                            footer: state.hasNextPage
+                                ? _LoadMoreButton(
+                                    isLoading: state.isLoadingMore,
+                                    error: state.loadMoreErrorMessage,
+                                    onPressed: notifier.loadMore,
+                                  )
+                                : null,
+                            child: _HistoryMessage(
+                              icon: state.errorMessage == null
+                                  ? Icons.library_music_outlined
+                                  : Icons.error_outline_rounded,
+                              message:
+                                  state.errorMessage ??
+                                  (state.items.isEmpty
+                                      ? 'Bạn chưa có bản thu luyện tập nào.'
+                                      : 'Không có bản thu đã tải thuộc trạng thái này.'),
+                              actionLabel: state.errorMessage == null
+                                  ? null
+                                  : 'Thử lại',
+                              onPressed: state.errorMessage == null
+                                  ? null
+                                  : notifier.refresh,
+                            ),
+                          ),
+                        )
+                      else ...[
+                        SliverPadding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          sliver: SliverList.builder(
+                            itemCount: visible.length,
+                            itemBuilder: (context, index) {
+                              final submission = visible[index];
+                              return Padding(
+                                key: ValueKey(submission.id),
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: _PracticeSubmissionCard(
+                                  submission: submission,
+                                  onTap: () => context.push(
+                                    '/practice-submission/${Uri.encodeComponent(submission.id)}',
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        if (state.hasNextPage)
+                          SliverPadding(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                            sliver: SliverToBoxAdapter(
+                              child: _LoadMoreButton(
+                                isLoading: state.isLoadingMore,
+                                error: state.loadMoreErrorMessage,
+                                onPressed: notifier.loadMore,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ],
                   ),
           ),
         ),
@@ -168,7 +191,7 @@ class _HistorySummary extends StatelessWidget {
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: MemberChoirStyle.gold),
+        side: MemberChoirStyle.buttonBorder,
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -224,7 +247,7 @@ class _PracticeSubmissionCard extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: statusColor.withValues(alpha: .24)),
+          side: MemberChoirStyle.buttonBorder,
         ),
         child: InkWell(
           onTap: onTap,
@@ -277,7 +300,7 @@ class _PracticeSubmissionCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: MemberChoirStyle.paper,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: MemberChoirStyle.border),
+                      border: MemberChoirStyle.panelBorder,
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(10),

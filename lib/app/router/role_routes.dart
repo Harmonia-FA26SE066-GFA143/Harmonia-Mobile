@@ -14,6 +14,7 @@ bool roleAllowsRoute(MobileRole? role, Uri uri) {
     'staff-members' ||
     'staff-member' ||
     'staff-choir' ||
+    'staff-choir-requests' ||
     'staff-skill-approval' ||
     'staff-rehearsals' ||
     'staff-attendance' ||
@@ -40,6 +41,7 @@ bool roleAllowsRoute(MobileRole? role, Uri uri) {
     'practice-history' ||
     'practice-submission' ||
     'music-library' ||
+    'choir-membership' ||
     'music-material' => role == MobileRole.choirMember,
     'profile' when uri.pathSegments.length > 1 =>
       role == MobileRole.choirMember,
@@ -59,7 +61,18 @@ String? notificationRoute({
   final id = referenceId?.trim();
   if (id == null || id.isEmpty) return null;
   if (type == 'Choir') {
-    return role == MobileRole.choirDirector ? '/manage' : null;
+    return switch (role) {
+      MobileRole.choirDirector => '/manage',
+      MobileRole.choirMember => '/choir-membership',
+      _ => null,
+    };
+  }
+  if (type == 'ChoirJoinRequest') {
+    return switch (role) {
+      MobileRole.choirDirector => '/staff-choir-requests',
+      MobileRole.choirMember => '/choir-membership',
+      _ => null,
+    };
   }
   final segment = switch (type) {
     'DirectorNomination' => 'director-nominations',

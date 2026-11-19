@@ -88,17 +88,23 @@ void main() {
   testWidgets('choir picker skips existing members and sends profile IDs', (
     tester,
   ) async {
+    const choirId = '80000000-0000-4000-8000-000000000001';
+    const memberId = '80000000-0000-4000-8000-000000000002';
     final api = makeApi((request) {
       if (request.path == '/api/member-profiles') {
         expect(request.queryParameters['status'], 'Active');
+        expect(request.queryParameters['hasChoir'], isFalse);
         return jsonResponse(200, {
-          'items': [memberRow('a', 'Ca viên A'), memberRow('b', 'Ca viên B')],
+          'items': [
+            memberRow('a', 'Ca viên A'),
+            memberRow(memberId, 'Ca viên B'),
+          ],
         });
       }
       expect(request.method, 'POST');
-      expect(request.path, '/api/choirs/c/members');
+      expect(request.path, '/api/choirs/$choirId/members');
       expect(request.data, {
-        'memberIds': ['b'],
+        'memberIds': [memberId],
       });
       return ResponseBody.fromString('', 204);
     });
@@ -115,7 +121,7 @@ void main() {
                     MaterialPageRoute(
                       builder: (_) => const StaffMembersScreen(
                         addToChoir: (
-                          id: 'c',
+                          id: choirId,
                           name: 'Ca đoàn C',
                           isActive: true,
                           description: null,
@@ -137,7 +143,9 @@ void main() {
     expect(find.text('Ca viên A'), findsNothing);
     await tester.tap(find.text('Ca viên B'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Thêm ca viên (1)'));
+    await tester.tap(find.text('Gửi lời mời (1)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Gửi lời mời'));
     await tester.pumpAndSettle();
     expect(added, isTrue);
   });

@@ -78,10 +78,12 @@ void main() {
         lessThan(initialBannerTop),
       );
 
-      final passedFilter = find.text('Đã đạt');
-      await tester.ensureVisible(passedFilter);
+      final filter = find.byType(DropdownButtonFormField<PracticeFilter>);
+      await tester.ensureVisible(filter);
       await tester.pumpAndSettle();
-      await tester.tap(passedFilter);
+      await tester.tap(filter);
+      await tester.pumpAndSettle();
+      await tester.tap(find.textContaining('Đã đạt').hitTestable().last);
       await tester.pumpAndSettle();
 
       final openRecording = find.text('Xem bài tập và bản thu');

@@ -107,7 +107,7 @@ final _profileActionButtonStyle = OutlinedButton.styleFrom(
   backgroundColor: AppColors.statusDangerSoft,
   minimumSize: const Size(0, 48),
   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-  side: BorderSide(color: AppColors.statusDanger.withValues(alpha: 0.35)),
+  side: const BorderSide(color: AppColors.statusDanger, width: 1.2),
   textStyle: AppTypography.labelLarge.copyWith(fontWeight: FontWeight.bold),
 );
 
@@ -241,13 +241,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         title: const Text('Xóa ảnh đại diện?'),
         content: const Text('Bạn có thể thêm ảnh mới bất cứ lúc nào.'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Hủy'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Xóa ảnh'),
+          MemberChoirStyle.pairedActions(
+            cancel: OutlinedButton(
+              style: MemberChoirStyle.cancelButtonStyle,
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Hủy'),
+            ),
+            confirm: TextButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Xóa ảnh'),
+            ),
           ),
         ],
       ),
@@ -423,7 +426,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     Text('Giới tính', style: AppTypography.labelLarge),
                     const SizedBox(height: 6),
                     DropdownButtonFormField<MemberGender>(
-                      icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                      icon: MemberChoirStyle.choiceIcon,
+                      iconEnabledColor: MemberChoirStyle.wine,
+                      decoration: MemberChoirStyle.choiceDecoration(
+                        const InputDecoration(),
+                      ),
                       initialValue: selectedGender,
                       isExpanded: true,
                       style: Theme.of(context).textTheme.bodyLarge,
@@ -753,18 +760,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                     )
                                   else
                                     DropdownButtonFormField<SkillDto>(
-                                      icon: const Icon(
-                                        Icons.keyboard_arrow_down_rounded,
-                                      ),
+                                      icon: MemberChoirStyle.choiceIcon,
+                                      iconEnabledColor: MemberChoirStyle.wine,
                                       initialValue: selectedSkill,
                                       isExpanded: true,
                                       itemHeight: null,
-                                      decoration: choiceDecoration.copyWith(
-                                        prefixIcon: const Icon(
-                                          Icons.music_note_rounded,
-                                          color: MemberChoirStyle.wine,
-                                        ),
-                                      ),
+                                      decoration:
+                                          MemberChoirStyle.choiceDecoration(
+                                            choiceDecoration.copyWith(
+                                              prefixIcon: const Icon(
+                                                Icons.music_note_rounded,
+                                                color: MemberChoirStyle.wine,
+                                              ),
+                                            ),
+                                          ),
                                       selectedItemBuilder: (_) => [
                                         for (final skill in availableSkills)
                                           Text(
@@ -850,9 +859,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                   OutlinedButton.icon(
                                     style: OutlinedButton.styleFrom(
                                       backgroundColor: MemberChoirStyle.paper,
-                                      side: const BorderSide(
-                                        color: MemberChoirStyle.border,
-                                      ),
                                     ),
                                     onPressed: isSubmitting
                                         ? null
@@ -970,41 +976,30 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             ),
                           Padding(
                             padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-                            child: Row(
-                              spacing: 10,
-                              children: [
-                                OutlinedButton(
-                                  style: OutlinedButton.styleFrom(
-                                    minimumSize: const Size(0, 48),
-                                  ),
-                                  onPressed: isSubmitting ? null : close,
-                                  child: const Text('Hủy'),
+                            child: MemberChoirStyle.pairedActions(
+                              cancel: OutlinedButton(
+                                style: MemberChoirStyle.cancelButtonStyle,
+                                onPressed: isSubmitting ? null : close,
+                                child: const Text('Hủy'),
+                              ),
+                              confirm: FilledButton.icon(
+                                onPressed: isSubmitting || selectedSkill == null
+                                    ? null
+                                    : submit,
+                                icon: isSubmitting
+                                    ? const SizedBox.square(
+                                        dimension: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : const Icon(Icons.send_outlined, size: 18),
+                                label: const Text(
+                                  'Gửi bản khai kỹ năng',
+                                  textAlign: TextAlign.center,
                                 ),
-                                Expanded(
-                                  child: FilledButton.icon(
-                                    onPressed:
-                                        isSubmitting || selectedSkill == null
-                                        ? null
-                                        : submit,
-                                    icon: isSubmitting
-                                        ? const SizedBox.square(
-                                            dimension: 18,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: Colors.white,
-                                            ),
-                                          )
-                                        : const Icon(
-                                            Icons.send_outlined,
-                                            size: 18,
-                                          ),
-                                    label: const Text(
-                                      'Gửi bản khai kỹ năng',
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
                           ),
                         ],
@@ -1433,17 +1428,29 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             'Bạn có chắc chắn muốn kết thúc phiên đăng nhập trên thiết bị này?',
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Hủy'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.statusDanger,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Đăng xuất'),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: 8,
+              children: [
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.statusDanger,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(
+                      0,
+                      MemberChoirStyle.dialogActionHeight,
+                    ),
+                  ),
+                  onPressed: () => Navigator.of(dialogContext).pop(true),
+                  child: const Text('Đăng xuất'),
+                ),
+                OutlinedButton(
+                  style: MemberChoirStyle.cancelButtonStyle,
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child: const Text('Hủy'),
+                ),
+              ],
             ),
           ],
         );
@@ -1512,6 +1519,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ],
               ),
               actions: [
+                IconButton(
+                  tooltip: 'Yêu cầu và lời mời ca đoàn',
+                  onPressed: () => context.push('/choir-membership'),
+                  icon: const Icon(Icons.groups_outlined),
+                ),
                 IconButton(
                   tooltip: 'Ảnh đại diện',
                   onPressed: profile == null || _isAvatarUpdating
@@ -1631,7 +1643,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             const Card(
                               child: Padding(
                                 padding: EdgeInsets.all(16),
-                                child: Text('Bạn chưa khai báo kỹ năng nào.'),
+                                child: Text(
+                                  'Bạn chưa khai báo kỹ năng nào.',
+                                  textAlign: TextAlign.center,
+                                ),
                               ),
                             )
                           else ...[

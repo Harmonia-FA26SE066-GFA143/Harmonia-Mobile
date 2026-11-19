@@ -447,9 +447,21 @@ void main() {
 
     // 4. Phân công cá nhân: Tách khung riêng trong thẻ sự kiện, đặt trước nút "Xem chi tiết phục vụ"
     expect(find.text('Phân công cá nhân:'), findsOneWidget);
+    final outlinedAssignment = find.ancestor(
+      of: find.text('Phân công cá nhân:'),
+      matching: find.byWidgetPredicate(
+        (widget) =>
+            widget is Container &&
+            widget.decoration is BoxDecoration &&
+            (widget.decoration! as BoxDecoration).border ==
+                MemberChoirStyle.panelBorder,
+      ),
+    );
+    expect(outlinedAssignment, findsOneWidget);
     expect(find.text('Xem chi tiết phục vụ'), findsOneWidget);
-    // Danh sách "Phân công của bạn" vẫn độc lập bên dưới
-    expect(find.text('Phân công của bạn'), findsOneWidget);
+    // The assignments section remains separate.
+    expect(find.text('Phân công'), findsOneWidget);
+    expect(find.text('Của bạn'), findsNothing);
 
     // 5. Thư viện thánh ca: Thẻ thu gọn, subtitle 1 dòng ellipsis
     expect(find.text('Thư viện thánh ca'), findsOneWidget);

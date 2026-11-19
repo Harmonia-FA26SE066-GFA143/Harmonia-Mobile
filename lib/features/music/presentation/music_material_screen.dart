@@ -483,7 +483,7 @@ class _MusicMaterialScreenState extends ConsumerState<MusicMaterialScreen> {
                     ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
-                      side: const BorderSide(color: MemberChoirStyle.border),
+                      side: MemberChoirStyle.buttonBorder,
                     ),
                     tileColor: MemberChoirStyle.paper,
                     leading: MusicTileIcon(
@@ -498,7 +498,8 @@ class _MusicMaterialScreenState extends ConsumerState<MusicMaterialScreen> {
                   ),
                   const Divider(height: 1),
                   DropdownButtonFormField<LearningStatus>(
-                    icon: const SizedBox.shrink(),
+                    icon: MemberChoirStyle.choiceIcon,
+                    iconEnabledColor: MemberChoirStyle.wine,
                     key: ValueKey((
                       progress,
                       material.learningUpdatedAt,
@@ -506,14 +507,16 @@ class _MusicMaterialScreenState extends ConsumerState<MusicMaterialScreen> {
                     )),
                     initialValue: progress,
                     isExpanded: true,
-                    decoration: InputDecoration(
-                      labelText: 'Tiến độ học',
-                      prefixIcon: const Icon(
-                        Icons.fact_check_outlined,
-                        color: MemberChoirStyle.wine,
+                    decoration: MemberChoirStyle.choiceDecoration(
+                      InputDecoration(
+                        labelText: 'Tiến độ học',
+                        prefixIcon: const Icon(
+                          Icons.fact_check_outlined,
+                          color: MemberChoirStyle.wine,
+                        ),
+                        filled: true,
+                        fillColor: progressFill,
                       ),
-                      filled: true,
-                      fillColor: progressFill,
                     ),
                     items: [
                       for (final status in LearningStatus.values)
@@ -866,7 +869,7 @@ class _AudioWaveformPlayer extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surfaceContainerLow,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        border: MemberChoirStyle.panelBorder,
       ),
       child: Row(
         children: [

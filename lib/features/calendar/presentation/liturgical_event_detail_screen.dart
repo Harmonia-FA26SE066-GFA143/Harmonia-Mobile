@@ -726,6 +726,7 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
                                   child: Center(
                                     child: Text(
                                       'Chưa có danh sách bài hát được duyệt cho sự kiện này',
+                                      textAlign: TextAlign.center,
                                       style: TextStyle(color: AppColors.muted),
                                     ),
                                   ),
@@ -740,6 +741,7 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
                                   child: Center(
                                     child: Text(
                                       'Danh sách bài hát đã được duyệt nhưng chưa có bài hát nào',
+                                      textAlign: TextAlign.center,
                                       style: TextStyle(color: AppColors.muted),
                                     ),
                                   ),
@@ -904,7 +906,7 @@ class _ParticipationOption extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
         backgroundColor: Colors.white,
         foregroundColor: MemberChoirStyle.ink,
-        side: const BorderSide(color: MemberChoirStyle.border),
+        side: MemberChoirStyle.buttonBorder,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       child: Column(

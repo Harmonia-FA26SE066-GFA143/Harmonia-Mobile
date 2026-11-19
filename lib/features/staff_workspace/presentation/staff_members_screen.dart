@@ -17,6 +17,7 @@ typedef _MemberQuery = ({
   String keyword,
   MemberStatus? status,
   String? skillId,
+  bool? hasChoir,
 });
 
 final staffMemberProfilesProvider = FutureProvider.autoDispose.family(
@@ -27,6 +28,7 @@ final staffMemberProfilesProvider = FutureProvider.autoDispose.family(
         keyword: query.keyword,
         status: query.status,
         skillId: query.skillId,
+        hasChoir: query.hasChoir,
       ),
 );
 
@@ -86,13 +88,19 @@ class _StaffMembersScreenState extends ConsumerState<StaffMembersScreen>
     });
   }
 
-  Future<void> _addMembers() async {
+  Future<void> _inviteMembers() async {
     final choir = widget.addToChoir;
     if (choir == null || _selected.isEmpty) return;
     final api = ref.read(staffOperationsApiProvider);
-    final added = await runAction(
-      () => api.addChoirMembers(choir.id, _selected.toList()),
+    final ids = _selected.toList();
+    final confirmed = await opsConfirm(
+      context,
+      'Gửi lời mời vào ca đoàn?',
+      'Gửi lời mời cho ${ids.length} ca viên vào ${choir.name}.',
+      'Gửi lời mời',
     );
+    if (!mounted || !confirmed) return;
+    final added = await runAction(() => api.addChoirMembers(choir.id, ids));
     if (!added || !mounted) return;
     Navigator.of(context).pop(true);
   }
@@ -104,15 +112,16 @@ class _StaffMembersScreenState extends ConsumerState<StaffMembersScreen>
       keyword: _keyword,
       status: _choosing ? MemberStatus.active : _status,
       skillId: _skillId,
+      hasChoir: _choosing ? false : null,
     ));
     final data = ref.watch(provider);
     final skills = _choosing ? null : ref.watch(_skills);
     final skillOptions = skills?.asData?.value;
 
     return HarmoniaBlockingOverlay(
-      label: busy ? 'Đang thêm ca viên…' : null,
+      label: busy ? 'Đang gửi lời mời…' : null,
       child: OpsPage(
-        title: _choosing ? 'Thêm ca viên' : 'Danh sách ca viên',
+        title: _choosing ? 'Mời ca viên' : 'Danh sách ca viên',
         actions: [
           IconButton(
             tooltip: 'Tải lại',
@@ -220,7 +229,7 @@ class _StaffMembersScreenState extends ConsumerState<StaffMembersScreen>
                           padding: const EdgeInsets.all(16),
                           child: Text(
                             _choosing
-                                ? 'Trang này không có ca viên có thể thêm.'
+                                ? 'Trang này không có ca viên có thể mời.'
                                 : 'Không tìm thấy ca viên phù hợp.',
                             textAlign: TextAlign.center,
                           ),
@@ -287,8 +296,10 @@ class _StaffMembersScreenState extends ConsumerState<StaffMembersScreen>
                 child: SizedBox(
                   width: double.infinity,
                   child: FilledButton(
-                    onPressed: busy || _selected.isEmpty ? null : _addMembers,
-                    child: Text('Thêm ca viên (${_selected.length})'),
+                    onPressed: busy || _selected.isEmpty
+                        ? null
+                        : _inviteMembers,
+                    child: Text('Gửi lời mời (${_selected.length})'),
                   ),
                 ),
               ),
@@ -345,7 +356,9 @@ class _StaffChoirMembersScreenState
     if (added != true || !mounted) return;
     ref.invalidate(_choirData(widget.choirId));
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Đã thêm ca viên vào ca đoàn.')),
+      const SnackBar(
+        content: Text('Đã gửi lời mời. Ca viên cần chấp thuận để vào ca đoàn.'),
+      ),
     );
   }
 
@@ -383,7 +396,21 @@ class _StaffChoirMembersScreenState
                   ? null
                   : () => _openAdd(data.choir, data.members),
               icon: const Icon(Icons.person_add_outlined),
-              label: const Text('Thêm ca viên'),
+              label: const Text('Mời ca viên'),
+            ),
+            OutlinedButton(
+              onPressed: busy
+                  ? null
+                  : () async {
+                      await context.push(
+                        Uri(
+                          path: '/staff-choir-requests',
+                          queryParameters: {'choirId': widget.choirId},
+                        ).toString(),
+                      );
+                      if (mounted) ref.invalidate(provider);
+                    },
+              child: const Text('Yêu cầu và lời mời'),
             ),
             actionState,
             if (data.members.isEmpty)

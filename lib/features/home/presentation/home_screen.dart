@@ -127,7 +127,6 @@ ThemeData _homeTheme(BuildContext context) {
         }),
         foregroundColor: outlinedForeground,
         iconColor: outlinedForeground,
-        side: const WidgetStatePropertyAll(BorderSide(color: _stitchBorder)),
       ),
     ),
     iconButtonTheme: IconButtonThemeData(
@@ -326,7 +325,7 @@ class HomeScreen extends ConsumerWidget {
                                 decoration: BoxDecoration(
                                   color: AppColors.surface,
                                   borderRadius: BorderRadius.circular(24),
-                                  border: Border.all(color: AppColors.border),
+                                  border: MemberChoirStyle.panelBorder,
                                 ),
                                 child: Text(
                                   ErrorMessages.forException(
@@ -346,26 +345,22 @@ class HomeScreen extends ConsumerWidget {
                                     decoration: BoxDecoration(
                                       color: AppColors.surface,
                                       borderRadius: BorderRadius.circular(24),
-                                      border: Border.all(
-                                        color: AppColors.border,
-                                      ),
+                                      border: MemberChoirStyle.panelBorder,
                                     ),
-                                    child: Row(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
                                       children: [
                                         const Icon(
                                           Icons.info_outline,
                                           color: MemberChoirStyle.accent,
                                           size: 24,
                                         ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Text(
-                                            'Chưa có sự kiện sắp tới được công bố cho ca viên.',
-                                            style: AppTypography.bodySmall
-                                                .copyWith(
-                                                  color: AppColors.muted,
-                                                ),
-                                          ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'Chưa có sự kiện sắp tới được công bố cho ca viên.',
+                                          textAlign: TextAlign.center,
+                                          style: AppTypography.bodySmall
+                                              .copyWith(color: AppColors.muted),
                                         ),
                                       ],
                                     ),
@@ -545,9 +540,8 @@ class HomeScreen extends ConsumerWidget {
                                                     .surfaceContainerLow,
                                                 borderRadius:
                                                     BorderRadius.circular(12),
-                                                border: Border.all(
-                                                  color: AppColors.border,
-                                                ),
+                                                border: MemberChoirStyle
+                                                    .panelBorder,
                                               ),
                                               child: Column(
                                                 children: [
@@ -619,10 +613,8 @@ class HomeScreen extends ConsumerWidget {
                                                 color: const Color(0xFFFBF8F5),
                                                 borderRadius:
                                                     BorderRadius.circular(12),
-                                                border: Border.all(
-                                                  color: _stitchBorder,
-                                                  width: 1,
-                                                ),
+                                                border: MemberChoirStyle
+                                                    .panelBorder,
                                               ),
                                               child: Row(
                                                 crossAxisAlignment:
@@ -704,7 +696,7 @@ class HomeScreen extends ConsumerWidget {
                               color: const Color(0xFFFFFCF4),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16),
-                                side: const BorderSide(color: _stitchBorder),
+                                side: MemberChoirStyle.buttonBorder,
                               ),
                               child: ListTile(
                                 dense: true,
@@ -758,39 +750,17 @@ class HomeScreen extends ConsumerWidget {
 
                             // To-do and assignments
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              spacing: 6,
                               children: [
-                                Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.assignment_turned_in_rounded,
-                                      color: MemberChoirStyle.accent,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      'Việc cần làm',
-                                      style: AppTypography.titleLarge.copyWith(
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ],
+                                const Icon(
+                                  Icons.assignment_turned_in_rounded,
+                                  color: MemberChoirStyle.accent,
+                                  size: 20,
                                 ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.statusDangerSoft,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    'Của bạn',
-                                    style: AppTypography.labelSmall.copyWith(
-                                      color: AppColors.statusDanger,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                Text(
+                                  'Việc cần làm',
+                                  style: AppTypography.titleLarge.copyWith(
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
                               ],
@@ -867,9 +837,8 @@ class HomeScreen extends ConsumerWidget {
                                                     .surfaceContainerLow,
                                                 borderRadius:
                                                     BorderRadius.circular(12),
-                                                border: Border.all(
-                                                  color: AppColors.border,
-                                                ),
+                                                border: MemberChoirStyle
+                                                    .panelBorder,
                                               ),
                                               child: Text(
                                                 nextEvent
