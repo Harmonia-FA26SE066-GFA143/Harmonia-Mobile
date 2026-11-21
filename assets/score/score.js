@@ -6,8 +6,12 @@ const pages = document.getElementById('pages');
 const previous = document.getElementById('previous');
 const next = document.getElementById('next');
 const pageNumber = document.getElementById('pageNumber');
-const buffers = { score: [], timeline: [] };
+const buffers = { score: [], timeline: [], preview: [] };
 let toolkit;
+let engineLoading = false;
+let pendingSource;
+let engraved = false;
+let previewShown = false;
 let page = 0;
 let pageCount = 0;
 let notes = [];
@@ -25,29 +29,59 @@ function notify(message) {
   }
 }
 
-function showError() {
+function showError(stage = 'runtime') {
   state.hidden = false;
   state.textContent = 'Không thể hiển thị khuông nhạc.';
+  console.error('Score engraving failed at ' + stage);
   notify('error');
 }
 
 function init() {
-  toolkit = new verovio.toolkit();
-  toolkit.setOptions({
-    expandNever: true,
-    breaks: 'auto',
-    pageWidth: 1200,
-    pageHeight: 1600,
-    pageMarginLeft: 32,
-    pageMarginRight: 32,
-    adjustPageHeight: true,
-    svgViewBox: true,
-  });
-  notify('ready');
+  try {
+    if (toolkit) return;
+    toolkit = new verovio.toolkit();
+    toolkit.setOptions({
+      expandNever: true,
+      breaks: 'auto',
+      pageWidth: 1200,
+      pageHeight: 1600,
+      pageMarginLeft: 32,
+      pageMarginRight: 32,
+      adjustPageHeight: true,
+      svgViewBox: true,
+    });
+    if (pendingSource) continueEngraving();
+  } catch (_) {
+    showError('runtime');
+  }
+}
+
+function startEngine() {
+  if (toolkit) return continueEngraving();
+  if (engineLoading) return;
+  engineLoading = true;
+  const script = document.createElement('script');
+  script.src = 'verovio-toolkit-wasm.js';
+  script.onerror = () => showError('runtime');
+  script.onload = () => {
+    if (typeof verovio === 'undefined') return showError('runtime');
+    if (verovio.module.calledRun) init();
+    else {
+      verovio.module.onRuntimeInitialized = init;
+      verovio.module.onAbort = () => showError('runtime');
+    }
+  };
+  document.head.appendChild(script);
+}
+
+function continueEngraving() {
+  // Paint the cached first page before doing the full layout in the background.
+  if (previewShown) requestAnimationFrame(() => window.setTimeout(engrave, 0));
+  else engrave();
 }
 
 function render(target) {
-  if (target < 1 || target > pageCount || target === page) return;
+  if (!engraved || target < 1 || target > pageCount || target === page) return;
   sheet.innerHTML = toolkit.renderToSVG(target);
   page = target;
   pageNumber.textContent = target + ' / ' + pageCount;
@@ -82,6 +116,7 @@ function read(kind) {
 }
 
 function load(follow = false) {
+  let stage = 'xml';
   try {
     followPlayback = follow;
     document.body.classList.toggle('follow-playback', followPlayback);
@@ -107,10 +142,9 @@ function load(follow = false) {
         });
       });
     }
-    if (!toolkit.loadData(new XMLSerializer().serializeToString(xml))) {
-      throw new Error('Verovio rejected MusicXML');
-    }
+    pendingSource = new XMLSerializer().serializeToString(xml);
 
+    stage = 'timeline';
     notes = JSON.parse(read('timeline')).flatMap(([locator, start, end]) => {
       const id = ids.get(locator);
       if (!id) return [];
@@ -118,14 +152,65 @@ function load(follow = false) {
     }).sort((a, b) => a.start - b.start);
     let maxEnd = 0;
     latestEnd = notes.map(note => (maxEnd = Math.max(maxEnd, note.end)));
+    if (buffers.preview.length) {
+      try {
+        const preview = JSON.parse(read('preview'));
+        if (preview.version === 1 && Number.isInteger(preview.pageCount) &&
+            preview.pageCount > 0 && typeof preview.svg === 'string' &&
+            preview.svg.trimStart().startsWith('<svg ')) {
+          sheet.innerHTML = preview.svg;
+          page = 1;
+          pageCount = preview.pageCount;
+          pageNumber.textContent = '1 / ' + pageCount;
+          previous.disabled = true;
+          next.disabled = true;
+          state.hidden = true;
+          pages.hidden = pageCount === 1;
+          previewShown = true;
+          notify('loaded');
+        }
+      } catch (_) {
+        // A missing/outdated preview falls back to the verified MusicXML.
+      }
+    }
+    if (previewShown) requestAnimationFrame(() => window.setTimeout(startEngine, 0));
+    else startEngine();
+  } catch (_) {
+    showError(stage);
+  }
+}
+
+function engrave() {
+  try {
+    if (!toolkit.loadData(pendingSource)) throw new Error('Invalid score');
+    pendingSource = null;
     pageCount = toolkit.getPageCount();
     if (pageCount < 1) throw new Error('No engraving pages');
+    engraved = true;
     render(1);
     state.hidden = true;
     pages.hidden = pageCount === 1;
-    notify('loaded');
+    next.disabled = page === pageCount;
+    if (!previewShown) {
+      notify('loaded');
+      const preview = JSON.stringify({ version: 1, svg: sheet.innerHTML, pageCount });
+      if (preview.length <= 2 * 1024 * 1024) {
+        for (let offset = 0; offset < preview.length;) {
+          let end = Math.min(offset + 24 * 1024, preview.length);
+          const last = preview.charCodeAt(end - 1);
+          if (last >= 0xd800 && last <= 0xdbff) end--;
+          notify('preview:' + preview.slice(offset, end));
+          offset = end;
+        }
+        notify('preview-done');
+      }
+    }
+    const currentPosition = position;
+    position = -1;
+    if (currentPosition >= 0) progress(currentPosition);
+    notify('engraved');
   } catch (_) {
-    showError();
+    showError('engraving');
   }
 }
 
@@ -149,7 +234,8 @@ function progress(seconds) {
   }
   const latestStart = active[active.length - 1]?.start;
   const focus = followPlayback ? active.find(note => note.start === latestStart) : active[0];
-  const target = focus && (document.getElementById(focus.id) ? page : toolkit.getPageWithElement(focus.id));
+  const target = focus && (document.getElementById(focus.id) ? page :
+    engraved ? toolkit.getPageWithElement(focus.id) : 0);
   if (target && target !== (followPlayback ? page : followedPage)) render(target);
   followedPage = target;
   const current = new Set(active.map(note => document.getElementById(note.id)).filter(Boolean));
@@ -171,10 +257,4 @@ function progress(seconds) {
 }
 
 window.HarmoniaScore = { append, load, progress };
-if (typeof verovio === 'undefined') showError();
-else if (verovio.module.calledRun) init();
-else {
-  verovio.module.onRuntimeInitialized = init;
-  verovio.module.onAbort = showError;
-  window.setTimeout(() => { if (!toolkit) showError(); }, 15000);
-}
+notify('ready');
