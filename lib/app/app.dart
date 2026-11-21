@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/di/core_providers.dart';
 import '../../core/session/session_manager.dart';
 import '../features/calendar/data/calendar_repository.dart';
+import '../features/music/data/score_cache_provider.dart';
 import '../features/notifications/presentation/notification_notifier.dart';
 import '../features/practice/data/practice_repository.dart';
 import '../features/profile/data/profile_repository.dart';
@@ -17,6 +18,7 @@ class HarmoniaApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
+    ref.watch(scoreFileCacheProvider);
     final signalRService = ref.watch(signalRServiceProvider);
 
     // Coordinate SignalR, notification and feature state with session lifecycle per Rule 04 & 06

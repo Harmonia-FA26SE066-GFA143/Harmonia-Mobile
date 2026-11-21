@@ -445,16 +445,18 @@ class _ChooseChoirDialogState extends ConsumerState<_ChooseChoirDialog> {
             const Text(
               'Nếu bạn đang thuộc một ca đoàn, yêu cầu được duyệt sẽ chuyển bạn sang ca đoàn mới.',
             ),
-            TextField(
-              maxLength: 500,
-              maxLines: 3,
-              decoration: InputDecoration(
-                labelText: 'Lời nhắn (tùy chọn)',
-                errorText: _message.length > 500
-                    ? 'Lời nhắn tối đa 500 ký tự.'
-                    : null,
+            MemberFieldLabel(
+              label: 'Lời nhắn (tùy chọn)',
+              child: TextField(
+                maxLength: 500,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  errorText: _message.length > 500
+                      ? 'Lời nhắn tối đa 500 ký tự.'
+                      : null,
+                ),
+                onChanged: (value) => setState(() => _message = value),
               ),
-              onChanged: (value) => setState(() => _message = value),
             ),
           ],
         ],

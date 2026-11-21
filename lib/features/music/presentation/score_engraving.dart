@@ -30,6 +30,9 @@ class _ScoreEngravingState extends State<ScoreEngraving> {
   MethodChannel? _channel;
   bool _loaded = false;
   bool _failed = false;
+  final _loadingTime = Stopwatch()..start();
+  final StringBuffer _preview = StringBuffer();
+  bool _previewTooLarge = false;
 
   @override
   void initState() {
@@ -70,12 +73,46 @@ class _ScoreEngravingState extends State<ScoreEngraving> {
     _channel = channel;
     channel.setMethodCallHandler((call) async {
       if (call.method != 'status' || !mounted) return;
+      final message = call.arguments;
+      if (message is String && message.startsWith('preview:')) {
+        if (!_previewTooLarge) {
+          _preview.write(message.substring(8));
+          if (_preview.length > 2 << 20) {
+            _previewTooLarge = true;
+            _preview.clear();
+          }
+        }
+        return;
+      }
+      if (message == 'preview-done') {
+        if (!_previewTooLarge) {
+          await widget.score.saveEngravingPreview?.call(_preview.toString());
+        }
+        _preview.clear();
+        return;
+      }
       switch (call.arguments) {
         case 'ready':
+          if (kDebugMode) {
+            debugPrint(
+              'Score engraving input ready: ${_loadingTime.elapsedMilliseconds} ms',
+            );
+          }
           await _load(channel);
         case 'loaded':
-          _loaded = true;
+          if (kDebugMode) {
+            debugPrint(
+              'Score engraving displayed: ${_loadingTime.elapsedMilliseconds} ms',
+            );
+          }
+          setState(() => _loaded = true);
           _sendPosition();
+        case 'engraved':
+          if (kDebugMode) {
+            debugPrint(
+              'Score engraving all pages ready: ${_loadingTime.elapsedMilliseconds} ms',
+            );
+          }
         case 'error':
           setState(() => _failed = true);
       }
@@ -104,7 +141,12 @@ class _ScoreEngravingState extends State<ScoreEngraving> {
         ),
         score.timeline.locators,
       );
-      for (final (kind, bytes) in [('score', xml), ('timeline', timeline)]) {
+      for (final (kind, bytes) in [
+        ('score', xml),
+        ('timeline', timeline),
+        if (score.engravingPreview != null)
+          ('preview', utf8.encode(score.engravingPreview!)),
+      ]) {
         const chunkSize = 48 * 1024;
         for (
           var offset = 0;
@@ -121,7 +163,10 @@ class _ScoreEngravingState extends State<ScoreEngraving> {
       if (!_failed) {
         await _run(channel, 'HarmoniaScore.load(${widget.followPlayback})');
       }
-    } catch (_) {
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint('Score engraving preparation failed: ${error.runtimeType}');
+      }
       if (mounted) setState(() => _failed = true);
     }
   }
@@ -131,19 +176,25 @@ class _ScoreEngravingState extends State<ScoreEngraving> {
     if (_failed) return const Text('Không thể hiển thị khuông nhạc.');
     return SizedBox(
       height: widget.followPlayback ? double.infinity : 400,
-      child: switch (defaultTargetPlatform) {
-        TargetPlatform.android => AndroidView(
-          viewType: _viewType,
-          onPlatformViewCreated: _onCreated,
-        ),
-        TargetPlatform.iOS => UiKitView(
-          viewType: _viewType,
-          onPlatformViewCreated: _onCreated,
-        ),
-        _ => const Center(
-          child: Text('Khuông nhạc hỗ trợ trên Android và iOS.'),
-        ),
-      },
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          switch (defaultTargetPlatform) {
+            TargetPlatform.android => AndroidView(
+              viewType: _viewType,
+              onPlatformViewCreated: _onCreated,
+            ),
+            TargetPlatform.iOS => UiKitView(
+              viewType: _viewType,
+              onPlatformViewCreated: _onCreated,
+            ),
+            _ => const Center(
+              child: Text('Khuông nhạc hỗ trợ trên Android và iOS.'),
+            ),
+          },
+          if (!_loaded) const Center(child: CircularProgressIndicator()),
+        ],
+      ),
     );
   }
 }

@@ -7,6 +7,7 @@ import 'package:flutter/material.dart' hide MaterialType;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/app_env.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../app/widgets/app_page_header.dart';
@@ -17,6 +18,7 @@ import '../../staff_workspace/data/staff_operations_api.dart';
 import '../../staff_workspace/presentation/staff_ops_widgets.dart';
 import '../data/music_dto.dart';
 import '../data/music_api_service.dart';
+import '../data/score_cache_provider.dart';
 import '../data/score_package.dart';
 import '../data/score_timeline.dart';
 import 'score_engraving.dart';
@@ -81,15 +83,27 @@ final _score = FutureProvider.autoDispose
     .family<DownloadedScore, (String, int)>((ref, key) async {
       final api = ref.watch(musicApiServiceProvider);
       final cancel = CancelToken();
+      ref.listen(sessionManagerProvider.select((s) => s.sessionEpoch), (
+        _,
+        next,
+      ) {
+        if (next != key.$2) cancel.cancel();
+      });
+      final cache = ref.watch(scoreFileCacheProvider);
       DownloadedScore? downloaded;
       ref.onDispose(() {
         cancel.cancel();
         final current = downloaded;
         if (current != null) unawaited(current.dispose());
       });
+      final userId = await ref.read(secureStorageServiceProvider).getUserId();
+      if (cancel.isCancelled) throw cancel.cancelError!;
       final result = await downloadScorePackage(
         getPackage: () => api.getMaterialScore(key.$1, cancel),
         cancel: cancel,
+        cache: cache,
+        cacheScope: userId == null ? null : '${AppEnv.apiBaseUrl}|$userId',
+        materialId: key.$1,
       );
       if (cancel.isCancelled) {
         await result.dispose();
@@ -201,6 +215,8 @@ class _ScorePlayerState extends State<_ScorePlayer> {
     _state = _player.onPlayerStateChanged.listen((_) {
       if (mounted) setState(() {});
     });
+    // Prepare local audio while the WebView starts instead of waiting for Play.
+    unawaited(_control(_prepare));
   }
 
   @override

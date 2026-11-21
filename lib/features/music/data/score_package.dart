@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
@@ -9,6 +10,7 @@ import '../../../core/errors/app_exceptions.dart';
 import '../../../core/network/api_client.dart';
 import 'music_dto.dart';
 import 'music_file_loader.dart';
+import 'score_file_cache.dart';
 import 'score_timeline.dart';
 
 class ScorePackageDto {
@@ -65,6 +67,8 @@ class DownloadedScore {
   final File audio;
   final ScoreTimeline timeline;
   final Directory _directory;
+  final String? engravingPreview;
+  final Future<void> Function(String)? saveEngravingPreview;
 
   DownloadedScore._(
     this.metadata,
@@ -72,6 +76,8 @@ class DownloadedScore {
     this.audio,
     this.timeline,
     this._directory,
+    this.engravingPreview,
+    this.saveEngravingPreview,
   );
 
   Future<void> dispose() => _delete(_directory);
@@ -100,7 +106,11 @@ Future<DownloadedScore> downloadScorePackage({
   required CancelToken cancel,
   Dio? signedFileClient,
   Future<Directory> Function()? temporaryDirectory,
+  ScoreFileCache? cache,
+  String? cacheScope,
+  String? materialId,
 }) async {
+  final loadingTime = Stopwatch()..start();
   final dio =
       signedFileClient ??
       Dio(
@@ -112,6 +122,11 @@ Future<DownloadedScore> downloadScorePackage({
   try {
     for (var attempt = 0; ; attempt++) {
       final package = await getPackage();
+      if (kDebugMode) {
+        debugPrint(
+          'Score metadata received: ${loadingTime.elapsedMilliseconds} ms',
+        );
+      }
       if (cancel.isCancelled) throw cancel.cancelError!;
       final directory =
           await (await (temporaryDirectory ?? getTemporaryDirectory)())
@@ -120,38 +135,99 @@ Future<DownloadedScore> downloadScorePackage({
         final score = File('${directory.path}/score.${package.format}');
         final audio = File('${directory.path}/audio.wav');
         final notes = File('${directory.path}/notes.json');
-        await _download(
-          dio,
-          cancel,
-          package.scoreUrl,
-          score,
-          package.scoreSha256,
-          20 << 20,
-        );
-        await _download(
-          dio,
-          cancel,
-          package.audioUrl,
-          audio,
-          package.audioSha256,
-          128 << 20,
-        );
-        await _download(
-          dio,
-          cancel,
-          package.notesUrl,
-          notes,
-          package.notesSha256,
-          48 << 20,
-        );
+        String? cacheKey;
+        // Older packages without a notes digest still use the real download path.
+        if (cache != null &&
+            cacheScope != null &&
+            materialId != null &&
+            package.notesSha256 != null) {
+          final account = sha256.convert(utf8.encode(cacheScope));
+          final version = sha256.convert(
+            utf8.encode(
+              jsonEncode([
+                materialId,
+                package.revision,
+                package.format,
+                package.scoreSha256.toLowerCase(),
+                package.audioSha256.toLowerCase(),
+                package.notesSha256?.toLowerCase(),
+                package.notesSchemaVersion,
+              ]),
+            ),
+          );
+          cacheKey = '$account/$version';
+        }
+        final restored =
+            cacheKey != null &&
+            await cache!.restore(
+              key: cacheKey,
+              destination: directory,
+              files: {
+                'score.${package.format}': (package.scoreSha256, 20 << 20),
+                'audio.wav': (package.audioSha256, 128 << 20),
+                'notes.json': (package.notesSha256, 48 << 20),
+              },
+              cancel: cancel,
+            );
+        if (cancel.isCancelled) throw cancel.cancelError!;
+        if (!restored) {
+          await Future.wait([
+            _download(
+              dio,
+              cancel,
+              package.scoreUrl,
+              score,
+              package.scoreSha256,
+              20 << 20,
+            ),
+            _download(
+              dio,
+              cancel,
+              package.audioUrl,
+              audio,
+              package.audioSha256,
+              128 << 20,
+            ),
+            _download(
+              dio,
+              cancel,
+              package.notesUrl,
+              notes,
+              package.notesSha256,
+              48 << 20,
+            ),
+          ]);
+        }
         final bytes = await notes.readAsBytes();
         final timeline = await compute(
           (input) => parseScoreTimeline(input.$1, expectedVersion: input.$2),
           (bytes, package.notesSchemaVersion),
         );
+        if (!restored && cacheKey != null) {
+          await cache!.store(key: cacheKey, source: directory, cancel: cancel);
+        }
         await notes.delete();
         if (cancel.isCancelled) throw cancel.cancelError!;
-        return DownloadedScore._(package, score, audio, timeline, directory);
+        if (kDebugMode) {
+          debugPrint(
+            'Score package ${restored ? 'cache' : 'network'} ready: ${loadingTime.elapsedMilliseconds} ms',
+          );
+        }
+        final previewFile = File('${directory.path}/preview.json');
+        final preview = await previewFile.exists()
+            ? utf8.decode(await previewFile.readAsBytes(), allowMalformed: true)
+            : null;
+        return DownloadedScore._(
+          package,
+          score,
+          audio,
+          timeline,
+          directory,
+          preview,
+          cacheKey == null
+              ? null
+              : (value) => cache!.storePreview(cacheKey!, value, cancel),
+        );
       } on _ScoreFileChanged {
         await _delete(directory);
         if (attempt > 0) throw _downloadError;
@@ -190,6 +266,7 @@ Future<void> _download(
   String? expectedHash,
   int limit,
 ) async {
+  final loadingTime = Stopwatch()..start();
   final response = await dio.get<ResponseBody>(
     MusicFileLoader.validatedUrl(url).toString(),
     cancelToken: cancel,
@@ -215,5 +292,10 @@ Future<void> _download(
     if (actual.toString() != expectedHash.toLowerCase()) {
       throw const _ScoreFileChanged();
     }
+  }
+  if (kDebugMode) {
+    debugPrint(
+      'Score file ${file.uri.pathSegments.last} downloaded: ${loadingTime.elapsedMilliseconds} ms',
+    );
   }
 }

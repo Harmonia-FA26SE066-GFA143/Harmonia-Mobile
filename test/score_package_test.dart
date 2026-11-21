@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -51,14 +52,21 @@ void main() {
             ],
           }),
         );
+        final startedFiles = <String>{};
+        final allStarted = Completer<void>();
         dio.interceptors.add(
           InterceptorsWrapper(
-            onRequest: (request, handler) {
+            onRequest: (request, handler) async {
               final (revision, name) = switch (request.uri.pathSegments) {
                 [final revision, final name] => (revision, name),
                 _ => throw StateError('Unexpected signed URL'),
               };
               expect(request.headers['Authorization'], isNull);
+              if (revision == '2') {
+                startedFiles.add(name);
+                if (startedFiles.length == 3) allStarted.complete();
+                await allStarted.future;
+              }
               if (revision == '1' && expired) {
                 handler.reject(
                   DioException(

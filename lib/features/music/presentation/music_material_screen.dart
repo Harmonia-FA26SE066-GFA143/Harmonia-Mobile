@@ -497,45 +497,47 @@ class _MusicMaterialScreenState extends ConsumerState<MusicMaterialScreen> {
                     ),
                   ),
                   const Divider(height: 1),
-                  DropdownButtonFormField<LearningStatus>(
-                    icon: MemberChoirStyle.choiceIcon,
-                    iconEnabledColor: MemberChoirStyle.wine,
-                    key: ValueKey((
-                      progress,
-                      material.learningUpdatedAt,
-                      _progressRevision,
-                    )),
-                    initialValue: progress,
-                    isExpanded: true,
-                    decoration: MemberChoirStyle.choiceDecoration(
-                      InputDecoration(
-                        labelText: 'Tiến độ học',
-                        prefixIcon: const Icon(
-                          Icons.fact_check_outlined,
-                          color: MemberChoirStyle.wine,
-                        ),
-                        filled: true,
-                        fillColor: progressFill,
-                      ),
-                    ),
-                    items: [
-                      for (final status in LearningStatus.values)
-                        DropdownMenuItem(
-                          value: status,
-                          enabled: status != LearningStatus.notStarted,
-                          child: Text(
-                            status.label,
-                            overflow: TextOverflow.ellipsis,
+                  MemberFieldLabel(
+                    label: 'Tiến độ học',
+                    child: DropdownButtonFormField<LearningStatus>(
+                      icon: MemberChoirStyle.choiceIcon,
+                      iconEnabledColor: MemberChoirStyle.wine,
+                      key: ValueKey((
+                        progress,
+                        material.learningUpdatedAt,
+                        _progressRevision,
+                      )),
+                      initialValue: progress,
+                      isExpanded: true,
+                      decoration: MemberChoirStyle.choiceDecoration(
+                        InputDecoration(
+                          prefixIcon: const Icon(
+                            Icons.fact_check_outlined,
+                            color: MemberChoirStyle.wine,
                           ),
+                          filled: true,
+                          fillColor: progressFill,
                         ),
-                    ],
-                    onChanged: _saving
-                        ? null
-                        : (value) {
-                            if (value != null && value != progress) {
-                              _updateProgress(value);
-                            }
-                          },
+                      ),
+                      items: [
+                        for (final status in LearningStatus.values)
+                          DropdownMenuItem(
+                            value: status,
+                            enabled: status != LearningStatus.notStarted,
+                            child: Text(
+                              status.label,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                      ],
+                      onChanged: _saving
+                          ? null
+                          : (value) {
+                              if (value != null && value != progress) {
+                                _updateProgress(value);
+                              }
+                            },
+                    ),
                   ),
                   if (_saving) const LinearProgressIndicator(),
                 ],
@@ -598,7 +600,7 @@ class _MusicMaterialScreenState extends ConsumerState<MusicMaterialScreen> {
                       label: Text(_playing ? 'Tạm dừng' : openLabel),
                     ),
                   if (interactive)
-                    TextButton.icon(
+                    OutlinedButton.icon(
                       onPressed: _busy
                           ? null
                           : () async {
@@ -768,10 +770,7 @@ class _MaterialPdfReaderState extends State<_MaterialPdfReader> {
                         _page + 1 >= pageCount
                     ? null
                     : () => _goToPage(_page + 1),
-                icon: const Text(
-                  'Sau',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                ),
+                icon: const Icon(Icons.chevron_right_rounded),
               ),
             ],
           ),

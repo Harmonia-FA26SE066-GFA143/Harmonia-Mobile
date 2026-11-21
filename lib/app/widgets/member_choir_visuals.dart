@@ -124,6 +124,23 @@ class MemberEmptyStateSliver extends StatelessWidget {
   );
 }
 
+class MemberFieldLabel extends StatelessWidget {
+  const MemberFieldLabel({super.key, required this.label, required this.child});
+
+  final String label;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    spacing: 6,
+    children: [
+      Text(label, style: Theme.of(context).textTheme.labelLarge),
+      child,
+    ],
+  );
+}
+
 class MemberChoiceField<T> extends StatelessWidget {
   const MemberChoiceField({
     super.key,
@@ -141,18 +158,19 @@ class MemberChoiceField<T> extends StatelessWidget {
   final String? hint;
 
   @override
-  Widget build(BuildContext context) => DropdownButtonFormField<T>(
-    key: ValueKey((label, value)),
-    initialValue: items.any((item) => item.value == value) ? value : null,
-    icon: MemberChoirStyle.choiceIcon,
-    iconEnabledColor: MemberChoirStyle.wine,
-    isExpanded: true,
-    hint: hint == null ? null : Text(hint!),
-    decoration: MemberChoirStyle.choiceDecoration(
-      InputDecoration(labelText: label),
+  Widget build(BuildContext context) => MemberFieldLabel(
+    label: label,
+    child: DropdownButtonFormField<T>(
+      key: ValueKey((label, value)),
+      initialValue: items.any((item) => item.value == value) ? value : null,
+      icon: MemberChoirStyle.choiceIcon,
+      iconEnabledColor: MemberChoirStyle.wine,
+      isExpanded: true,
+      hint: hint == null ? null : Text(hint!),
+      decoration: MemberChoirStyle.choiceDecoration(const InputDecoration()),
+      items: items,
+      onChanged: onChanged,
     ),
-    items: items,
-    onChanged: onChanged,
   );
 }
 
