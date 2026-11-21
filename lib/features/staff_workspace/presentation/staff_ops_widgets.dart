@@ -235,12 +235,18 @@ Future<String?> opsText(
       builder: (context, update) => AlertDialog(
         title: Text(title),
         scrollable: true,
-        content: TextFormField(
-          initialValue: initial,
-          maxLength: max,
-          maxLines: 3,
-          decoration: InputDecoration(labelText: label),
-          onChanged: (value) => update(() => text = value.trim()),
+        content: _labeledTextField(
+          label: label,
+          member: outlinedCancel,
+          child: TextFormField(
+            initialValue: initial,
+            maxLength: max,
+            maxLines: 3,
+            decoration: InputDecoration(
+              labelText: outlinedCancel ? null : label,
+            ),
+            onChanged: (value) => update(() => text = value.trim()),
+          ),
         ),
         actions: _dialogActions(
           context,
@@ -256,6 +262,12 @@ Future<String?> opsText(
     ),
   );
 }
+
+Widget _labeledTextField({
+  required String label,
+  required bool member,
+  required Widget child,
+}) => member ? MemberFieldLabel(label: label, child: child) : child;
 
 List<Widget> _dialogActions(
   BuildContext context, {

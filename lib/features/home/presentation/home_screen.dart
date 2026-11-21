@@ -791,21 +791,6 @@ class HomeScreen extends ConsumerWidget {
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
-                                            Container(
-                                              padding: const EdgeInsets.all(8),
-                                              decoration: BoxDecoration(
-                                                color: MemberChoirStyle.accent
-                                                    .withValues(alpha: 0.08),
-                                                borderRadius:
-                                                    BorderRadius.circular(10),
-                                              ),
-                                              child: const Icon(
-                                                Icons.event_available_rounded,
-                                                color: MemberChoirStyle.accent,
-                                                size: 20,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 12),
                                             Expanded(
                                               child: Column(
                                                 crossAxisAlignment:
