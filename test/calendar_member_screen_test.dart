@@ -10,6 +10,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:harmonia_mobile/app/widgets/harmonia_svg_art.dart';
 import 'package:harmonia_mobile/app/theme/app_theme.dart';
 import 'package:harmonia_mobile/core/di/core_providers.dart';
 import 'package:harmonia_mobile/core/errors/app_exceptions.dart';
@@ -464,7 +465,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Phát bản ghi'));
       await tester.pump();
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byType(HarmoniaNeumeSpinner), findsOneWidget);
       expect(tester.takeException(), isNull);
 
       await tester.pumpWidget(const SizedBox.shrink());

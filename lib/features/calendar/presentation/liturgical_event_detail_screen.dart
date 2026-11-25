@@ -33,7 +33,7 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
           gradient: MemberChoirStyle.header,
           showEmptyAccent: true,
         ),
-        body: const Center(child: CircularProgressIndicator()),
+        body: const Center(child: HarmoniaNeumeSpinner()),
       );
     }
     if (detailState.hasError) {
@@ -672,7 +672,7 @@ class LiturgicalEventDetailScreen extends ConsumerWidget {
                           loading: () => const Padding(
                             padding: EdgeInsets.symmetric(vertical: 24),
                             child: Center(
-                              child: CircularProgressIndicator(
+                              child: HarmoniaNeumeSpinner(
                                 color: AppColors.primary,
                               ),
                             ),

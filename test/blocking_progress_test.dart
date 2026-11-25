@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -5,6 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:harmonia_mobile/app/router/splash_screen.dart';
 import 'package:harmonia_mobile/app/theme/app_theme.dart';
 import 'package:harmonia_mobile/app/widgets/harmonia_blocking_progress.dart';
+import 'package:harmonia_mobile/app/widgets/harmonia_refresh_indicator.dart';
+import 'package:harmonia_mobile/app/widgets/harmonia_svg_art.dart';
 import 'package:harmonia_mobile/core/di/core_providers.dart';
 import 'package:harmonia_mobile/core/session/session_manager.dart';
 import 'package:harmonia_mobile/core/storage/secure_storage_service.dart';
@@ -26,7 +30,7 @@ void main() {
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));
 
   testWidgets(
-    'SplashScreen animates the rose window during restoration and respects reduced motion',
+    'SplashScreen animates the neume spinner during restoration and respects reduced motion',
     (tester) async {
       final session = SessionManager(SecureStorageService());
 
@@ -48,23 +52,31 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
 
-      final frameFinder = find.descendant(
-        of: find.byType(HarmoniaRoseWindowSpinner),
-        matching: find.byType(Image),
+      final spinner = find.byType(HarmoniaNeumeSpinner);
+      final graphic = find.descendant(
+        of: spinner,
+        matching: find.byType(HarmoniaSvgGraphic),
       );
-      String assetName() =>
-          (tester.widget<Image>(frameFinder).image as AssetImage).assetName;
-
+      final rotation = find.descendant(
+        of: spinner,
+        matching: find.byType(RotationTransition),
+      );
+      expect(
+        tester.widget<HarmoniaSvgGraphic>(graphic).assetPath,
+        HarmoniaSvgAsset.neumeSpinner,
+      );
       expect(find.text('Đang khôi phục phiên…'), findsOneWidget);
-      expect(assetName(), endsWith('/0.png'));
+      final initialTurns = tester
+          .widget<RotationTransition>(rotation)
+          .turns
+          .value;
       await tester.pump(const Duration(milliseconds: 300));
-      expect(assetName(), endsWith('/1.png'));
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(assetName(), endsWith('/2.png'));
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(assetName(), endsWith('/3.png'));
+      expect(
+        tester.widget<RotationTransition>(rotation).turns.value,
+        isNot(initialTurns),
+      );
 
-      // Case 2: Reduced motion holds the initial frame.
+      // Case 2: Reduced motion shows the same asset without rotation.
       await tester.pumpWidget(
         ProviderScope(
           key: const ValueKey('splash-reduced'),
@@ -87,9 +99,8 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
 
-      expect(assetName(), endsWith('/0.png'));
-      await tester.pump(const Duration(milliseconds: 900));
-      expect(assetName(), endsWith('/0.png'));
+      expect(graphic, findsOneWidget);
+      expect(rotation, findsNothing);
 
       // Case 3: Error state hides spinner and shows retry button.
       await tester.pumpWidget(
@@ -111,13 +122,53 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(HarmoniaRoseWindowSpinner), findsNothing);
-      expect(find.text('Thử lại'), findsOneWidget);
+      expect(find.byType(HarmoniaNeumeSpinner), findsNothing);
+      final retry = find.widgetWithText(FilledButton, 'Thử lại');
+      expect(retry, findsOneWidget);
+      expect(tester.getSize(retry).height, greaterThanOrEqualTo(48));
+      expect(
+        tester.getSize(retry).width,
+        lessThan(tester.getSize(find.byType(Scaffold)).width - 48),
+      );
 
       await tester.pumpWidget(const SizedBox());
       session.dispose();
     },
   );
+
+  testWidgets('pull to refresh shows the neume until the refresh finishes', (
+    tester,
+  ) async {
+    final pending = Completer<void>();
+    var refreshes = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: HarmoniaRefreshIndicator(
+            onRefresh: () {
+              refreshes++;
+              return pending.future;
+            },
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: const [ListTile(title: Text('Nội dung'))],
+            ),
+          ),
+        ),
+      ),
+    );
+    final spinner = find.byType(HarmoniaNeumeSpinner);
+    expect(spinner, findsNothing);
+    await tester.drag(find.byType(ListView), const Offset(0, 350));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(refreshes, 1);
+    expect(spinner, findsOneWidget);
+    expect(find.text('Nội dung'), findsOneWidget);
+    pending.complete();
+    await tester.pumpAndSettle();
+    expect(spinner, findsNothing);
+  });
 
   testWidgets('blocking progress intercepts taps and back until it completes', (
     tester,
@@ -163,7 +214,7 @@ void main() {
 
     progressLabel.value = null;
     await tester.pumpAndSettle();
-    expect(find.byType(HarmoniaRoseWindowSpinner), findsNothing);
+    expect(find.byType(HarmoniaNeumeSpinner), findsNothing);
     await tester.tap(find.text('Thao tác'));
     expect(taps, 1);
     await tester.binding.handlePopRoute();

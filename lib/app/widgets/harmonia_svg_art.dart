@@ -191,10 +191,12 @@ class HarmoniaNeumeSpinner extends StatefulWidget {
     super.key,
     this.size = 30,
     this.color = AppColors.primary,
+    this.semanticsLabel = 'Đang tải',
   });
 
   final double size;
   final Color color;
+  final String semanticsLabel;
 
   @override
   State<HarmoniaNeumeSpinner> createState() => _HarmoniaNeumeSpinnerState();
@@ -237,8 +239,12 @@ class _HarmoniaNeumeSpinnerState extends State<HarmoniaNeumeSpinner>
       height: widget.size,
       colorOverride: widget.color,
     );
-    if (reduceMotion) return graphic;
-    return RotationTransition(turns: _controller, child: graphic);
+    return Semantics(
+      label: widget.semanticsLabel,
+      child: reduceMotion
+          ? graphic
+          : RotationTransition(turns: _controller, child: graphic),
+    );
   }
 }
 

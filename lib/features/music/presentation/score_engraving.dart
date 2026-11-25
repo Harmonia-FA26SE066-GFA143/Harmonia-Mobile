@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../app/widgets/harmonia_svg_art.dart';
 import '../data/music_xml_archive.dart';
 import '../data/score_package.dart';
 
@@ -192,7 +193,7 @@ class _ScoreEngravingState extends State<ScoreEngraving> {
               child: Text('Khuông nhạc hỗ trợ trên Android và iOS.'),
             ),
           },
-          if (!_loaded) const Center(child: CircularProgressIndicator()),
+          if (!_loaded) const Center(child: HarmoniaNeumeSpinner()),
         ],
       ),
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/widgets/harmonia_svg_art.dart';
 import '../../../app/widgets/harmonia_blocking_progress.dart';
 import '../../../app/widgets/app_page_header.dart';
 import '../../../app/theme/app_colors.dart';
@@ -194,7 +195,7 @@ class _StaffSongProposalState extends ConsumerState<StaffSongProposal> {
                 ),
           body: SafeArea(
             child: slots.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: HarmoniaNeumeSpinner()),
               error: (error, _) => Center(
                 child: OutlinedButton(
                   onPressed: () => ref.invalidate(_slots),
@@ -432,7 +433,7 @@ class _SongPickerState extends ConsumerState<StaffSongPicker> {
                     .watch(provider)
                     .when(
                       loading: () =>
-                          const Center(child: CircularProgressIndicator()),
+                          const Center(child: HarmoniaNeumeSpinner()),
                       error: (error, _) => Center(
                         child: OutlinedButton(
                           onPressed: () => ref.invalidate(provider),

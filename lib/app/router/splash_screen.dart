@@ -6,8 +6,8 @@ import '../../core/di/core_providers.dart';
 import '../../features/auth/presentation/auth_notifier.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
-import '../widgets/harmonia_blocking_progress.dart';
 import '../widgets/harmonia_logo.dart';
+import '../widgets/harmonia_svg_art.dart';
 import '../widgets/stitch_entrance.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
@@ -181,15 +181,19 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                               style: const TextStyle(color: Colors.white),
                             ),
                             const SizedBox(height: 12),
-                            FilledButton(
-                              style: FilledButton.styleFrom(
-                                backgroundColor: gold,
-                                foregroundColor: AppColors.onSurface,
+                            FractionallySizedBox(
+                              widthFactor: .82,
+                              child: FilledButton(
+                                style: FilledButton.styleFrom(
+                                  minimumSize: const Size(0, 48),
+                                  backgroundColor: gold,
+                                  foregroundColor: AppColors.onSurface,
+                                ),
+                                onPressed: () => ref
+                                    .read(authNotifierProvider.notifier)
+                                    .restoreSession(),
+                                child: const Text('Thử lại'),
                               ),
-                              onPressed: () => ref
-                                  .read(authNotifierProvider.notifier)
-                                  .restoreSession(),
-                              child: const Text('Thử lại'),
                             ),
                             TextButton(
                               style: TextButton.styleFrom(
@@ -207,8 +211,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                                   shape: BoxShape.circle,
                                 ),
                                 child: Padding(
-                                  padding: EdgeInsets.all(4),
-                                  child: HarmoniaRoseWindowSpinner(),
+                                  padding: EdgeInsets.all(9),
+                                  child: HarmoniaNeumeSpinner(size: 44),
                                 ),
                               ),
                             ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/widgets/harmonia_svg_art.dart';
 import '../../../app/widgets/member_choir_visuals.dart';
 import '../../../core/di/core_providers.dart';
 import '../../calendar/data/calendar_repository.dart';
@@ -315,7 +316,7 @@ class _ChoirMembershipScreenState extends ConsumerState<ChoirMembershipScreen>
                         : 'Chưa xác minh được ca đoàn'),
               ),
               if (catalog?.isLoading == true)
-                const LinearProgressIndicator()
+                const Center(child: HarmoniaNeumeSpinner(size: 22))
               else if (catalog?.hasError == true)
                 TextButton(
                   onPressed: () => ref.invalidate(_catalog),
@@ -420,7 +421,7 @@ class _ChooseChoirDialogState extends ConsumerState<_ChooseChoirDialog> {
         spacing: 12,
         children: [
           if (catalog.isLoading)
-            const LinearProgressIndicator()
+            const Center(child: HarmoniaNeumeSpinner(size: 22))
           else if (catalog.hasError)
             TextButton(
               onPressed: () => ref.invalidate(_catalog),

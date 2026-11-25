@@ -181,7 +181,7 @@ class _PracticeSubmissionDetailScreenState
         top: false,
         child: AntiphonaryBackground(
           child: detail.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => const Center(child: HarmoniaNeumeSpinner()),
             error: (error, _) => Center(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
@@ -367,8 +367,8 @@ class _PracticeSubmissionDetailScreenState
                     icon: _isLoadingAudio
                         ? const SizedBox.square(
                             dimension: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
+                            child: HarmoniaNeumeSpinner(
+                              size: 20,
                               color: Colors.white,
                             ),
                           )

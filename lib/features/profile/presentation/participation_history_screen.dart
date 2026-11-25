@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app/widgets/harmonia_refresh_indicator.dart';
+import '../../../app/widgets/harmonia_svg_art.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../app/widgets/app_page_header.dart';
@@ -264,9 +266,7 @@ class _ParticipationHistoryScreenState
                 builder: (context) {
                   if (_isLoading && _items.isEmpty) {
                     return const Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.primary,
-                      ),
+                      child: HarmoniaNeumeSpinner(color: AppColors.primary),
                     );
                   }
 
@@ -333,7 +333,7 @@ class _ParticipationHistoryScreenState
                     );
                   }
 
-                  return RefreshIndicator(
+                  return HarmoniaRefreshIndicator(
                     onRefresh: () => _loadHistory(reset: true),
                     color: AppColors.primary,
                     child: ListView.separated(
@@ -354,9 +354,7 @@ class _ParticipationHistoryScreenState
                                     ? const SizedBox(
                                         width: 16,
                                         height: 16,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                        ),
+                                        child: HarmoniaNeumeSpinner(size: 20),
                                       )
                                     : null,
                                 label: const Text('Tải thêm sự kiện'),

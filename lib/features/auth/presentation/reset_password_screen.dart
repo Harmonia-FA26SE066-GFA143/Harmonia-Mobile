@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/widgets/harmonia_svg_art.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/di/core_providers.dart';
@@ -275,8 +276,8 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                           ? const SizedBox(
                               width: 20,
                               height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
+                              child: HarmoniaNeumeSpinner(
+                                size: 20,
                                 color: AppColors.onPrimary,
                               ),
                             )
@@ -615,8 +616,8 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                 ? const SizedBox(
                     height: 20,
                     width: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
+                    child: HarmoniaNeumeSpinner(
+                      size: 20,
                       color: AppColors.onPrimary,
                     ),
                   )

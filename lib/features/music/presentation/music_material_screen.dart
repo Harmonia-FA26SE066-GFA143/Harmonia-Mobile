@@ -333,7 +333,7 @@ class _MusicMaterialScreenState extends ConsumerState<MusicMaterialScreen> {
       body: SafeArea(
         top: false,
         child: detail.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const Center(child: HarmoniaNeumeSpinner()),
           error: (error, _) => Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
@@ -539,7 +539,8 @@ class _MusicMaterialScreenState extends ConsumerState<MusicMaterialScreen> {
                             },
                     ),
                   ),
-                  if (_saving) const LinearProgressIndicator(),
+                  if (_saving)
+                    const Center(child: HarmoniaNeumeSpinner(size: 22)),
                 ],
               ),
             ),
@@ -588,7 +589,7 @@ class _MusicMaterialScreenState extends ConsumerState<MusicMaterialScreen> {
                       icon: _busy
                           ? const SizedBox.square(
                               dimension: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                              child: HarmoniaNeumeSpinner(size: 20),
                             )
                           : Icon(
                               _playing
@@ -887,8 +888,8 @@ class _AudioWaveformPlayer extends StatelessWidget {
               icon: isBusy
                   ? const SizedBox.square(
                       dimension: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
+                      child: HarmoniaNeumeSpinner(
+                        size: 20,
                         color: AppColors.onPrimary,
                       ),
                     )

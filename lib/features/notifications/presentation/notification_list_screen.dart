@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app/widgets/harmonia_refresh_indicator.dart';
 import '../../../app/router/role_routes.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/widgets/app_page_header.dart';
@@ -190,7 +191,7 @@ class _NotificationListScreenState
     final Widget? paging = state.isLoadingMore
         ? const Padding(
             padding: EdgeInsets.all(16),
-            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            child: Center(child: HarmoniaNeumeSpinner(size: 20)),
           )
         : state.hasNextPage
         ? OutlinedButton(
@@ -305,7 +306,7 @@ class _NotificationListScreenState
           body: SafeArea(
             top: false,
             child: AntiphonaryBackground(
-              child: RefreshIndicator(
+              child: HarmoniaRefreshIndicator(
                 onRefresh: notifier.refresh,
                 child: CustomScrollView(
                   controller: _scrollController,
@@ -390,7 +391,7 @@ class _NotificationListScreenState
                         sliver: MemberEmptyStateSliver(
                           footer: paging,
                           child: state.isLoading && state.items.isEmpty
-                              ? const CircularProgressIndicator()
+                              ? const HarmoniaNeumeSpinner()
                               : state.errorMessage != null &&
                                     state.items.isEmpty
                               ? _MemberNotificationMessage(
@@ -480,7 +481,7 @@ class _NotificationListScreenState
           builder: (context) {
             if (state.isLoading && state.items.isEmpty) {
               return const Center(
-                child: CircularProgressIndicator(color: AppColors.primary),
+                child: HarmoniaNeumeSpinner(color: AppColors.primary),
               );
             }
 
@@ -514,7 +515,7 @@ class _NotificationListScreenState
             }
 
             if (state.items.isEmpty) {
-              return RefreshIndicator(
+              return HarmoniaRefreshIndicator(
                 onRefresh: () => notifier.refresh(),
                 color: AppColors.primary,
                 child: ListView(
@@ -559,7 +560,7 @@ class _NotificationListScreenState
               );
             }
 
-            return RefreshIndicator(
+            return HarmoniaRefreshIndicator(
               onRefresh: () => notifier.refresh(),
               color: AppColors.primary,
               child: ListView.separated(
@@ -577,8 +578,8 @@ class _NotificationListScreenState
                     return const Padding(
                       padding: EdgeInsets.symmetric(vertical: 16),
                       child: Center(
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
+                        child: HarmoniaNeumeSpinner(
+                          size: 20,
                           color: AppColors.primary,
                         ),
                       ),

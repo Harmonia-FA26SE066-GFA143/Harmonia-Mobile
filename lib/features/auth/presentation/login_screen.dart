@@ -387,10 +387,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                           child: auth.isLoading
                                               ? const SizedBox.square(
                                                   dimension: 20,
-                                                  child:
-                                                      CircularProgressIndicator(
-                                                        strokeWidth: 2,
-                                                      ),
+                                                  child: HarmoniaNeumeSpinner(
+                                                    size: 20,
+                                                  ),
                                                 )
                                               : const Text(
                                                   'Đăng nhập',

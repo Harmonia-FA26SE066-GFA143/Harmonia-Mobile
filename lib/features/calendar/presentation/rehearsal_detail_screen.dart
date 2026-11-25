@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app/widgets/harmonia_refresh_indicator.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../app/widgets/app_page_header.dart';
@@ -324,7 +325,7 @@ class _RehearsalDetailScreenState extends ConsumerState<RehearsalDetailScreen>
           loading: () => const Card(
             child: Padding(
               padding: EdgeInsets.all(24),
-              child: Center(child: CircularProgressIndicator()),
+              child: Center(child: HarmoniaNeumeSpinner()),
             ),
           ),
           error: (error, _) => Card(
@@ -490,7 +491,7 @@ class _RehearsalDetailScreenState extends ConsumerState<RehearsalDetailScreen>
         body: SafeArea(
           top: false,
           child: AntiphonaryBackground(
-            child: RefreshIndicator(
+            child: HarmoniaRefreshIndicator(
               color: MemberChoirStyle.accent,
               onRefresh: () => _refreshAll(isMemberSession),
               child: state.when(
@@ -500,7 +501,7 @@ class _RehearsalDetailScreenState extends ConsumerState<RehearsalDetailScreen>
                     Padding(
                       padding: EdgeInsets.all(32),
                       child: Center(
-                        child: CircularProgressIndicator(
+                        child: HarmoniaNeumeSpinner(
                           color: MemberChoirStyle.wine,
                         ),
                       ),
@@ -1384,8 +1385,8 @@ class _RehearsalRecordingCard extends StatelessWidget {
                     icon: isLoading
                         ? const SizedBox.square(
                             dimension: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
+                            child: HarmoniaNeumeSpinner(
+                              size: 20,
                               color: Color(0xFF521925),
                             ),
                           )

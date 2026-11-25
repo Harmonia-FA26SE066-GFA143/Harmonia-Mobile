@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app/widgets/harmonia_refresh_indicator.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../app/widgets/app_page_header.dart';
@@ -91,7 +92,7 @@ class SongDetailScreen extends ConsumerWidget {
         child: AntiphonaryBackground(
           child: detail.when(
             loading: () => const Center(
-              child: CircularProgressIndicator(color: MemberChoirStyle.wine),
+              child: HarmoniaNeumeSpinner(color: MemberChoirStyle.wine),
             ),
             error: (error, _) => Center(
               child: SingleChildScrollView(
@@ -147,7 +148,7 @@ class SongDetailScreen extends ConsumerWidget {
                   (assignment?.instruction.trim().isNotEmpty == true) ||
                   (assignment?.feedbackComment?.trim().isNotEmpty == true);
 
-              return RefreshIndicator(
+              return HarmoniaRefreshIndicator(
                 color: MemberChoirStyle.wine,
                 onRefresh: () async => await ref.refresh(provider.future),
                 child: ListView(

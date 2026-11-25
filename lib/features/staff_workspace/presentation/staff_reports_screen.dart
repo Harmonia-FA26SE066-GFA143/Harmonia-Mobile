@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app/widgets/harmonia_svg_art.dart';
 import '../../../core/di/core_providers.dart';
 import '../../../core/session/session_manager.dart';
 import '../data/staff_documents.dart';
@@ -222,7 +223,8 @@ class _StaffReportsScreenState extends ConsumerState<StaffReportsScreen>
                   ref
                       .watch(_choirs)
                       .when(
-                        loading: () => const LinearProgressIndicator(),
+                        loading: () =>
+                            const Center(child: HarmoniaNeumeSpinner(size: 22)),
                         error: (_, _) => TextButton(
                           onPressed: () => ref.invalidate(_choirs),
                           child: const Text('Tải lại bộ lọc ca đoàn'),

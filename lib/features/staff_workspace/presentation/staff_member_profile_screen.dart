@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app/widgets/harmonia_svg_art.dart';
 import '../../lookups/data/lookups_api_service.dart';
 import '../../lookups/data/lookup_dto.dart';
 import '../../profile/data/member_profile_dto.dart';
@@ -230,7 +231,7 @@ class _AssignSkillDialogState extends ConsumerState<_AssignSkillDialog>
           children: [
             Text(widget.profile.fullName),
             if (catalog.isLoading)
-              const LinearProgressIndicator()
+              const Center(child: HarmoniaNeumeSpinner(size: 22))
             else if (catalog.hasError)
               TextButton(
                 onPressed: () => ref.invalidate(_assignableSkills),

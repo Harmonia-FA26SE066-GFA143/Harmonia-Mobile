@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app/widgets/harmonia_refresh_indicator.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/widgets/app_page_header.dart';
 import '../../../app/widgets/harmonia_svg_art.dart';
@@ -62,10 +63,10 @@ class _PracticeHistoryScreenState extends ConsumerState<PracticeHistoryScreen> {
       body: SafeArea(
         top: false,
         child: AntiphonaryBackground(
-          child: RefreshIndicator(
+          child: HarmoniaRefreshIndicator(
             onRefresh: notifier.refresh,
             child: state.items.isEmpty && state.isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(child: HarmoniaNeumeSpinner())
                 : CustomScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     slivers: [
@@ -500,7 +501,7 @@ class _LoadMoreButton extends StatelessWidget {
               ? const SizedBox(
                   width: 16,
                   height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  child: HarmoniaNeumeSpinner(size: 20),
                 )
               : null,
           label: Text(isLoading ? 'Đang tải…' : 'Tải thêm lần nộp'),

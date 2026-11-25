@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/widgets/harmonia_svg_art.dart';
 import '../../../core/errors/app_exceptions.dart';
 import '../data/staff_operations_api.dart';
 import '../data/staff_practice_providers.dart';
@@ -99,7 +100,8 @@ class _PracticeEventFilter extends ConsumerWidget {
               ),
             ],
           ),
-          if (state.isLoading) const LinearProgressIndicator(),
+          if (state.isLoading)
+            const Center(child: HarmoniaNeumeSpinner(size: 22)),
           if (state.hasError)
             TextButton(
               onPressed: () =>

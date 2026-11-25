@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:harmonia_mobile/app/widgets/harmonia_svg_art.dart';
 import 'package:harmonia_mobile/app/router/app_router.dart';
 import 'package:harmonia_mobile/core/di/core_providers.dart';
 import 'package:harmonia_mobile/core/errors/app_exceptions.dart';
@@ -666,7 +667,7 @@ void main() {
           findsNothing,
         );
         // The submit button must NOT be in loading state from request A
-        expect(find.byType(CircularProgressIndicator), findsNothing);
+        expect(find.byType(HarmoniaNeumeSpinner), findsNothing);
         expect(
           find.widgetWithText(ElevatedButton, 'Đặt lại mật khẩu'),
           findsOneWidget,
@@ -922,7 +923,7 @@ void main() {
           find.widgetWithText(OutlinedButton, 'Đăng nhập bằng Google'),
         );
         expect(googleButton.onPressed, isNotNull);
-        expect(find.byType(CircularProgressIndicator), findsNothing);
+        expect(find.byType(HarmoniaNeumeSpinner), findsNothing);
 
         // 3. Now let the old reset request complete with error (AUTH_RESET_TOKEN_EXPIRED)
         resetCompleter.completeError(
@@ -959,7 +960,7 @@ void main() {
         await tester.pump(); // Login in-flight
 
         // Verify login request is in loading state
-        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        expect(find.byType(HarmoniaNeumeSpinner), findsOneWidget);
         final loginButtonDuringLogin = tester.widget<ElevatedButton>(
           find.byType(ElevatedButton).first,
         );
@@ -971,7 +972,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
 
         // Login finished loading
-        expect(find.byType(CircularProgressIndicator), findsNothing);
+        expect(find.byType(HarmoniaNeumeSpinner), findsNothing);
       },
     );
 
@@ -1068,7 +1069,7 @@ void main() {
         expect(find.byType(LoginScreen), findsOneWidget);
         expect(find.text('Đặt lại mật khẩu thành công!'), findsNothing);
         expect(find.text('Home Screen'), findsNothing);
-        expect(find.byType(CircularProgressIndicator), findsNothing);
+        expect(find.byType(HarmoniaNeumeSpinner), findsNothing);
         final loginButtonAfter = tester.widget<ElevatedButton>(
           find.widgetWithText(ElevatedButton, 'Đăng nhập'),
         );

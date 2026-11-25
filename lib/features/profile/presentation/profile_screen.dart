@@ -552,8 +552,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           ? const SizedBox(
                               width: 20,
                               height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
+                              child: HarmoniaNeumeSpinner(
+                                size: 20,
                                 color: AppColors.onPrimary,
                               ),
                             )
@@ -769,9 +769,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                     const Padding(
                                       padding: EdgeInsets.all(16),
                                       child: Center(
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                        ),
+                                        child: HarmoniaNeumeSpinner(size: 20),
                                       ),
                                     )
                                   else if (availableSkills.isEmpty)
@@ -986,8 +984,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 icon: isSubmitting
                                     ? const SizedBox.square(
                                         dimension: 18,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
+                                        child: HarmoniaNeumeSpinner(
+                                          size: 20,
                                           color: Colors.white,
                                         ),
                                       )
@@ -1033,9 +1031,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     return const Padding(
                       padding: EdgeInsets.all(32),
                       child: Center(
-                        child: CircularProgressIndicator(
-                          color: AppColors.primary,
-                        ),
+                        child: HarmoniaNeumeSpinner(color: AppColors.primary),
                       ),
                     );
                   }
@@ -1339,9 +1335,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 ? const SizedBox(
                                     width: 18,
                                     height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
+                                    child: HarmoniaNeumeSpinner(size: 20),
                                   )
                                 : const Icon(Icons.upload_file_rounded),
                             label: Text(
@@ -1506,8 +1500,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   icon: _isAvatarUpdating
                       ? const SizedBox.square(
                           dimension: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
+                          child: HarmoniaNeumeSpinner(
+                            size: 20,
                             color: Colors.white,
                           ),
                         )
@@ -1518,7 +1512,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             body: SafeArea(
               top: false,
               child: loading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const Center(child: HarmoniaNeumeSpinner())
                   : snapshot.hasError || profile == null
                   ? Center(
                       child: SingleChildScrollView(
@@ -1595,7 +1589,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           if (skills.isLoading && skills.items.isEmpty)
                             const Padding(
                               padding: EdgeInsets.all(20),
-                              child: Center(child: CircularProgressIndicator()),
+                              child: Center(child: HarmoniaNeumeSpinner()),
                             )
                           else if (skills.errorMessage != null &&
                               skills.items.isEmpty)
@@ -1635,7 +1629,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               ),
                             if (skills.hasNextPage)
                               if (skills.isLoadingMore)
-                                const Center(child: CircularProgressIndicator())
+                                const Center(child: HarmoniaNeumeSpinner())
                               else if (skills.loadMoreErrorMessage != null)
                                 Column(
                                   children: [
@@ -1790,8 +1784,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               child: ColoredBox(
                                 color: Colors.black38,
                                 child: const Center(
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
+                                  child: HarmoniaNeumeSpinner(
+                                    size: 20,
                                     color: Colors.white,
                                   ),
                                 ),

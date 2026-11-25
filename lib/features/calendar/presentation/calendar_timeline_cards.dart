@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/widgets/harmonia_svg_art.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../app/widgets/member_choir_visuals.dart';
@@ -233,11 +234,12 @@ class CalendarEventCard extends ConsumerWidget {
           ],
           if (loading) ...[
             const SizedBox(height: 12),
-            const LinearProgressIndicator(
-              minHeight: 2,
-              color: MemberChoirStyle.wine,
-              backgroundColor: Color(0xFFE7EEFF),
-              semanticsLabel: 'Đang tải chi tiết lễ',
+            const Center(
+              child: HarmoniaNeumeSpinner(
+                size: 22,
+                color: MemberChoirStyle.wine,
+                semanticsLabel: 'Đang tải chi tiết lễ',
+              ),
             ),
           ] else ...[
             if (current.canRespond) _EventParticipationActions(event: current),
@@ -556,11 +558,12 @@ class CalendarRehearsalCard extends ConsumerWidget {
           ],
           if (loading) ...[
             const SizedBox(height: 12),
-            const LinearProgressIndicator(
-              minHeight: 2,
-              color: MemberChoirStyle.wine,
-              backgroundColor: Color(0xFFE7EEFF),
-              semanticsLabel: 'Đang tải chi tiết buổi tập',
+            const Center(
+              child: HarmoniaNeumeSpinner(
+                size: 22,
+                color: MemberChoirStyle.wine,
+                semanticsLabel: 'Đang tải chi tiết buổi tập',
+              ),
             ),
           ] else ...[
             const SizedBox(height: 12),
@@ -650,9 +653,11 @@ class CalendarApprovedSongs extends ConsumerWidget {
     } else if (state.isLoading) {
       content = const Padding(
         padding: EdgeInsets.symmetric(vertical: 12),
-        child: LinearProgressIndicator(
-          minHeight: 2,
-          semanticsLabel: 'Đang tải bộ lễ đã duyệt',
+        child: Center(
+          child: HarmoniaNeumeSpinner(
+            size: 22,
+            semanticsLabel: 'Đang tải bộ lễ đã duyệt',
+          ),
         ),
       );
     } else {

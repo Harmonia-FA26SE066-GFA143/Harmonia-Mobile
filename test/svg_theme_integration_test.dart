@@ -222,7 +222,7 @@ void main() {
   );
 
   testWidgets(
-    'SplashScreen animates the rose window during restoration and respects reduced motion',
+    'SplashScreen animates the neume spinner during restoration and respects reduced motion',
     (tester) async {
       final session = SessionManager(SecureStorageService());
 
@@ -244,23 +244,31 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
 
-      final frameFinder = find.descendant(
-        of: find.byType(HarmoniaRoseWindowSpinner),
-        matching: find.byType(Image),
+      final spinner = find.byType(HarmoniaNeumeSpinner);
+      final graphic = find.descendant(
+        of: spinner,
+        matching: find.byType(HarmoniaSvgGraphic),
       );
-      String assetName() =>
-          (tester.widget<Image>(frameFinder).image as AssetImage).assetName;
-
+      final rotation = find.descendant(
+        of: spinner,
+        matching: find.byType(RotationTransition),
+      );
+      expect(
+        tester.widget<HarmoniaSvgGraphic>(graphic).assetPath,
+        HarmoniaSvgAsset.neumeSpinner,
+      );
       expect(find.text('Đang khôi phục phiên…'), findsOneWidget);
-      expect(assetName(), endsWith('/0.png'));
+      final initialTurns = tester
+          .widget<RotationTransition>(rotation)
+          .turns
+          .value;
       await tester.pump(const Duration(milliseconds: 300));
-      expect(assetName(), endsWith('/1.png'));
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(assetName(), endsWith('/2.png'));
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(assetName(), endsWith('/3.png'));
+      expect(
+        tester.widget<RotationTransition>(rotation).turns.value,
+        isNot(initialTurns),
+      );
 
-      // Case 2: Reduced motion holds the initial frame.
+      // Case 2: Reduced motion shows the same asset without rotation.
       await tester.pumpWidget(
         ProviderScope(
           key: const ValueKey('splash-reduced'),
@@ -283,9 +291,8 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
 
-      expect(assetName(), endsWith('/0.png'));
-      await tester.pump(const Duration(milliseconds: 900));
-      expect(assetName(), endsWith('/0.png'));
+      expect(graphic, findsOneWidget);
+      expect(rotation, findsNothing);
 
       // Case 3: Error state hides spinner and shows retry button.
       await tester.pumpWidget(
@@ -307,7 +314,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(HarmoniaRoseWindowSpinner), findsNothing);
+      expect(find.byType(HarmoniaNeumeSpinner), findsNothing);
       expect(find.text('Thử lại'), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox());
@@ -359,7 +366,7 @@ void main() {
 
     progressLabel.value = null;
     await tester.pumpAndSettle();
-    expect(find.byType(HarmoniaRoseWindowSpinner), findsNothing);
+    expect(find.byType(HarmoniaNeumeSpinner), findsNothing);
     await tester.tap(find.text('Thao tác'));
     expect(taps, 1);
     await tester.binding.handlePopRoute();

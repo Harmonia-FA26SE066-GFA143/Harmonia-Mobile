@@ -85,7 +85,7 @@ class OpsAsync<T> extends StatelessWidget {
   final Widget Function(T) data;
   @override
   Widget build(BuildContext context) => value.when(
-    loading: () => const Center(child: CircularProgressIndicator()),
+    loading: () => const Center(child: HarmoniaNeumeSpinner()),
     error: (error, _) => Center(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -149,7 +149,7 @@ mixin OpsActions<T extends ConsumerStatefulWidget> on ConsumerState<T> {
   Widget get actionState => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      if (busy) const LinearProgressIndicator(),
+      if (busy) const Center(child: HarmoniaNeumeSpinner(size: 22)),
       if (actionError != null)
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),

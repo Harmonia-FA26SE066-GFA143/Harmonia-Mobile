@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app/widgets/harmonia_refresh_indicator.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/errors/error_messages.dart';
@@ -211,7 +212,7 @@ class HomeScreen extends ConsumerWidget {
             bottom: false,
             child: AntiphonaryBackground(
               backgroundColor: AppColors.background,
-              child: RefreshIndicator(
+              child: HarmoniaRefreshIndicator(
                 color: MemberChoirStyle.accent,
                 onRefresh: () async {
                   ref.invalidate(rehearsalsProvider);
@@ -318,7 +319,7 @@ class HomeScreen extends ConsumerWidget {
                               loading: () => const Center(
                                 child: Padding(
                                   padding: EdgeInsets.all(32),
-                                  child: CircularProgressIndicator(
+                                  child: HarmoniaNeumeSpinner(
                                     color: MemberChoirStyle.accent,
                                   ),
                                 ),

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app/widgets/harmonia_svg_art.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../app/widgets/app_page_header.dart';
@@ -144,7 +145,7 @@ class _StaffProgramFormState extends ConsumerState<StaffProgramForm> {
           : null,
       body: SafeArea(
         child: options.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const Center(child: HarmoniaNeumeSpinner()),
           error: (_, _) => Center(
             child: OutlinedButton(
               onPressed: () => ref.invalidate(_programOptions),

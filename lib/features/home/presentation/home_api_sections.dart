@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app/widgets/harmonia_svg_art.dart';
 import '../../../app/widgets/member_choir_visuals.dart';
 import '../../../core/errors/error_messages.dart';
 import '../../calendar/data/calendar_repository.dart';
@@ -115,7 +116,7 @@ class UpcomingRehearsalCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) => ref
       .watch(rehearsalsProvider)
       .when(
-        loading: () => const LinearProgressIndicator(),
+        loading: () => const Center(child: HarmoniaNeumeSpinner(size: 22)),
         error: (error, _) => Card(
           child: ListTile(
             title: Text(ErrorMessages.forException(error)),

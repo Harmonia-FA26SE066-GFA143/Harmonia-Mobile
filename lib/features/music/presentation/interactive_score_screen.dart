@@ -7,6 +7,7 @@ import 'package:flutter/material.dart' hide MaterialType;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/widgets/harmonia_svg_art.dart';
 import '../../../app/app_env.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
@@ -358,7 +359,7 @@ class _ScorePlayerState extends State<_ScorePlayer> {
             ),
             scrubber,
             memberControls,
-            if (_working) const LinearProgressIndicator(),
+            if (_working) const Center(child: HarmoniaNeumeSpinner(size: 22)),
             ?playbackError,
           ],
         ),
@@ -444,7 +445,7 @@ class _ScorePlayerState extends State<_ScorePlayer> {
             icon: Icon(playing ? Icons.pause : Icons.play_arrow),
             label: Text(playing ? 'Tạm dừng' : 'Phát bản nhạc'),
           ),
-        if (_working) const LinearProgressIndicator(),
+        if (_working) const Center(child: HarmoniaNeumeSpinner(size: 22)),
         ?playbackError,
       ],
     );

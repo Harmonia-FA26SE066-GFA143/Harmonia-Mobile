@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/widgets/harmonia_refresh_indicator.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../auth/presentation/auth_notifier.dart';
 import '../data/staff_dashboard_providers.dart';
@@ -76,7 +77,7 @@ class StaffDirectorDashboard extends ConsumerWidget {
           icon: const Icon(Icons.refresh),
         ),
       ],
-      child: RefreshIndicator(
+      child: HarmoniaRefreshIndicator(
         onRefresh: () => _refresh(ref),
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),

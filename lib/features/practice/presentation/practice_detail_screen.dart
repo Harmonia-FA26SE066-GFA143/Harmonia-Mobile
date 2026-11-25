@@ -805,8 +805,8 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                         ? const SizedBox(
                             width: 17,
                             height: 17,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
+                            child: HarmoniaNeumeSpinner(
+                              size: 20,
                               color: Colors.white,
                             ),
                           )
@@ -833,7 +833,7 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                 icon: _isScoring
                     ? const SizedBox.square(
                         dimension: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: HarmoniaNeumeSpinner(size: 20),
                       )
                     : const Icon(Icons.graphic_eq),
                 label: Text(
@@ -877,7 +877,7 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
             showEmptyAccent: true,
           ),
           body: const Center(
-            child: CircularProgressIndicator(color: AppColors.primary),
+            child: HarmoniaNeumeSpinner(color: AppColors.primary),
           ),
         ),
         error: (err, _) => Scaffold(
@@ -1488,8 +1488,8 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                             return const Padding(
                               padding: EdgeInsets.symmetric(vertical: 16),
                               child: Center(
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
+                                child: HarmoniaNeumeSpinner(
+                                  size: 20,
                                   color: AppColors.primary,
                                 ),
                               ),
@@ -1607,8 +1607,8 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                                           const Center(
                                             child: Padding(
                                               padding: EdgeInsets.all(8),
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
+                                              child: HarmoniaNeumeSpinner(
+                                                size: 20,
                                                 color: AppColors.primary,
                                               ),
                                             ),

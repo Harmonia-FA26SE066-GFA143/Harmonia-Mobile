@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app/widgets/harmonia_refresh_indicator.dart';
 import '../../../app/router/role_routes.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/widgets/app_page_header.dart';
@@ -739,7 +740,7 @@ class _EventWorkflowState extends ConsumerState<_EventWorkflow> {
           ),
         ),
         serving.when(
-          loading: () => const LinearProgressIndicator(),
+          loading: () => const Center(child: HarmoniaNeumeSpinner(size: 22)),
           error: (error, _) => TextButton(
             onPressed: () => ref.invalidate(_servingChoirs(_id)),
             child: const Text('Tải lại ca đoàn phục vụ'),
@@ -840,7 +841,7 @@ class _EventWorkflowState extends ConsumerState<_EventWorkflow> {
             title: 'Ghi chú mục vụ & Dặn dò phòng áo',
             subtitle: widget.event.requirements,
           ),
-        if (_busy) const LinearProgressIndicator(),
+        if (_busy) const Center(child: HarmoniaNeumeSpinner(size: 22)),
         if (_error != null)
           Text(
             _error!,
@@ -865,7 +866,7 @@ class _EventWorkflowState extends ConsumerState<_EventWorkflow> {
     return ref
         .watch(provider)
         .when(
-          loading: () => const LinearProgressIndicator(),
+          loading: () => const Center(child: HarmoniaNeumeSpinner(size: 22)),
           error: (error, _) => TextButton(
             onPressed: () => ref.invalidate(provider),
             child: const Text('Tải lại danh sách bài hát'),
@@ -1309,7 +1310,7 @@ class _DataPage<T> extends StatelessWidget {
       },
       children: data.when(
         data: rows,
-        loading: () => const [Center(child: CircularProgressIndicator())],
+        loading: () => const [Center(child: HarmoniaNeumeSpinner())],
         error: (error, _) => [
           Text(ErrorMessages.forException(error)),
           OutlinedButton(
@@ -1383,7 +1384,7 @@ class _StaffPage extends StatelessWidget {
         child: AntiphonaryBackground(
           child: onRefresh == null
               ? list
-              : RefreshIndicator(onRefresh: onRefresh!, child: list),
+              : HarmoniaRefreshIndicator(onRefresh: onRefresh!, child: list),
         ),
       ),
     );

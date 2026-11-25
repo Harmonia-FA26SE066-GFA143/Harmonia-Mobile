@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app/widgets/harmonia_refresh_indicator.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/widgets/harmonia_logo.dart';
 import '../../../app/widgets/harmonia_svg_art.dart';
@@ -189,7 +190,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             bottom: false,
             child: AntiphonaryBackground(
               backgroundColor: AppColors.background,
-              child: RefreshIndicator(
+              child: HarmoniaRefreshIndicator(
                 color: MemberChoirStyle.accent,
                 onRefresh: _refresh,
                 child: CustomScrollView(
@@ -220,10 +221,11 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                   if (loading)
                                     const Padding(
                                       padding: EdgeInsets.only(bottom: 16),
-                                      child: LinearProgressIndicator(
-                                        minHeight: 2,
-                                        color: MemberChoirStyle.wine,
-                                        backgroundColor: Color(0xFFE7EEFF),
+                                      child: Center(
+                                        child: HarmoniaNeumeSpinner(
+                                          size: 22,
+                                          color: MemberChoirStyle.wine,
+                                        ),
                                       ),
                                     ),
                                   if (!isPastWeek && eventsState.hasError)
@@ -271,8 +273,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                   if (eventsState.isLoading)
                                     const Padding(
                                       padding: EdgeInsets.only(bottom: 12),
-                                      child: LinearProgressIndicator(
-                                        minHeight: 2,
+                                      child: Center(
+                                        child: HarmoniaNeumeSpinner(size: 22),
                                       ),
                                     ),
                                   if (eventsState.hasError)

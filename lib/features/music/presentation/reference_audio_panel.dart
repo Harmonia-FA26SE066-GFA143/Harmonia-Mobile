@@ -4,6 +4,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart' hide MaterialType;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/widgets/harmonia_svg_art.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../app/widgets/member_choir_visuals.dart';
@@ -768,10 +769,8 @@ class _ReferenceAudioPlayerState extends ConsumerState<_ReferenceAudioPlayer>
         ),
         if (_busy) ...[
           const SizedBox(height: 8),
-          const LinearProgressIndicator(
-            minHeight: 2,
-            color: MemberChoirStyle.wine,
-            backgroundColor: Color(0xFFE7EEFF),
+          const Center(
+            child: HarmoniaNeumeSpinner(size: 22, color: MemberChoirStyle.wine),
           ),
         ],
         if (_error case final error?)

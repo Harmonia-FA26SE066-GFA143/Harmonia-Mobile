@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app/widgets/harmonia_refresh_indicator.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/widgets/app_page_header.dart';
 import '../../../app/widgets/harmonia_svg_art.dart';
@@ -72,45 +73,32 @@ class _PracticeListScreenState extends ConsumerState<PracticeListScreen> {
     );
   }
 
-  void _onFilterChanged(PracticeFilter filter) {
+  Future<void> _onFilterChanged(PracticeFilter filter) {
     setState(() {
       _selectedFilter = filter;
     });
-    switch (filter) {
-      case PracticeFilter.all:
-        ref.read(practiceListNotifierProvider.notifier).loadAssignments();
-        break;
-      case PracticeFilter.notSubmitted:
-        ref
-            .read(practiceListNotifierProvider.notifier)
-            .loadAssignments(hasSubmissionFilter: false);
-        break;
-      case PracticeFilter.submitted:
-        ref
-            .read(practiceListNotifierProvider.notifier)
-            .loadAssignments(statusFilter: 'Submitted');
-        break;
-      case PracticeFilter.needsRevision:
-        ref
-            .read(practiceListNotifierProvider.notifier)
-            .loadAssignments(statusFilter: 'NeedsRevision');
-        break;
-      case PracticeFilter.passed:
-        ref
-            .read(practiceListNotifierProvider.notifier)
-            .loadAssignments(statusFilter: 'Passed');
-        break;
-      case PracticeFilter.overdue:
-        ref
-            .read(practiceListNotifierProvider.notifier)
-            .loadAssignments(statusFilter: 'Overdue');
-        break;
-    }
+    final notifier = ref.read(practiceListNotifierProvider.notifier);
+    return switch (filter) {
+      PracticeFilter.all => notifier.loadAssignments(),
+      PracticeFilter.notSubmitted => notifier.loadAssignments(
+        hasSubmissionFilter: false,
+      ),
+      PracticeFilter.submitted => notifier.loadAssignments(
+        statusFilter: 'Submitted',
+      ),
+      PracticeFilter.needsRevision => notifier.loadAssignments(
+        statusFilter: 'NeedsRevision',
+      ),
+      PracticeFilter.passed => notifier.loadAssignments(statusFilter: 'Passed'),
+      PracticeFilter.overdue => notifier.loadAssignments(
+        statusFilter: 'Overdue',
+      ),
+    };
   }
 
-  void _reload() {
+  Future<void> _reload() {
     ref.invalidate(practiceCountsProvider);
-    _onFilterChanged(_selectedFilter);
+    return _onFilterChanged(_selectedFilter);
   }
 
   @override
@@ -146,8 +134,8 @@ class _PracticeListScreenState extends ConsumerState<PracticeListScreen> {
         body: SafeArea(
           top: false,
           child: AntiphonaryBackground(
-            child: RefreshIndicator(
-              onRefresh: () async => _reload(),
+            child: HarmoniaRefreshIndicator(
+              onRefresh: _reload,
               color: MemberChoirStyle.accent,
               child: CustomScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -166,7 +154,7 @@ class _PracticeListScreenState extends ConsumerState<PracticeListScreen> {
                       SliverFillRemaining(
                         hasScrollBody: false,
                         child: Center(
-                          child: CircularProgressIndicator(
+                          child: HarmoniaNeumeSpinner(
                             color: MemberChoirStyle.accent,
                           ),
                         ),
@@ -301,8 +289,8 @@ class _PracticeListScreenState extends ConsumerState<PracticeListScreen> {
                                           ? const SizedBox(
                                               width: 16,
                                               height: 16,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
+                                              child: HarmoniaNeumeSpinner(
+                                                size: 20,
                                               ),
                                             )
                                           : null,

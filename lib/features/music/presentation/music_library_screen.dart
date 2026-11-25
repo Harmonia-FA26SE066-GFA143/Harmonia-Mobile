@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app/widgets/harmonia_refresh_indicator.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../app/widgets/app_page_header.dart';
@@ -582,9 +583,11 @@ class _MusicLibraryScreenState extends ConsumerState<MusicLibraryScreen> {
         pad(
           const Padding(
             padding: EdgeInsets.only(top: 6),
-            child: LinearProgressIndicator(
-              color: MemberChoirStyle.wine,
-              backgroundColor: Color(0xFFE6E1D8),
+            child: Center(
+              child: HarmoniaNeumeSpinner(
+                size: 22,
+                color: MemberChoirStyle.wine,
+              ),
             ),
           ),
         ),
@@ -685,8 +688,8 @@ class _MusicLibraryScreenState extends ConsumerState<MusicLibraryScreen> {
               child: state.loadingMore
                   ? const SizedBox.square(
                       dimension: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
+                      child: HarmoniaNeumeSpinner(
+                        size: 20,
                         color: MemberChoirStyle.wine,
                       ),
                     )
@@ -914,7 +917,7 @@ class _MusicLibraryScreenState extends ConsumerState<MusicLibraryScreen> {
             ),
             Expanded(
               child: AntiphonaryBackground(
-                child: RefreshIndicator(
+                child: HarmoniaRefreshIndicator(
                   color: MemberChoirStyle.wine,
                   onRefresh: () => notifier.refresh(),
                   child: listView,
