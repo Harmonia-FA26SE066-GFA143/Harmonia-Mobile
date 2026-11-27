@@ -5,7 +5,7 @@ const path = require('node:path');
 const source = fs.readFileSync(path.join(__dirname, '../assets/score/score.js'), 'utf8');
 
 function start(preview) {
-  const notifications = [], tasks = [], scripts = [], elements = new Map();
+  const notifications = [], tasks = [], scripts = [], elements = new Map(), layouts = [];
   const context = {
     console: { error() {} }, TextDecoder, Uint8Array,
     atob: value => Buffer.from(value, 'base64').toString('binary'),
@@ -28,7 +28,7 @@ function start(preview) {
       setTimeout: callback => tasks.push(callback),
     },
     verovio: { module: {}, toolkit: class {
-      setOptions() {}
+      setOptions(options) { layouts.push(options); }
       loadData() { return true; }
       getPageCount() { return 2; }
       renderToSVG() { return '<svg width="1200"></svg>'; }
@@ -42,7 +42,7 @@ function start(preview) {
     ...(preview ? [['preview', preview]] : []),
   ]) context.window.HarmoniaScore.append(kind, Buffer.from(value).toString('base64'));
   context.window.HarmoniaScore.load(true);
-  return { context, notifications, tasks, scripts, elements };
+  return { context, notifications, tasks, scripts, elements, layouts };
 }
 
 const cold = start();
@@ -51,11 +51,14 @@ for (const task of cold.tasks) task();
 assert.deepEqual(cold.notifications, ['ready'], 'Slow initialization must not be a permanent error');
 cold.context.verovio.module.onRuntimeInitialized();
 assert(cold.notifications.includes('loaded'));
+assert.equal(cold.layouts[0].pageWidth, 1500);
+assert.equal(cold.layouts[0].lyricWordSpace, 4.5);
+assert(cold.notifications.some(message => message.startsWith('preview:{"version":2,')));
 assert.equal(cold.notifications.at(-1), 'engraved');
 cold.context.verovio.module.onAbort();
 assert.equal(cold.notifications.at(-1), 'error', 'Actual engine failure must be reported');
 
-const warm = start(JSON.stringify({ version: 1, svg: '<svg width="1200"></svg>', pageCount: 2 }));
+const warm = start(JSON.stringify({ version: 2, svg: '<svg width="1500"></svg>', pageCount: 2 }));
 assert.deepEqual(warm.notifications, ['ready', 'loaded']);
 assert.equal(warm.scripts.length, 0, 'Cached sheet must paint before loading the large engine script');
 assert.equal(warm.elements.get('next').disabled, true);
@@ -66,6 +69,12 @@ warm.context.verovio.module.onRuntimeInitialized();
 for (const task of warm.tasks) task();
 assert.equal(warm.elements.get('next').disabled, false);
 assert.equal(warm.notifications.at(-1), 'engraved');
+
+const old = start(JSON.stringify({ version: 1, svg: '<svg width="1200"></svg>', pageCount: 2 }));
+assert.deepEqual(old.notifications, ['ready'], 'Older previews must not display the previous layout');
+old.scripts[0].onload();
+old.context.verovio.module.onRuntimeInitialized();
+assert(old.notifications.some(message => message.startsWith('preview:{"version":2,')));
 
 const corrupt = start('{invalid preview');
 corrupt.scripts[0].onload();

@@ -7,6 +7,7 @@ const previous = document.getElementById('previous');
 const next = document.getElementById('next');
 const pageNumber = document.getElementById('pageNumber');
 const buffers = { score: [], timeline: [], preview: [] };
+const previewVersion = 2;
 let toolkit;
 let engineLoading = false;
 let pendingSource;
@@ -43,11 +44,12 @@ function init() {
     toolkit.setOptions({
       expandNever: true,
       breaks: 'auto',
-      pageWidth: 1200,
+      pageWidth: 1500,
       pageHeight: 1600,
       pageMarginLeft: 32,
       pageMarginRight: 32,
       adjustPageHeight: true,
+      lyricWordSpace: 4.5,
       svgViewBox: true,
     });
     if (pendingSource) continueEngraving();
@@ -155,7 +157,7 @@ function load(follow = false) {
     if (buffers.preview.length) {
       try {
         const preview = JSON.parse(read('preview'));
-        if (preview.version === 1 && Number.isInteger(preview.pageCount) &&
+        if (preview.version === previewVersion && Number.isInteger(preview.pageCount) &&
             preview.pageCount > 0 && typeof preview.svg === 'string' &&
             preview.svg.trimStart().startsWith('<svg ')) {
           sheet.innerHTML = preview.svg;
@@ -193,7 +195,7 @@ function engrave() {
     next.disabled = page === pageCount;
     if (!previewShown) {
       notify('loaded');
-      const preview = JSON.stringify({ version: 1, svg: sheet.innerHTML, pageCount });
+      const preview = JSON.stringify({ version: previewVersion, svg: sheet.innerHTML, pageCount });
       if (preview.length <= 2 * 1024 * 1024) {
         for (let offset = 0; offset < preview.length;) {
           let end = Math.min(offset + 24 * 1024, preview.length);
