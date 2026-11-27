@@ -49,6 +49,7 @@ class StitchCalendarRepository extends MockCalendarRepositoryImpl {
     location: 'Nhà thờ API',
     assignedVocalPart: 'Soprano',
     participationStatus: ParticipationStatus.confirmed,
+    canRespond: true,
   );
   late final rehearsal = RehearsalSession(
     id: 'rehearsal-api',
@@ -785,6 +786,17 @@ void main() {
       expect(find.text('Bắt đầu tập'), findsNothing);
       expect(find.text('Hoạt động tuần này'), findsOneWidget);
 
+      final eventCard = find.byKey(const ValueKey('timeline-event-event-api'));
+      expect(
+        find.descendant(of: eventCard, matching: find.text('Đã xác nhận')),
+        findsOneWidget,
+      );
+      for (final label in ['Có mặt', 'Vắng', 'Chưa chắc chắn']) {
+        expect(
+          find.descendant(of: eventCard, matching: find.text(label)),
+          findsNothing,
+        );
+      }
       final eventDetailButton = find.text('Xem chi tiết phụng vụ & bài hát');
       await tester.ensureVisible(eventDetailButton);
       await tester.pumpAndSettle();

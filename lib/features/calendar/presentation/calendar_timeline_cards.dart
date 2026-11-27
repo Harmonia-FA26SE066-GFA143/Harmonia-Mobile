@@ -11,7 +11,6 @@ import '../../music/data/music_repository.dart';
 import '../data/calendar_member_dto.dart';
 import '../data/calendar_repository.dart';
 import '../data/liturgical_models.dart';
-import 'participation_prompt.dart';
 
 const _stitchSurfaceBg = Color(0xFFFAF8F5);
 const _stitchTextDark = Color(0xFF201C21);
@@ -242,7 +241,6 @@ class CalendarEventCard extends ConsumerWidget {
               ),
             ),
           ] else ...[
-            if (current.canRespond) _EventParticipationActions(event: current),
             const SizedBox(height: 12),
             const Divider(height: 1, color: Color(0x33C6C6CE)),
             const SizedBox(height: 6),
@@ -293,61 +291,6 @@ class CalendarEventCard extends ConsumerWidget {
       ),
     );
   }
-}
-
-class _EventParticipationActions extends ConsumerWidget {
-  final LiturgicalEvent event;
-
-  const _EventParticipationActions({required this.event});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) => Padding(
-    padding: const EdgeInsets.only(top: 10),
-    child: Wrap(
-      spacing: 6,
-      runSpacing: 6,
-      children: [
-        for (final (label, status) in [
-          ('Có mặt', ParticipationStatus.confirmed),
-          ('Vắng', ParticipationStatus.declined),
-          ('Chưa chắc chắn', ParticipationStatus.unsure),
-        ])
-          TextButton(
-            onPressed: () =>
-                showParticipationPrompt(context, ref, event, status),
-            style: TextButton.styleFrom(
-              foregroundColor: switch (status) {
-                ParticipationStatus.unsure => _stitchAmberText,
-                ParticipationStatus.declined => _stitchDangerRed,
-                _ => MemberChoirStyle.wine,
-              },
-              backgroundColor: switch (status) {
-                ParticipationStatus.unsure => _stitchGold.withValues(
-                  alpha: 0.16,
-                ),
-                ParticipationStatus.declined => _stitchDangerRed.withValues(
-                  alpha: 0.08,
-                ),
-                _ => MemberChoirStyle.wine.withValues(alpha: 0.08),
-              },
-              minimumSize: const Size(44, 36),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: Text(
-              label,
-              style: AppTypography.labelSmall.copyWith(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-      ],
-    ),
-  );
 }
 
 class CalendarRehearsalCard extends ConsumerWidget {

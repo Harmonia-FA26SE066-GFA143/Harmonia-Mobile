@@ -461,8 +461,16 @@ void main() {
     );
     await tester.tap(find.text('Respond'));
     await tester.pumpAndSettle();
-    expect(find.text('Đổi phản hồi'), findsOneWidget);
-    await tester.tap(find.text('Quay lại'));
+    final submit = tester.getRect(
+      find.widgetWithText(FilledButton, 'Đổi phản hồi'),
+    );
+    final back = find.widgetWithText(OutlinedButton, 'Quay lại');
+    final backRect = tester.getRect(back);
+    expect(submit.bottom, lessThan(backRect.top));
+    expect(submit.left, backRect.left);
+    expect(submit.right, backRect.right);
+    expect(tester.getCenter(find.text('Quay lại')).dx, backRect.center.dx);
+    await tester.tap(back);
     await tester.pumpAndSettle();
     expect(repo.calls, 0);
     await tester.pumpWidget(const SizedBox.shrink());

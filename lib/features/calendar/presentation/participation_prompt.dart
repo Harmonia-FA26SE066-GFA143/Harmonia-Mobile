@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/widgets/harmonia_blocking_progress.dart';
+import '../../../app/widgets/member_choir_visuals.dart';
 import '../../../core/di/core_providers.dart';
 import '../../../core/errors/error_messages.dart';
 import '../data/calendar_repository.dart';
@@ -36,13 +37,24 @@ Future<void> showParticipationPrompt(
       ),
       content: Text(event.title),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(dialogContext, false),
-          child: const Text('Quay lại'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.pop(dialogContext, true),
-          child: Text(isChange ? 'Đổi phản hồi' : 'Gửi phản hồi'),
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: 8,
+          children: [
+            FilledButton(
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(0, MemberChoirStyle.dialogActionHeight),
+              ),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(isChange ? 'Đổi phản hồi' : 'Gửi phản hồi'),
+            ),
+            OutlinedButton(
+              style: MemberChoirStyle.cancelButtonStyle,
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Quay lại'),
+            ),
+          ],
         ),
       ],
     ),
