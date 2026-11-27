@@ -1,4 +1,5 @@
 import 'support/fake_practice_repository.dart';
+import 'support/fake_music_repository.dart';
 
 import 'dart:async' hide TimeoutException;
 import 'dart:io';
@@ -14,6 +15,8 @@ import 'package:harmonia_mobile/core/errors/app_exceptions.dart';
 import 'package:harmonia_mobile/core/errors/error_messages.dart';
 import 'package:harmonia_mobile/core/session/session_manager.dart';
 import 'package:harmonia_mobile/core/storage/secure_storage_service.dart';
+import 'package:harmonia_mobile/features/music/data/music_dto.dart' as music;
+import 'package:harmonia_mobile/features/music/data/music_repository.dart';
 import 'package:harmonia_mobile/features/practice/data/practice_models.dart';
 import 'package:harmonia_mobile/features/practice/data/practice_repository.dart';
 import 'package:harmonia_mobile/features/practice/presentation/practice_detail_screen.dart';
@@ -83,6 +86,7 @@ class RecordingRepository extends MockPracticeRepositoryImpl {
 }
 
 PracticeAssignment recordingAssignment({
+  String? songId,
   bool? canSubmit = true,
   String? reason,
   bool isOverdue = false,
@@ -91,6 +95,7 @@ PracticeAssignment recordingAssignment({
   id: 'record-test',
   title: 'Bài tập kiểm thử',
   songTitle: 'Bài hát kiểm thử',
+  songId: songId,
   instruction: 'Hướng dẫn kiểm thử',
   dueDate: isOverdue ? DateTime(2000) : DateTime(2030),
   vocalPart: 'Soprano',
@@ -105,6 +110,32 @@ class RecordingSession extends SessionManager {
   int epoch = 0;
   @override
   int get sessionEpoch => epoch;
+}
+
+class _PdfMetadataRepository extends MockMusicRepositoryImpl {
+  @override
+  Future<PagedList<music.MusicMaterialDetailDto>> getMyMaterialsPage(
+    music.SearchMusicMaterialsRequest request,
+  ) async => const PagedList(
+    items: [
+      music.MusicMaterialDetailDto(
+        id: 'score',
+        songId: 'test-song',
+        materialType: music.MaterialType.sheetMusic,
+        title: 'Bản phổ kiểm thử',
+        fileName: 'score.pdf',
+        fileUrl: '',
+        createdAt: '',
+        learningStatus: music.LearningStatus.notStarted,
+      ),
+    ],
+    pageNumber: 1,
+    pageSize: 20,
+    totalCount: 1,
+    totalPages: 1,
+    hasPreviousPage: false,
+    hasNextPage: false,
+  );
 }
 
 void main() {
@@ -244,8 +275,11 @@ void main() {
     String? reason,
     bool isOverdue = false,
     bool useAppTheme = false,
+    String? songId,
+    MusicRepository? musicRepository,
   }) async {
     repository.assignment = recordingAssignment(
+      songId: songId,
       canSubmit: assignmentStatus == PracticeStatus.passed ? false : canSubmit,
       reason: assignmentStatus == PracticeStatus.passed
           ? 'PRACTICE_SUBMISSION_ALREADY_PASSED'
@@ -269,6 +303,9 @@ void main() {
       ProviderScope(
         overrides: [
           practiceRepositoryProvider.overrideWithValue(repository),
+          musicRepositoryProvider.overrideWithValue(
+            musicRepository ?? MockMusicRepositoryImpl(),
+          ),
           sessionManagerProvider.overrideWithValue(session),
           practiceDetailProvider('record-test').overrideWith((ref) async {
             if (detailError != null) throw detailError;
@@ -341,6 +378,37 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpAndSettle();
   }
+
+  testWidgets('a song without PDFs adds no section to the recording screen', (
+    tester,
+  ) async {
+    await open(tester, songId: 'test-song');
+    expect(find.text('Đọc PDF'), findsNothing);
+    expect(find.text('Chưa có PDF để đọc cho bài hát này.'), findsNothing);
+    expect(find.text('Phòng thu âm cá nhân'), findsOneWidget);
+  });
+
+  testWidgets('the PDF section stays above the recorder while recording', (
+    tester,
+  ) async {
+    await open(
+      tester,
+      songId: 'test-song',
+      musicRepository: _PdfMetadataRepository(),
+    );
+    final score = find.text('Bản phổ kiểm thử');
+    final recorder = find.text('Phòng thu âm cá nhân');
+    expect(
+      tester.getBottomLeft(score).dy,
+      lessThan(tester.getTopLeft(recorder).dy),
+    );
+    await start(tester);
+    expect(score, findsOneWidget);
+    expect(find.text('Đang thu âm...'), findsOneWidget);
+    expect(recordCalls.where((call) => call == 'start'), hasLength(1));
+    expect(recordCalls, isNot(contains('stop')));
+    await stop(tester);
+  });
 
   testWidgets('stopping before five seconds rejects the recording', (
     tester,

@@ -28,6 +28,7 @@ import '../../staff_workspace/presentation/staff_practice_screen.dart'
 import '../data/practice_audio_format.dart';
 import '../data/practice_models.dart';
 import '../data/practice_repository.dart';
+import 'practice_pdf_panel.dart';
 
 class PracticeDetailScreen extends ConsumerStatefulWidget {
   final String assignmentId;
@@ -946,6 +947,7 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
               loadedAssignment == null;
           final canSubmit =
               assignment.canSubmit == true && !permissionUnavailable;
+          final songId = assignment.songId;
           final references = assignment.materials
               .where(
                 (item) =>
@@ -1258,6 +1260,15 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
                         const SizedBox(height: 20),
                       ],
 
+                      if (songId != null && songId.isNotEmpty)
+                        PracticePdfPanel(
+                          key: ValueKey(songId),
+                          songId: songId,
+                          attachedMaterialIds: [
+                            for (final material in assignment.materials)
+                              material.id,
+                          ],
+                        ),
                       Card(
                         margin: EdgeInsets.zero,
                         color: MemberChoirStyle.ink,
