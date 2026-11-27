@@ -7,18 +7,10 @@ import 'package:harmonia_mobile/core/session/session_manager.dart';
 import 'package:harmonia_mobile/core/storage/secure_storage_service.dart';
 import 'package:harmonia_mobile/features/calendar/data/calendar_dto.dart';
 import 'package:harmonia_mobile/features/calendar/data/calendar_repository.dart';
-import 'package:harmonia_mobile/features/practice/data/practice_repository.dart';
 import 'package:harmonia_mobile/features/profile/data/profile_repository.dart';
 import 'package:harmonia_mobile/features/profile/presentation/profile_screen.dart';
 
 import 'support/fake_profile_repository.dart';
-
-class _EmptyPracticeHistory extends PracticeSubmissionsNotifier {
-  _EmptyPracticeHistory() : super(null);
-
-  @override
-  PracticeSubmissionsState build() => const PracticeSubmissionsState();
-}
 
 void main() {
   testWidgets('profile displays all choirs and supports editing saint name', (
@@ -45,8 +37,6 @@ void main() {
               }),
             ),
           ),
-          practiceSubmissionsNotifierProvider(null)
-              .overrideWith(_EmptyPracticeHistory.new),
           publicAppSettingsProvider.overrideWith(
             (ref) async => const PublicAppSettings(choirName: 'Ca đoàn chung'),
           ),

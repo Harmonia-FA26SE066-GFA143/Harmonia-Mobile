@@ -11,18 +11,68 @@ import '../../../app/widgets/member_choir_visuals.dart';
 import '../../../core/errors/error_messages.dart';
 import '../../lookups/data/lookup_dto.dart';
 import '../../lookups/data/lookups_api_service.dart';
+import '../../practice/presentation/practice_history_screen.dart';
 import '../data/profile_repository.dart';
 
-class ParticipationHistoryScreen extends ConsumerStatefulWidget {
+class ParticipationHistoryScreen extends StatelessWidget {
   const ParticipationHistoryScreen({super.key});
 
   @override
-  ConsumerState<ParticipationHistoryScreen> createState() =>
-      _ParticipationHistoryScreenState();
+  Widget build(BuildContext context) => Theme(
+    data: MemberChoirStyle.theme(context),
+    child: const DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppPageHeader(
+          gradient: MemberChoirStyle.header,
+          titleFontFamily: MemberChoirStyle.displayFont,
+          title: Text(
+            'Lịch sử tham gia & luyện tập',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        body: SafeArea(
+          top: false,
+          child: Column(
+            children: [
+              Material(
+                color: AppColors.surface,
+                child: TabBar(
+                  tabs: [
+                    Tab(text: 'Tham gia'),
+                    Tab(text: 'Bản thu'),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: TabBarView(
+                  children: [
+                    _ParticipationHistoryContent(),
+                    PracticeHistoryContent(),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
-class _ParticipationHistoryScreenState
-    extends ConsumerState<ParticipationHistoryScreen> {
+class _ParticipationHistoryContent extends ConsumerStatefulWidget {
+  const _ParticipationHistoryContent();
+
+  @override
+  ConsumerState<_ParticipationHistoryContent> createState() =>
+      _ParticipationHistoryContentState();
+}
+
+class _ParticipationHistoryContentState
+    extends ConsumerState<_ParticipationHistoryContent>
+    with AutomaticKeepAliveClientMixin {
   String? _selectedSeasonId;
   DateTime? _fromDate;
   DateTime? _toDate;
@@ -37,6 +87,9 @@ class _ParticipationHistoryScreenState
   List<LiturgicalSeasonDto> _seasons = [];
 
   int _requestGen = 0;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -159,344 +212,331 @@ class _ParticipationHistoryScreenState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: const AppPageHeader(
-        gradient: MemberChoirStyle.header,
-        titleFontFamily: MemberChoirStyle.displayFont,
-        title: Text(
-          'Lịch sử tham gia & luyện tập',
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Filter Bar
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              color: AppColors.surface,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+    super.build(context);
+    return Column(
+      children: [
+        // Filter Bar
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          color: AppColors.surface,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Mùa phụng vụ', style: AppTypography.labelLarge),
+              const SizedBox(height: 6),
+              Row(
                 children: [
-                  Text('Mùa phụng vụ', style: AppTypography.labelLarge),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      // Season dropdown
-                      Expanded(
-                        child: DropdownButtonFormField<String?>(
-                          icon: MemberChoirStyle.choiceIcon,
-                          iconEnabledColor: MemberChoirStyle.wine,
-                          initialValue: _selectedSeasonId,
-                          isExpanded: true,
-                          decoration: MemberChoirStyle.choiceDecoration(
-                            InputDecoration(
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 10,
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
+                  // Season dropdown
+                  Expanded(
+                    child: DropdownButtonFormField<String?>(
+                      icon: MemberChoirStyle.choiceIcon,
+                      iconEnabledColor: MemberChoirStyle.wine,
+                      initialValue: _selectedSeasonId,
+                      isExpanded: true,
+                      decoration: MemberChoirStyle.choiceDecoration(
+                        InputDecoration(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ),
+                      items: [
+                        const DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text('Tất cả các mùa'),
+                        ),
+                        ..._seasons.map(
+                          (s) => DropdownMenuItem<String?>(
+                            value: s.id,
+                            child: Text(
+                              s.name,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          items: [
-                            const DropdownMenuItem<String?>(
-                              value: null,
-                              child: Text('Tất cả các mùa'),
-                            ),
-                            ..._seasons.map(
-                              (s) => DropdownMenuItem<String?>(
-                                value: s.id,
-                                child: Text(
-                                  s.name,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ),
-                          ],
-                          onChanged: (val) {
-                            setState(() => _selectedSeasonId = val);
-                            _loadHistory(reset: true);
-                          },
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      // Date range button
-                      IconButton.outlined(
-                        tooltip: 'Chọn khoảng ngày',
-                        icon: Icon(
-                          Icons.calendar_month_rounded,
-                          color: (_fromDate != null || _toDate != null)
-                              ? AppColors.primary
-                              : AppColors.muted,
-                        ),
-                        onPressed: _selectDateRange,
-                      ),
-                      if (_selectedSeasonId != null ||
-                          _fromDate != null ||
-                          _toDate != null)
-                        IconButton(
-                          tooltip: 'Xóa bộ lọc',
-                          icon: const Icon(Icons.clear_rounded),
-                          onPressed: _clearFilters,
-                        ),
-                    ],
-                  ),
-                  if (_fromDate != null && _toDate != null) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      'Từ ${DateFormat('dd/MM/yyyy').format(_fromDate!)} đến ${DateFormat('dd/MM/yyyy').format(_toDate!)}',
-                      style: AppTypography.labelSmall.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      ],
+                      onChanged: (val) {
+                        setState(() => _selectedSeasonId = val);
+                        _loadHistory(reset: true);
+                      },
                     ),
-                  ],
+                  ),
+                  const SizedBox(width: 8),
+                  // Date range button
+                  IconButton.outlined(
+                    tooltip: 'Chọn khoảng ngày',
+                    icon: Icon(
+                      Icons.calendar_month_rounded,
+                      color: (_fromDate != null || _toDate != null)
+                          ? AppColors.primary
+                          : AppColors.muted,
+                    ),
+                    onPressed: _selectDateRange,
+                  ),
+                  if (_selectedSeasonId != null ||
+                      _fromDate != null ||
+                      _toDate != null)
+                    IconButton(
+                      tooltip: 'Xóa bộ lọc',
+                      icon: const Icon(Icons.clear_rounded),
+                      onPressed: _clearFilters,
+                    ),
                 ],
               ),
-            ),
-            const Divider(height: 1),
+              if (_fromDate != null && _toDate != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  'Từ ${DateFormat('dd/MM/yyyy').format(_fromDate!)} đến ${DateFormat('dd/MM/yyyy').format(_toDate!)}',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const Divider(height: 1),
 
-            // Content List
-            Expanded(
-              child: Builder(
-                builder: (context) {
-                  if (_isLoading && _items.isEmpty) {
-                    return const Center(
-                      child: HarmoniaNeumeSpinner(color: AppColors.primary),
-                    );
-                  }
+        // Content List
+        Expanded(
+          child: Builder(
+            builder: (context) {
+              if (_isLoading && _items.isEmpty) {
+                return const Center(
+                  child: HarmoniaNeumeSpinner(color: AppColors.primary),
+                );
+              }
 
-                  if (_errorMessage != null && _items.isEmpty) {
-                    return Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.error_outline_rounded,
-                              size: 48,
-                              color: AppColors.statusDanger,
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              _errorMessage!,
-                              style: AppTypography.bodyMedium,
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 16),
-                            ElevatedButton(
-                              onPressed: () => _loadHistory(reset: true),
-                              child: const Text('Thử lại'),
-                            ),
-                          ],
+              if (_errorMessage != null && _items.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.error_outline_rounded,
+                          size: 48,
+                          color: AppColors.statusDanger,
                         ),
-                      ),
-                    );
-                  }
+                        const SizedBox(height: 12),
+                        Text(
+                          _errorMessage!,
+                          style: AppTypography.bodyMedium,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () => _loadHistory(reset: true),
+                          child: const Text('Thử lại'),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
 
-                  if (_items.isEmpty) {
-                    return Center(
+              if (_items.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.history_rounded,
+                          size: 56,
+                          color: AppColors.muted.withValues(alpha: 0.5),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Chưa có dữ liệu lịch sử tham gia',
+                          style: AppTypography.titleMedium.copyWith(
+                            color: AppColors.muted,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Lịch sử chỉ ghi nhận các sự kiện đã diễn ra mà bạn đã xác nhận tham gia hoặc có trong danh sách phục vụ.',
+                          style: AppTypography.bodySmall.copyWith(
+                            color: AppColors.muted,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              return HarmoniaRefreshIndicator(
+                onRefresh: () => _loadHistory(reset: true),
+                color: AppColors.primary,
+                child: ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _items.length + (_hasNextPage ? 1 : 0),
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    if (index == _items.length) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          child: ElevatedButton.icon(
+                            onPressed: _isLoading
+                                ? null
+                                : () => _loadHistory(reset: false),
+                            icon: _isLoading
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: HarmoniaNeumeSpinner(size: 20),
+                                  )
+                                : null,
+                            label: const Text('Tải thêm sự kiện'),
+                          ),
+                        ),
+                      );
+                    }
+
+                    final item = _items[index];
+                    final rehearsalsPercent = item.rehearsalsHeld > 0
+                        ? (item.rehearsalsAttended / item.rehearsalsHeld * 100)
+                              .round()
+                        : null;
+                    final assignmentsPercent = item.assignmentsTotal > 0
+                        ? (item.assignmentsPassed / item.assignmentsTotal * 100)
+                              .round()
+                        : null;
+
+                    return Card(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: MemberChoirStyle.buttonBorder,
+                      ),
                       child: Padding(
-                        padding: const EdgeInsets.all(32),
+                        padding: const EdgeInsets.all(16),
                         child: Column(
-                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(
-                              Icons.history_rounded,
-                              size: 56,
-                              color: AppColors.muted.withValues(alpha: 0.5),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Chưa có dữ liệu lịch sử tham gia',
-                              style: AppTypography.titleMedium.copyWith(
-                                color: AppColors.muted,
+                            SizedBox(
+                              width: double.infinity,
+                              child: Wrap(
+                                alignment: WrapAlignment.spaceBetween,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                spacing: 8,
+                                runSpacing: 4,
+                                children: [
+                                  if (item.liturgicalSeasonName != null &&
+                                      item
+                                          .liturgicalSeasonName!
+                                          .isNotEmpty) ...[
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 3,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primary.withValues(
+                                          alpha: 0.1,
+                                        ),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        item.liturgicalSeasonName!,
+                                        style: AppTypography.labelSmall
+                                            .copyWith(
+                                              color: AppColors.primary,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                      ),
+                                    ),
+                                  ],
+                                  Text(
+                                    item.eventDate,
+                                    style: AppTypography.labelSmall.copyWith(
+                                      color: AppColors.muted,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Lịch sử chỉ ghi nhận các sự kiện đã diễn ra mà bạn đã xác nhận tham gia hoặc có trong danh sách phục vụ.',
-                              style: AppTypography.bodySmall.copyWith(
-                                color: AppColors.muted,
+                              item.title,
+                              style: AppTypography.titleMedium.copyWith(
+                                fontWeight: FontWeight.bold,
                               ),
-                              textAlign: TextAlign.center,
+                            ),
+                            if (item.servedSkills.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.mic_rounded,
+                                    size: 16,
+                                    color: AppColors.secondary,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      'Bè / Kỹ năng phục vụ: ${item.servedSkills.join(', ')}',
+                                      style: AppTypography.bodySmall.copyWith(
+                                        color: AppColors.secondary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                            const SizedBox(height: 12),
+                            const Divider(height: 1),
+                            const SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildMetricTile(
+                                    icon: Icons.groups_rounded,
+                                    label: 'Điểm danh buổi tập',
+                                    value:
+                                        '${item.rehearsalsAttended}/${item.rehearsalsHeld}',
+                                    percent: rehearsalsPercent,
+                                  ),
+                                ),
+                                Container(
+                                  width: 1,
+                                  height: 36,
+                                  color: AppColors.border,
+                                ),
+                                Expanded(
+                                  child: _buildMetricTile(
+                                    icon: Icons.check_circle_outline_rounded,
+                                    label: 'Bài tập đạt',
+                                    value:
+                                        '${item.assignmentsPassed}/${item.assignmentsTotal}',
+                                    percent: assignmentsPercent,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
                       ),
                     );
-                  }
-
-                  return HarmoniaRefreshIndicator(
-                    onRefresh: () => _loadHistory(reset: true),
-                    color: AppColors.primary,
-                    child: ListView.separated(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _items.length + (_hasNextPage ? 1 : 0),
-                      separatorBuilder: (context, index) =>
-                          const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        if (index == _items.length) {
-                          return Center(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              child: ElevatedButton.icon(
-                                onPressed: _isLoading
-                                    ? null
-                                    : () => _loadHistory(reset: false),
-                                icon: _isLoading
-                                    ? const SizedBox(
-                                        width: 16,
-                                        height: 16,
-                                        child: HarmoniaNeumeSpinner(size: 20),
-                                      )
-                                    : null,
-                                label: const Text('Tải thêm sự kiện'),
-                              ),
-                            ),
-                          );
-                        }
-
-                        final item = _items[index];
-                        final rehearsalsPercent = item.rehearsalsHeld > 0
-                            ? (item.rehearsalsAttended /
-                                      item.rehearsalsHeld *
-                                      100)
-                                  .round()
-                            : null;
-                        final assignmentsPercent = item.assignmentsTotal > 0
-                            ? (item.assignmentsPassed /
-                                      item.assignmentsTotal *
-                                      100)
-                                  .round()
-                            : null;
-
-                        return Card(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            side: MemberChoirStyle.buttonBorder,
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    if (item.liturgicalSeasonName != null &&
-                                        item
-                                            .liturgicalSeasonName!
-                                            .isNotEmpty) ...[
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 3,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.primary.withValues(
-                                            alpha: 0.1,
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          item.liturgicalSeasonName!,
-                                          style: AppTypography.labelSmall
-                                              .copyWith(
-                                                color: AppColors.primary,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                        ),
-                                      ),
-                                    ],
-                                    Text(
-                                      item.eventDate,
-                                      style: AppTypography.labelSmall.copyWith(
-                                        color: AppColors.muted,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  item.title,
-                                  style: AppTypography.titleMedium.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                if (item.servedSkills.isNotEmpty) ...[
-                                  const SizedBox(height: 6),
-                                  Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.mic_rounded,
-                                        size: 16,
-                                        color: AppColors.secondary,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        'Bè / Kỹ năng phục vụ: ${item.servedSkills.join(', ')}',
-                                        style: AppTypography.bodySmall.copyWith(
-                                          color: AppColors.secondary,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                                const SizedBox(height: 12),
-                                const Divider(height: 1),
-                                const SizedBox(height: 10),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: _buildMetricTile(
-                                        icon: Icons.groups_rounded,
-                                        label: 'Điểm danh buổi tập',
-                                        value:
-                                            '${item.rehearsalsAttended}/${item.rehearsalsHeld}',
-                                        percent: rehearsalsPercent,
-                                      ),
-                                    ),
-                                    Container(
-                                      width: 1,
-                                      height: 36,
-                                      color: AppColors.border,
-                                    ),
-                                    Expanded(
-                                      child: _buildMetricTile(
-                                        icon:
-                                            Icons.check_circle_outline_rounded,
-                                        label: 'Bài tập đạt',
-                                        value:
-                                            '${item.assignmentsPassed}/${item.assignmentsTotal}',
-                                        percent: assignmentsPercent,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
+                  },
+                ),
+              );
+            },
+          ),
         ),
-      ),
+      ],
     );
   }
 
@@ -522,7 +562,9 @@ class _ParticipationHistoryScreenState
                     color: AppColors.muted,
                   ),
                 ),
-                Row(
+                Wrap(
+                  spacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
                       value,
@@ -530,8 +572,7 @@ class _ParticipationHistoryScreenState
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    if (percent != null) ...[
-                      const SizedBox(width: 4),
+                    if (percent != null)
                       Text(
                         '($percent%)',
                         style: AppTypography.labelSmall.copyWith(
@@ -541,7 +582,6 @@ class _ParticipationHistoryScreenState
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ],
                   ],
                 ),
               ],

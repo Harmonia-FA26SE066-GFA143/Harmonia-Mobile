@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/di/core_providers.dart';
 import '../../../core/errors/app_exceptions.dart';
 import '../../../core/errors/error_messages.dart';
-import '../../../core/session/session_manager.dart';
 import '../../notifications/data/notification_dto.dart';
 import 'practice_api_service.dart';
 import 'practice_models.dart';
@@ -497,11 +496,16 @@ class PracticeSubmissionsNotifier extends Notifier<PracticeSubmissionsState> {
 
   @override
   PracticeSubmissionsState build() {
-    ref.listen<SessionManager>(sessionManagerProvider, (prev, next) {
-      if (prev != null &&
-          (prev.sessionEpoch != next.sessionEpoch || !next.isAuthenticated)) {
-        reset();
-      }
+    ref.listen(
+      sessionManagerProvider.select((session) => session.sessionEpoch),
+      (previous, next) {
+        ref.invalidateSelf();
+      },
+    );
+    ref.onDispose(() {
+      _requestId++;
+      _buildLoadScheduled = false;
+      _inFlightInitialLoad = null;
     });
 
     _buildLoadScheduled = true;
@@ -511,7 +515,7 @@ class PracticeSubmissionsNotifier extends Notifier<PracticeSubmissionsState> {
         loadInitial();
       }
     });
-    return const PracticeSubmissionsState();
+    return const PracticeSubmissionsState(isLoading: true);
   }
 
   void reset() {
@@ -566,13 +570,18 @@ class PracticeSubmissionsNotifier extends Notifier<PracticeSubmissionsState> {
         errorMessage: 'Không thể tải lịch sử nộp bài. Vui lòng thử lại.',
       );
     } finally {
-      _inFlightInitialLoad = null;
+      if (_requestId == reqId) _inFlightInitialLoad = null;
     }
   }
 
   Future<void> refresh() async {
+    if (state.isLoading || state.isRefreshing) return;
     final reqId = ++_requestId;
-    state = state.copyWith(isRefreshing: true, clearLoadMoreError: true);
+    state = state.copyWith(
+      isRefreshing: true,
+      isLoadingMore: false,
+      clearLoadMoreError: true,
+    );
 
     try {
       final pagedList = await _repository.getMySubmissionsPaged(
@@ -590,14 +599,25 @@ class PracticeSubmissionsNotifier extends Notifier<PracticeSubmissionsState> {
         totalCount: pagedList.totalCount,
         clearLoadMoreError: true,
       );
-    } catch (_) {
+    } catch (error) {
       if (_requestId != reqId) return;
-      state = state.copyWith(isRefreshing: false);
+      state = state.copyWith(
+        isRefreshing: false,
+        errorMessage: ErrorMessages.forException(
+          error,
+          defaultMessage: 'Không thể tải lịch sử nộp bài. Vui lòng thử lại.',
+        ),
+      );
     }
   }
 
   Future<void> loadMore() async {
-    if (state.isLoadingMore || !state.hasNextPage || state.isLoading) return;
+    if (state.isLoadingMore ||
+        !state.hasNextPage ||
+        state.isLoading ||
+        state.isRefreshing) {
+      return;
+    }
 
     final reqId = _requestId;
     final nextPage = state.pageNumber + 1;

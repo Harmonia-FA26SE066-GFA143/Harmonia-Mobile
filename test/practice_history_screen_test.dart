@@ -4,16 +4,21 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:harmonia_mobile/core/di/core_providers.dart';
 import 'package:harmonia_mobile/core/session/session_manager.dart';
 import 'package:harmonia_mobile/core/storage/secure_storage_service.dart';
+import 'package:harmonia_mobile/features/lookups/data/lookup_dto.dart';
+import 'package:harmonia_mobile/features/lookups/data/lookups_api_service.dart';
 import 'package:harmonia_mobile/features/practice/data/practice_models.dart';
 import 'package:harmonia_mobile/features/practice/data/practice_repository.dart';
 import 'package:harmonia_mobile/features/practice/presentation/practice_history_screen.dart';
+import 'package:harmonia_mobile/features/profile/data/profile_repository.dart';
+import 'package:harmonia_mobile/features/profile/presentation/participation_history_screen.dart';
 
 import 'support/fake_practice_repository.dart';
+import 'support/fake_profile_repository.dart';
 
 class _HistoryRepository extends MockPracticeRepositoryImpl {
   _HistoryRepository({this.empty = false});
 
-  final bool empty;
+  bool empty;
 
   @override
   Future<PagedList<PracticeSubmissionDetail>> getMySubmissionsPaged({
@@ -90,7 +95,88 @@ class _TestSessionManager extends SessionManager {
   _TestSessionManager() : super(SecureStorageService());
 }
 
+class _HistoryLookups implements LookupsApiService {
+  @override
+  Future<List<LiturgicalSeasonDto>> getLiturgicalSeasons() async => [];
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 void main() {
+  testWidgets('profile history shows events and recordings in the same route', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 720);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final session = _TestSessionManager();
+    addTearDown(session.dispose);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          profileRepositoryProvider.overrideWithValue(
+            MockProfileRepositoryImpl(),
+          ),
+          practiceRepositoryProvider.overrideWithValue(_HistoryRepository()),
+          lookupsApiServiceProvider.overrideWithValue(_HistoryLookups()),
+          sessionManagerProvider.overrideWithValue(session),
+        ],
+        child: const MaterialApp(home: ParticipationHistoryScreen()),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pumpAndSettle();
+    expect(find.text('Chúa nhật XXVI Thường niên'), findsOneWidget);
+    expect(find.text('Mùa phụng vụ'), findsOneWidget);
+
+    await tester.tap(find.text('Bản thu'));
+    await tester.pumpAndSettle();
+    expect(find.text('Lịch sử tham gia & luyện tập'), findsOneWidget);
+    expect(find.text('Luyện bài Ca Hiệp Lễ'), findsOneWidget);
+    expect(find.text('Mùa phụng vụ').hitTestable(), findsNothing);
+
+    await tester.tap(find.text('Tham gia'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Chúa nhật XXVI Thường niên').hitTestable(),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('reloads a cached empty history when the screen opens', (
+    tester,
+  ) async {
+    final repository = _HistoryRepository(empty: true);
+    final session = _TestSessionManager();
+    addTearDown(session.dispose);
+    final container = ProviderContainer.test(
+      overrides: [
+        practiceRepositoryProvider.overrideWithValue(repository),
+        sessionManagerProvider.overrideWithValue(session),
+      ],
+    );
+    final history = practiceSubmissionsNotifierProvider(null);
+    final subscription = container.listen(history, (_, _) {});
+    addTearDown(subscription.close);
+    await container.read(history.notifier).loadInitial();
+    expect(container.read(history).items, isEmpty);
+    repository.empty = false;
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: PracticeHistoryScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('1 bản thu đã nộp'), findsOneWidget);
+    expect(find.text('Luyện bài Ca Hiệp Lễ'), findsOneWidget);
+  });
+
   testWidgets('centers the empty message below the submission summary', (
     tester,
   ) async {

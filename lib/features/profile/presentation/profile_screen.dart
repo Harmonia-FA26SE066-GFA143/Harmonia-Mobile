@@ -21,9 +21,6 @@ import '../../lookups/data/lookup_dto.dart';
 import '../../lookups/data/lookups_api_service.dart';
 import '../../calendar/data/calendar_repository.dart'
     show publicAppSettingsProvider;
-import '../../practice/data/practice_models.dart' show PracticeSubmissionDetail;
-import '../../practice/data/practice_repository.dart'
-    show practiceSubmissionsNotifierProvider;
 import '../data/avatar_image_picker.dart';
 import '../data/member_skill_evidence_picker.dart';
 import '../data/profile_models.dart';
@@ -1438,15 +1435,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final skills = ref.watch(memberSkillsNotifierProvider);
     final skillsNotifier = ref.read(memberSkillsNotifierProvider.notifier);
     final profileFuture = ref.watch(currentMemberProfileProvider.future);
-    final hasProfile = ref.watch(
-      currentMemberProfileProvider.select((profile) => profile.hasValue),
-    );
-    final recentSubmissions = hasProfile
-        ? ref.watch(
-            practiceSubmissionsNotifierProvider(null)
-                .select((state) => state.items),
-          )
-        : const <PracticeSubmissionDetail>[];
     final settings = ref.watch(publicAppSettingsProvider).asData?.value;
     final parishName = settings?.parishName.trim() ?? '';
     final busy = ref.watch(
@@ -1650,9 +1638,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 ),
                           ],
                           const SizedBox(height: 20),
-                          _ProfileRecentPractice(
-                            submissions: recentSubmissions,
-                          ),
                           const _ProfileSectionHeading(
                             title: 'Cài đặt tài khoản',
                           ),
@@ -1678,7 +1663,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               ),
                               title: const Text('Lịch sử tham gia & luyện tập'),
                               subtitle: const Text(
-                                'Xem kết quả phục vụ lễ và bài tập đã hoàn thành',
+                                'Xem lịch sử phục vụ lễ và các bản thu đã nộp',
                               ),
                               onTap: () => context.push('/profile/history'),
                             ),
@@ -2075,13 +2060,11 @@ class _ProfileSectionHeading extends StatelessWidget {
     required this.title,
     this.action,
     this.inlineAction = false,
-    this.showAccent = false,
   });
 
   final String title;
   final Widget? action;
   final bool inlineAction;
-  final bool showAccent;
 
   @override
   Widget build(BuildContext context) {
@@ -2092,8 +2075,6 @@ class _ProfileSectionHeading extends StatelessWidget {
           : CrossAxisAlignment.center,
       spacing: 8,
       children: [
-        if (showAccent)
-          Container(width: 3, height: 20, color: MemberChoirStyle.wine),
         Flexible(
           child: Semantics(
             header: true,
@@ -2263,56 +2244,6 @@ class _ProfileSkillCard extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _ProfileRecentPractice extends StatelessWidget {
-  const _ProfileRecentPractice({required this.submissions});
-
-  final List<PracticeSubmissionDetail> submissions;
-
-  @override
-  Widget build(BuildContext context) {
-    if (submissions.isEmpty) return const SizedBox.shrink();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _ProfileSectionHeading(
-          title: 'Luyện tập gần đây',
-          showAccent: true,
-          action: TextButton(
-            onPressed: () => context.push('/practice-history'),
-            child: const Text('Xem tất cả'),
-          ),
-        ),
-        Card(
-          child: Column(
-            children: [
-              for (final submission in submissions.take(3))
-                ListTile(
-                  leading: const Icon(
-                    Icons.headphones_rounded,
-                    color: MemberChoirStyle.wine,
-                  ),
-                  title: Text(
-                    submission.assignmentTitle?.trim().isNotEmpty == true
-                        ? submission.assignmentTitle!
-                        : 'Bản thu lần ${submission.attemptNo}',
-                  ),
-                  subtitle: Text(
-                    DateFormat('dd/MM/yyyy · HH:mm')
-                        .format(submission.submittedAt),
-                  ),
-                  onTap: () => context.push(
-                    '/practice-submission/${Uri.encodeComponent(submission.id)}',
-                  ),
-                ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-      ],
     );
   }
 }

@@ -630,13 +630,10 @@ class _PracticeDetailScreenState extends ConsumerState<PracticeDetailScreen>
           );
 
       if (!mounted || session.sessionEpoch != epoch) return;
-      ref
-          .read(
-            practiceSubmissionsNotifierProvider(widget.assignmentId).notifier,
-          )
-          .refresh();
+      ref.invalidate(practiceSubmissionsNotifierProvider(widget.assignmentId));
       ref.invalidate(practiceDetailProvider(widget.assignmentId));
       ref.invalidate(mySubmissionsProvider(widget.assignmentId));
+      ref.invalidate(practiceSubmissionsNotifierProvider(null));
       ref.invalidate(practiceCountsProvider);
 
       if (!mounted) return;

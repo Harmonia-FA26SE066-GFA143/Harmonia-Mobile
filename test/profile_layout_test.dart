@@ -11,7 +11,6 @@ import 'package:harmonia_mobile/features/practice/data/practice_repository.dart'
 import 'package:harmonia_mobile/features/profile/data/profile_repository.dart';
 import 'package:harmonia_mobile/features/profile/presentation/profile_screen.dart';
 
-import 'support/fake_practice_repository.dart';
 import 'support/fake_profile_repository.dart';
 
 void main() {
@@ -27,6 +26,7 @@ void main() {
     final session = SessionManager(SecureStorageService());
     await session.markAuthenticated(role: 'ChoirMember');
     addTearDown(session.dispose);
+    var requestedPracticeRepository = false;
 
     await tester.pumpWidget(
       ProviderScope(
@@ -37,9 +37,10 @@ void main() {
               profile: MockProfileData.profileWithChoirs,
             ),
           ),
-          practiceRepositoryProvider.overrideWithValue(
-            MockPracticeRepositoryImpl(),
-          ),
+          practiceRepositoryProvider.overrideWith((ref) {
+            requestedPracticeRepository = true;
+            throw StateError('Profile should not load recordings');
+          }),
           publicAppSettingsProvider.overrideWith(
             (ref) async => const PublicAppSettings(choirName: 'Ca đoàn chung'),
           ),
@@ -74,16 +75,9 @@ void main() {
       greaterThan(tester.getTopRight(skillsTitle).dx),
     );
 
-    final viewAll = find.widgetWithText(TextButton, 'Xem tất cả');
-    await tester.scrollUntilVisible(viewAll, 160);
-    expect(
-      tester.getTopLeft(viewAll).dy,
-      greaterThanOrEqualTo(
-        tester.getBottomLeft(find.text('Luyện tập gần đây')).dy,
-      ),
-    );
-
     await tester.scrollUntilVisible(find.text('Đăng xuất'), 160);
+    expect(find.text('Luyện tập gần đây'), findsNothing);
+    expect(requestedPracticeRepository, isFalse);
     final settingsTop = tester.getTopLeft(find.text('Cài đặt tài khoản')).dy;
     for (final label in [
       'Đề cử ca trưởng của tôi',
